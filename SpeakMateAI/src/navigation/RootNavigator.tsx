@@ -1,0 +1,84 @@
+import React from 'react';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useTheme } from 'react-native-paper';
+
+import { RootStackParamList } from './types';
+import { useAuth } from '@/contexts/AuthContext';
+import LoadingScreen from '@/components/common/LoadingScreen';
+
+import AuthNavigator from './AuthNavigator';
+import MainTabNavigator from './MainTabNavigator';
+import VocabularyScreen from '@/screens/vocabulary/VocabularyScreen';
+import FavoritesScreen from '@/screens/vocabulary/FavoritesScreen';
+import MockInterviewScreen from '@/screens/interview/MockInterviewScreen';
+import InterviewSessionScreen from '@/screens/interview/InterviewSessionScreen';
+import PremiumScreen from '@/screens/premium/PremiumScreen';
+import ProfileScreen from '@/screens/settings/ProfileScreen';
+import NotificationPrefsScreen from '@/screens/settings/NotificationPrefsScreen';
+import PrivacyPolicyScreen from '@/screens/settings/PrivacyPolicyScreen';
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+
+export default function RootNavigator() {
+  const { user, initializing } = useAuth();
+  const theme = useTheme();
+
+  if (initializing) {
+    return <LoadingScreen label="Setting things up…" />;
+  }
+
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.surface },
+        headerTintColor: theme.colors.onSurface,
+        headerTitleStyle: { fontWeight: '700' },
+        animation: 'slide_from_right',
+      }}
+    >
+      {!user ? (
+        <Stack.Screen name="Auth" component={AuthNavigator} options={{ headerShown: false }} />
+      ) : (
+        <>
+          <Stack.Screen name="Main" component={MainTabNavigator} options={{ headerShown: false }} />
+          <Stack.Screen
+            name="Vocabulary"
+            component={VocabularyScreen}
+            options={{ title: 'Vocabulary' }}
+          />
+          <Stack.Screen
+            name="Favorites"
+            component={FavoritesScreen}
+            options={{ title: 'Favorite Words' }}
+          />
+          <Stack.Screen
+            name="MockInterview"
+            component={MockInterviewScreen}
+            options={{ title: 'Mock Interview' }}
+          />
+          <Stack.Screen
+            name="InterviewSession"
+            component={InterviewSessionScreen}
+            options={{ title: 'Interview Session' }}
+          />
+          <Stack.Screen
+            name="Premium"
+            component={PremiumScreen}
+            options={{ title: 'Go Premium', presentation: 'modal' }}
+          />
+          <Stack.Screen name="Profile" component={ProfileScreen} options={{ title: 'Profile' }} />
+          <Stack.Screen
+            name="NotificationPrefs"
+            component={NotificationPrefsScreen}
+            options={{ title: 'Notifications' }}
+          />
+          <Stack.Screen
+            name="PrivacyPolicy"
+            component={PrivacyPolicyScreen}
+            options={{ title: 'Privacy Policy' }}
+          />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
