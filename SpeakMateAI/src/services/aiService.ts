@@ -1,6 +1,6 @@
 // Mock AI service abstraction. Same interface can later be backed by a real LLM.
 
-import { ChatMessage, InterviewQuestion, SpeakingScore } from '@/types';
+import { ChatMessage, InterviewAnswer, InterviewQuestion, InterviewResult, InterviewTrack, SpeakingScore } from '@/types';
 import { delay, pickRandom, randomId } from '@/utils/helpers';
 
 const friendlyReplies = [
@@ -166,5 +166,77 @@ export const aiService = {
       'Tell me more about your role specifically.',
     ];
     return pickRandom(followUps);
+  },
+
+  async scoreInterviewSession(track: InterviewTrack, answers: InterviewAnswer[]): Promise<InterviewResult> {
+    await delay(900);
+    const avg = answers.length ? answers.reduce((s, a) => s + a.score, 0) / answers.length : 0;
+    const avgWords = answers.length
+      ? answers.reduce((s, a) => s + a.answer.trim().split(/\s+/).filter(Boolean).length, 0) / answers.length
+      : 0;
+
+    // Communication = grammar + vocabulary + clarity (proxy: average score adjusted by grammar quality)
+    const grammarPenalty = answers.filter((a) => correctGrammar(a.answer)).length * 3;
+    const communicationScore = Math.max(40, Math.min(98, Math.round(avg - grammarPenalty + (Math.random() * 8 - 4))));
+
+    // Confidence = average answer length & assertive language proxy
+    const confidenceBase = Math.min(95, 55 + avgWords * 0.8);
+    const fillerPenalty = answers.filter((a) => /\b(um|uh|like|you know|basically)\b/i.test(a.answer)).length * 5;
+    const confidenceScore = Math.max(35, Math.min(98, Math.round(confidenceBase - fillerPenalty + (Math.random() * 8 - 4))));
+
+    // Content = raw score average
+    const contentScore = Math.round(avg);
+
+    const overallScore = Math.round(communicationScore * 0.35 + confidenceScore * 0.3 + contentScore * 0.35);
+
+    // Generate suggestions
+    const suggestions: string[] = [];
+    if (communicationScore < 75)
+      suggestions.push('Use clearer sentence structures — start with the main point, then add context.');
+    if (confidenceScore < 70)
+      suggestions.push('Reduce filler words (um, like, basically) by pausing briefly instead.');
+    if (avgWords < 30)
+      suggestions.push('Expand your answers using the STAR framework (Situation, Task, Action, Result).');
+    if (contentScore < 75)
+      suggestions.push('Add concrete examples and quantifiable outcomes (numbers, percentages).');
+    if (grammarPenalty > 0)
+      suggestions.push('Review subject-verb agreement and tense consistency.');
+    if (suggestions.length === 0)
+      suggestions.push('Try recording yourself to refine tone and pace for even more polish.');
+
+    const strengths: string[] = [];
+    if (communicationScore >= 80) strengths.push('Clear and articulate communication.');
+    if (confidenceScore >= 80) strengths.push('Strong, confident delivery.');
+    if (contentScore >= 80) strengths.push('Well-structured, on-point answers.');
+    if (avgWords >= 50) strengths.push('Thoughtful, detailed responses.');
+    if (strengths.length === 0) strengths.push('You showed up and practised — that\'s the biggest win.');
+
+    return {
+      track,
+      overallScore,
+      communicationScore,
+      confidenceScore,
+      contentScore,
+      suggestions: suggestions.slice(0, 4),
+      strengths: strengths.slice(0, 3),
+      answers,
+      completedAt: Date.now(),
+    };
+  },
+
+  computeInterviewReadiness(stats: {
+    interviewsCount: number;
+    bestInterviewScore: number;
+    streak: number;
+    speakingScores: number[];
+  }): number {
+    const interviewWeight = Math.min(40, stats.interviewsCount * 8);
+    const speakingAvg = stats.speakingScores.length
+      ? stats.speakingScores.reduce((a, b) => a + b, 0) / stats.speakingScores.length
+      : 0;
+    const speakingWeight = (speakingAvg / 100) * 30;
+    const bestWeight = (stats.bestInterviewScore / 100) * 20;
+    const streakWeight = Math.min(10, stats.streak);
+    return Math.min(100, Math.round(interviewWeight + speakingWeight + bestWeight + streakWeight));
   },
 };

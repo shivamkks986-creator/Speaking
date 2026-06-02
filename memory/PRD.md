@@ -66,6 +66,25 @@ SpeakMateAI/
 - ✅ Production-ready `app.json` (icon, splash, adaptive icon, RECORD_AUDIO permission, plugins)
 - ✅ Complete README with setup, Firebase instructions, EAS build commands
 
+## Upgrade — Phase 2 (2026-01)
+- ✅ **59 total TypeScript files** — zero compile errors, zero lint warnings (added 10 new)
+- ✅ **AI Interview Coach** tab — 3 tracks (HR, Fresher, Technical) with gradient cards, lock state for Technical (premium gate)
+- ✅ **Interview Results Screen** with `ScoreRing` (SVG ring chart), Communication / Confidence / Content sub-scores, Strengths list, Improvement Suggestions list, per-question review with progress bars
+- ✅ **`aiService.scoreInterviewSession`** — computes communication (grammar-aware), confidence (length/filler aware), content scores + actionable suggestions + strengths
+- ✅ **`aiService.computeInterviewReadiness`** — combined score from interviews count + best score + speaking avg + streak
+- ✅ **Daily Speaking Challenge** screen — 7 rotating prompts (fluency/pronunciation/vocab/confidence focus), animated timer auto-stop, separate daily challenge streak
+- ✅ **Speaking Score Screen** — detailed view with ring chart, sub-scores, AI feedback, quick wins tips
+- ✅ **Pronunciation Practice Screen** — 3 daily drills with phonetic, IPA, tip, example, normal & slow TTS playback, mark-as-practised tracking
+- ✅ **Dashboard upgrade** — `ReadinessCard` (SVG ring) + `SpeakingProgressCard` (avg/best/sessions + sparkline) injected on Home; Premium badge next to user name
+- ✅ **Speaking screen upgrade** — Daily Challenge + Pronunciation Practice shortcut banners at the top
+- ✅ **Premium tab** in bottom nav with diamond icon
+- ✅ **Interview tab** in bottom nav with briefcase icon
+- ✅ **Premium Badge** component reused across Home and Settings
+- ✅ **ProgressContext upgrade** — speakingScores (rolling 10), bestSpeakingScore, bestInterviewScore, dailyChallengeStreak, dailyChallengeCompletedDate + new methods (recordSpeakingScore, recordInterviewScore, recordDailyChallenge)
+- ✅ **InterviewSessionScreen rewrite** — accepts `track` param, on finish calls `scoreInterviewSession`, navigates to new `InterviewResults` screen
+- ✅ **New components**: PremiumBadge, ScoreRing (SVG-based), SpeakingProgressCard, ReadinessCard
+- ✅ Existing features fully preserved — MockInterview accessible via stack, all old routes intact
+
 ## Prioritized Backlog
 ### P0 (next)
 - Wire real Firebase project credentials (user action)

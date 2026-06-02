@@ -9,9 +9,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProgress } from '@/contexts/ProgressContext';
+import { aiService } from '@/services/aiService';
 import { VOCAB_WORDS } from '@/data/vocabulary';
 import Card from '@/components/common/Card';
 import StreakBadge from '@/components/feature/StreakBadge';
+import PremiumBadge from '@/components/feature/PremiumBadge';
+import SpeakingProgressCard from '@/components/feature/SpeakingProgressCard';
+import ReadinessCard from '@/components/feature/ReadinessCard';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import { radius } from '@/config/theme';
 
@@ -44,6 +48,13 @@ export default function HomeScreen() {
     return 'Good evening';
   }, []);
 
+  const readiness = aiService.computeInterviewReadiness({
+    interviewsCount: stats.interviewsCount,
+    bestInterviewScore: stats.bestInterviewScore,
+    streak: stats.streak,
+    speakingScores: stats.speakingScores,
+  });
+
   const actions: Action[] = [
     {
       label: 'AI Tutor',
@@ -70,11 +81,11 @@ export default function HomeScreen() {
       testID: 'home-action-vocab',
     },
     {
-      label: 'Mock Interview',
-      description: 'HR interview practice',
+      label: 'Interview',
+      description: 'HR · Fresher · Tech',
       icon: 'briefcase',
       colors: ['#F59E0B', '#FBBF24'],
-      onPress: () => navigation.navigate('MockInterview'),
+      onPress: () => navigation.navigate('Main', { screen: 'Interview' }),
       testID: 'home-action-interview',
     },
   ];
@@ -86,9 +97,12 @@ export default function HomeScreen() {
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
             {greeting},
           </Text>
-          <Text variant="headlineSmall" style={{ fontWeight: '700' }} numberOfLines={1}>
-            {user?.displayName || 'Learner'} 👋
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text variant="headlineSmall" style={{ fontWeight: '700' }} numberOfLines={1}>
+              {user?.displayName || 'Learner'} 👋
+            </Text>
+            {user?.isPremium ? <PremiumBadge size="sm" testID="home-premium-badge" /> : null}
+          </View>
         </View>
         <Pressable onPress={() => navigation.navigate('Profile')} testID="home-profile-btn">
           {user?.photoURL ? (
@@ -154,6 +168,22 @@ export default function HomeScreen() {
             </Pressable>
           ))}
         </View>
+
+        <Text variant="titleMedium" style={styles.sectionTitle}>
+          Your readiness
+        </Text>
+        <ReadinessCard
+          score={readiness}
+          interviewsCount={stats.interviewsCount}
+          bestScore={stats.bestInterviewScore}
+          onPress={() => navigation.navigate('Main', { screen: 'Interview' })}
+        />
+
+        <SpeakingProgressCard
+          scores={stats.speakingScores}
+          bestScore={stats.bestSpeakingScore}
+          onPress={() => navigation.navigate('Main', { screen: 'Speaking' })}
+        />
 
         <View style={styles.rowBetween}>
           <Text variant="titleMedium" style={styles.sectionTitle}>

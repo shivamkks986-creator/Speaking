@@ -1,16 +1,23 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, Easing, Pressable, Alert } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Pressable, Alert, ScrollView } from 'react-native';
 import { Text, Button, useTheme, TextInput, ProgressBar, Appbar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { RootStackParamList } from '@/navigation/types';
 import { speechService } from '@/services/speechService';
 import { aiService } from '@/services/aiService';
 import { useProgress } from '@/contexts/ProgressContext';
 import { SpeakingScore } from '@/types';
 import Card from '@/components/common/Card';
+import { todayKey } from '@/utils/helpers';
 import { radius } from '@/config/theme';
+
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const PROMPTS = [
   'Describe your favourite weekend activity.',
@@ -24,7 +31,8 @@ type Phase = 'idle' | 'recording' | 'processing' | 'result';
 
 export default function SpeakingPracticeScreen() {
   const theme = useTheme();
-  const { recordActivity } = useProgress();
+  const navigation = useNavigation<Nav>();
+  const { recordActivity, recordSpeakingScore, stats } = useProgress();
   const [phase, setPhase] = useState<Phase>('idle');
   const [transcript, setTranscript] = useState('');
   const [duration, setDuration] = useState(0);
@@ -106,12 +114,13 @@ export default function SpeakingPracticeScreen() {
       setScore(result);
       setPhase('result');
       recordActivity(Math.max(1, Math.round(sec / 60)), 'speaking').catch(() => {});
+      recordSpeakingScore(result.overall).catch(() => {});
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to process recording';
       setError(msg);
       setPhase('idle');
     }
-  }, [transcript, recordActivity]);
+  }, [transcript, recordActivity, recordSpeakingScore]);
 
   const onPlaybackPrompt = () => {
     speechService.speak(prompt);
@@ -138,7 +147,51 @@ export default function SpeakingPracticeScreen() {
         <Appbar.Action icon="shuffle" onPress={newPrompt} testID="speak-new-prompt" />
       </Appbar.Header>
 
-      <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+        <View style={styles.shortcutsRow}>
+          <Pressable
+            onPress={() => navigation.navigate('DailyChallenge')}
+            style={{ flex: 1 }}
+            testID="speak-daily-challenge-btn"
+          >
+            <LinearGradient
+              colors={['#FF7A6B', '#FFA396']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.shortcut}
+            >
+              <Ionicons name="flash" size={22} color="#fff" />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.shortcutTitle}>Daily Challenge</Text>
+                <Text style={styles.shortcutSub}>
+                  {stats.dailyChallengeCompletedDate === todayKey()
+                    ? '✓ Done today'
+                    : `Streak ${stats.dailyChallengeStreak}🔥`}
+                </Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+          <Pressable
+            onPress={() => navigation.navigate('PronunciationPractice')}
+            style={{ flex: 1 }}
+            testID="speak-pronunciation-btn"
+          >
+            <LinearGradient
+              colors={['#34D399', '#6EE7B7']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.shortcut}
+            >
+              <Ionicons name="megaphone" size={22} color="#fff" />
+              <View style={{ flex: 1, marginLeft: 8 }}>
+                <Text style={styles.shortcutTitle}>Pronunciation</Text>
+                <Text style={styles.shortcutSub}>3 daily drills</Text>
+              </View>
+            </LinearGradient>
+          </Pressable>
+        </View>
+
+        <View style={styles.container}>
         <Card>
           <Text variant="labelMedium" style={{ color: theme.colors.primary, fontWeight: '700' }}>
             PROMPT
@@ -244,7 +297,8 @@ export default function SpeakingPracticeScreen() {
             </Button>
           </Card>
         ) : null}
-      </View>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -262,6 +316,17 @@ function ScoreRow({ label, value, color }: { label: string; value: number; color
 }
 
 const styles = StyleSheet.create({
+  scrollContent: { paddingBottom: 32 },
+  shortcutsRow: { flexDirection: 'row', gap: 10, padding: 16, paddingBottom: 0 },
+  shortcut: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: radius.lg,
+    minHeight: 60,
+  },
+  shortcutTitle: { color: '#fff', fontWeight: '800', fontSize: 13 },
+  shortcutSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 1 },
   container: { padding: 16, flex: 1 },
   recordArea: {
     alignItems: 'center',

@@ -30,11 +30,14 @@ export interface VocabWord {
   level: 'beginner' | 'intermediate' | 'advanced';
 }
 
+export type InterviewTrack = 'hr' | 'fresher' | 'technical';
+
 export interface InterviewQuestion {
   id: string;
   question: string;
   category: 'introduction' | 'behavioural' | 'technical' | 'situational';
   difficulty: 'easy' | 'medium' | 'hard';
+  track?: InterviewTrack;
 }
 
 export interface InterviewAnswer {
@@ -43,6 +46,34 @@ export interface InterviewAnswer {
   answer: string;
   score: number;
   feedback: string;
+}
+
+export interface InterviewResult {
+  track: InterviewTrack;
+  overallScore: number;
+  communicationScore: number;
+  confidenceScore: number;
+  contentScore: number;
+  suggestions: string[];
+  strengths: string[];
+  answers: InterviewAnswer[];
+  completedAt: number;
+}
+
+export interface DailyChallenge {
+  id: string;
+  title: string;
+  prompt: string;
+  durationSec: number;
+  focus: 'fluency' | 'pronunciation' | 'vocabulary' | 'confidence';
+}
+
+export interface PronunciationDrill {
+  id: string;
+  word: string;
+  phonetic: string;
+  tip: string;
+  example: string;
 }
 
 export interface SpeakingScore {
@@ -62,6 +93,11 @@ export interface ProgressStats {
   interviewsCount: number;
   lastActiveDate: string;
   weeklyMinutes: number[]; // Mon..Sun
+  speakingScores: number[]; // last 10 speaking session overall scores
+  bestSpeakingScore: number;
+  bestInterviewScore: number;
+  dailyChallengeCompletedDate: string;
+  dailyChallengeStreak: number;
 }
 
 export interface PremiumProduct {

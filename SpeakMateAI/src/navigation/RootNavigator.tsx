@@ -12,6 +12,10 @@ import VocabularyScreen from '@/screens/vocabulary/VocabularyScreen';
 import FavoritesScreen from '@/screens/vocabulary/FavoritesScreen';
 import MockInterviewScreen from '@/screens/interview/MockInterviewScreen';
 import InterviewSessionScreen from '@/screens/interview/InterviewSessionScreen';
+import InterviewResultsScreen from '@/screens/interview/InterviewResultsScreen';
+import DailyChallengeScreen from '@/screens/speaking/DailyChallengeScreen';
+import SpeakingScoreScreen from '@/screens/speaking/SpeakingScoreScreen';
+import PronunciationPracticeScreen from '@/screens/speaking/PronunciationPracticeScreen';
 import PremiumScreen from '@/screens/premium/PremiumScreen';
 import ProfileScreen from '@/screens/settings/ProfileScreen';
 import NotificationPrefsScreen from '@/screens/settings/NotificationPrefsScreen';
@@ -60,6 +64,26 @@ export default function RootNavigator() {
             name="InterviewSession"
             component={InterviewSessionScreen}
             options={{ title: 'Interview Session' }}
+          />
+          <Stack.Screen
+            name="InterviewResults"
+            component={InterviewResultsScreen}
+            options={{ title: 'Interview Results' }}
+          />
+          <Stack.Screen
+            name="DailyChallenge"
+            component={DailyChallengeScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SpeakingScore"
+            component={SpeakingScoreScreen}
+            options={{ title: 'Your Score' }}
+          />
+          <Stack.Screen
+            name="PronunciationPractice"
+            component={PronunciationPracticeScreen}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Premium"
