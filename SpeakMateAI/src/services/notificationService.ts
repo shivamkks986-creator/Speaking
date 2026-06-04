@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: false,
     shouldSetBadge: false,
   }),
@@ -31,7 +33,12 @@ export const notificationService = {
         title: '🎙️ Time to practise English!',
         body: 'A 5-minute session keeps your streak alive. Tap to start.',
       },
-      trigger: { hour, minute, repeats: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        hour,
+        minute,
+        repeats: true,
+      },
     });
   },
 
@@ -43,7 +50,12 @@ export const notificationService = {
         title: '🔥 Don\'t break your streak!',
         body: 'You\'re doing amazing — finish today\'s practice before bedtime.',
       },
-      trigger: { hour: 21, minute: 30, repeats: true },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        hour: 21,
+        minute: 30,
+        repeats: true,
+      },
     });
   },
 

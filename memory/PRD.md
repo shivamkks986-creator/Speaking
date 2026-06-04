@@ -4,14 +4,16 @@
 Build a production-ready Android app called "SpeakMate AI" to help Indian users improve spoken English through AI conversations, grammar correction, pronunciation practice, vocabulary building, and mock interviews.
 
 ## Tech Stack
-- React Native 0.74 + Expo SDK 51
+- React Native 0.81 + Expo SDK 54 (upgraded from SDK 51)
 - TypeScript (strict)
-- React Navigation 6 (Stack + Bottom Tabs)
+- React Navigation 7 (Stack + Bottom Tabs)
 - React Native Paper (Material Design 3)
-- Firebase (Auth + Firestore) — placeholder config
+- Firebase (Auth + Firestore) — user-provided credentials
 - expo-av / expo-speech / expo-notifications / expo-haptics / expo-linear-gradient
-- Reanimated 3 + Gesture Handler
+- Reanimated 4 + react-native-worklets + Gesture Handler 2.28
 - AsyncStorage for local persistence
+- **FastAPI backend** (Emergent platform) with `emergentintegrations` for multi-LLM routing
+- **EMERGENT_LLM_KEY** (universal key) routes to OpenAI/Anthropic/Google
 
 ## User Personas
 - **Aspiring professional** — wants to crack HR interviews, sound confident at work
@@ -86,33 +88,42 @@ SpeakMateAI/
 - ✅ Existing features fully preserved — MockInterview accessible via stack, all old routes intact
 
 ## Prioritized Backlog
+### Done (Feb 2026)
+- ✅ Upgraded local project to Expo SDK 54 + Reanimated 4 + React 19.1 + RN 0.81
+- ✅ Firebase Auth + Firestore wired by user with their credentials
+- ✅ App running successfully on physical Android via Expo Go
+- ✅ **Multi-agent AI backend** deployed: GPT-5.2 (Tutor/Interview) + Claude Sonnet 4.6 (Speaking/Daily Challenge) + Gemini 3 Flash (Vocabulary)
+- ✅ `aiService.ts` refactored to call backend with mock fallback on network errors
+- ✅ Notification service updated for SDK 54 trigger API
+
 ### P0 (next)
-- Wire real Firebase project credentials (user action)
-- Wire Google Sign-In webClientId (user action)
-- Test on physical Android via Expo Go
+- Test all real-AI flows end-to-end on phone (Tutor chat, Speaking score, Interview eval/followup/session, Vocabulary lookup, Daily Challenge)
+- User needs to add `EXPO_PUBLIC_BACKEND_URL` to local `.env` file and copy new `aiService.ts` + `notificationService.ts`
 
 ### P1
-- Replace mock AI with real LLM (OpenAI/Gemini/Claude) — keep `aiService` interface unchanged
-- Implement real STT (OpenAI Whisper / Google Cloud STT) inside `speechService`
-- Integrate `expo-in-app-purchases` or `react-native-iap` in `billingService`
+- Wire real Speech-to-Text (OpenAI Whisper via backend) inside `speechService`
+- Integrate `expo-in-app-purchases` / `react-native-iap` for Google Play Billing
+- Persist tutor chat history in MongoDB (currently session memory only)
 - Push Firestore-backed sync for streaks & favorites across devices
 
 ### P2
 - Onboarding carousel
 - Leaderboard / social practice
-- Daily quizzes & spaced repetition for vocabulary
 - Streak-saver "freeze" mechanic
-- More interview tracks (Technical, Behavioural, Sales)
+- More interview tracks (Sales, Behavioural deep-dive)
 
-## Delivery
-Code lives at `/app/SpeakMateAI/`. User clones via GitHub and runs:
-```bash
-cd SpeakMateAI && npm install && npx expo start
-```
+## AI Backend Endpoints
+- `POST /api/ai/tutor/chat` — GPT-5.2, multi-turn with `session_id`
+- `POST /api/ai/speaking/score` — Claude Sonnet 4.6, JSON scoring
+- `POST /api/ai/interview/evaluate` — GPT-5.2, per-answer scoring
+- `POST /api/ai/interview/followup` — GPT-5.2, dynamic follow-up question
+- `POST /api/ai/interview/score-session` — GPT-5.2, full session report
+- `POST /api/ai/vocabulary/lookup` — Gemini 3 Flash, word lookup + Hindi
+- `POST /api/ai/daily-challenge/evaluate` — Claude Sonnet 4.6, writing eval
 
 ## Notes
-- Real AI is **MOCKED** in `src/services/aiService.ts` (rule-based grammar + scoring)
-- Firebase config uses **PLACEHOLDER VALUES** — user must replace in `src/config/firebase.ts`
-- Google Play Billing is **PLACEHOLDER ONLY** — `billingService.purchase()` returns "not configured"
-- Google Sign-In throws an explanatory error until `webClientId` is configured
-- No backend testing performed (this is a mobile RN/Expo project, not a web app — preview environment cannot run it)
+- AI is now **REAL** via Emergent LLM Key (multi-model routing in `/app/backend/ai_routes.py`)
+- Mobile app needs `EXPO_PUBLIC_BACKEND_URL` env var to reach backend
+- Firebase config now uses **REAL VALUES** (user added their own)
+- Google Play Billing is still **PLACEHOLDER ONLY**
+- Google Sign-In still requires `webClientId` configuration
