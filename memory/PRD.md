@@ -95,6 +95,22 @@ SpeakMateAI/
 - ✅ **Multi-agent AI backend** deployed: GPT-5.2 (Tutor/Interview) + Claude Sonnet 4.6 (Speaking/Daily Challenge) + Gemini 3 Flash (Vocabulary)
 - ✅ `aiService.ts` refactored to call backend with mock fallback on network errors
 - ✅ Notification service updated for SDK 54 trigger API
+- ✅ **Premium AI Companion Upgrade (Feb 2026)**:
+  - Dark theme with purple gradients + glassmorphism cards
+  - 5 AI companions (Alex/Emma/Sophia/Ryan/Maya) with unique personalities, gradients, system prompts
+  - Companion-aware tutor chat (backend accepts `system_prompt` per companion)
+  - Companion selection screen + companions strip on Home
+  - Gamification system: XP, coins, 6 levels (Beginner→Master Speaker), 11 achievement badges
+  - Reward modal (level-up, badge unlock, daily login celebration)
+  - Animated voice mic button with listening/thinking/speaking states
+  - Voice call screen with companion avatar + TTS via expo-speech
+  - Achievements screen (badges grid + level chips)
+  - Premium dashboard (Speaking/Confidence/Pronunciation/Grammar scores + weekly chart)
+  - Premium subscription screen redesigned (Monthly/Quarterly/Annual + 7-day free trial highlight)
+  - Modern AI Tutor chat (typing dots, message bubbles with corrections/suggestions, companion avatar header)
+  - Home screen redesigned (companion greeting, XP bar, daily goal, quick actions, premium CTA)
+  - XP rewards wired into Speaking, Interview, Daily Challenge flows
+  - Badge auto-checking on key milestones
 
 ### P0 (next)
 - Test all real-AI flows end-to-end on phone (Tutor chat, Speaking score, Interview eval/followup/session, Vocabulary lookup, Daily Challenge)

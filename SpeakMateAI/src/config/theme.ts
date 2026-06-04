@@ -5,19 +5,37 @@ import {
   Theme as NavTheme,
 } from '@react-navigation/native';
 
-// Brand palette — Royal Indigo + Sunrise Coral + Mint
+// Premium AI startup palette — Royal Purple + Electric Indigo + Neon Mint
 const brand = {
-  primary: '#6D5BFF',
-  primaryDark: '#5546E0',
-  secondary: '#FF7A6B',
-  tertiary: '#34D399',
+  primary: '#7C5CFF',       // electric purple
+  primaryDark: '#5B3FE0',
+  primaryLight: '#A992FF',
+  secondary: '#FF6B9D',     // hot pink
+  tertiary: '#22D3EE',      // cyan accent
+  accent: '#FACC15',        // gold for XP/coins
+  success: '#34D399',
   warning: '#F59E0B',
   danger: '#EF4444',
 };
 
+export const colors = brand;
+
+// Gradient presets used across the app
+export const gradients = {
+  primary: ['#7C5CFF', '#A992FF'] as [string, string],
+  hero: ['#5B3FE0', '#7C5CFF', '#A992FF'] as [string, string, string],
+  pink: ['#FF6B9D', '#FFA496'] as [string, string],
+  cyan: ['#22D3EE', '#7C5CFF'] as [string, string],
+  gold: ['#FACC15', '#F97316'] as [string, string],
+  emerald: ['#10B981', '#22D3EE'] as [string, string],
+  darkBg: ['#0A0418', '#150828', '#1F0E3D'] as [string, string, string],
+  darkCard: ['rgba(124,92,255,0.15)', 'rgba(34,211,238,0.05)'] as [string, string],
+  premium: ['#FACC15', '#FF6B9D', '#7C5CFF'] as [string, string, string],
+};
+
 export const lightTheme: MD3Theme = {
   ...MD3LightTheme,
-  roundness: 3,
+  roundness: 4,
   colors: {
     ...MD3LightTheme.colors,
     primary: brand.primary,
@@ -26,12 +44,12 @@ export const lightTheme: MD3Theme = {
     onPrimaryContainer: '#1A1340',
     secondary: brand.secondary,
     onSecondary: '#FFFFFF',
-    secondaryContainer: '#FFE3DE',
-    onSecondaryContainer: '#3D1410',
+    secondaryContainer: '#FFE3EE',
+    onSecondaryContainer: '#3D1024',
     tertiary: brand.tertiary,
-    onTertiary: '#062F22',
-    tertiaryContainer: '#D1FAE5',
-    background: '#F7F7FB',
+    onTertiary: '#00343D',
+    tertiaryContainer: '#CFFAFE',
+    background: '#F5F4FB',
     onBackground: '#13131A',
     surface: '#FFFFFF',
     onSurface: '#13131A',
@@ -42,29 +60,30 @@ export const lightTheme: MD3Theme = {
   },
 };
 
+// Dark theme: Premium AI aesthetic — deep purple bg, glass cards, neon accents
 export const darkTheme: MD3Theme = {
   ...MD3DarkTheme,
-  roundness: 3,
+  roundness: 4,
   colors: {
     ...MD3DarkTheme.colors,
-    primary: '#9C8FFF',
-    onPrimary: '#1A1340',
-    primaryContainer: '#3A2FB0',
-    onPrimaryContainer: '#EAE5FF',
-    secondary: '#FFA396',
-    onSecondary: '#3D1410',
-    secondaryContainer: '#8C2D20',
-    onSecondaryContainer: '#FFE3DE',
-    tertiary: '#6EE7B7',
-    onTertiary: '#062F22',
-    tertiaryContainer: '#0F5A3F',
-    background: '#0B0B12',
-    onBackground: '#F2F2F7',
-    surface: '#15151F',
-    onSurface: '#F2F2F7',
-    surfaceVariant: '#222232',
-    onSurfaceVariant: '#B6B6C8',
-    outline: '#3A3A4D',
+    primary: brand.primaryLight,
+    onPrimary: '#1A0F3D',
+    primaryContainer: '#3A2480',
+    onPrimaryContainer: '#EAE0FF',
+    secondary: '#FF8FB6',
+    onSecondary: '#3D1024',
+    secondaryContainer: '#7A1A40',
+    onSecondaryContainer: '#FFE3EE',
+    tertiary: '#67E8F9',
+    onTertiary: '#00343D',
+    tertiaryContainer: '#155E75',
+    background: '#0A0418',
+    onBackground: '#F2EEFF',
+    surface: '#150828',
+    onSurface: '#F2EEFF',
+    surfaceVariant: '#241139',
+    onSurfaceVariant: '#C8BBE0',
+    outline: '#3A2858',
     error: '#FF6B6B',
   },
 };
@@ -102,6 +121,7 @@ export const spacing = {
   lg: 16,
   xl: 24,
   xxl: 32,
+  huge: 48,
 };
 
 export const radius = {
@@ -109,5 +129,6 @@ export const radius = {
   md: 12,
   lg: 16,
   xl: 24,
+  xxl: 32,
   pill: 999,
 };

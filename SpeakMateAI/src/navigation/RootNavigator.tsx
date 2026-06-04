@@ -20,6 +20,10 @@ import PremiumScreen from '@/screens/premium/PremiumScreen';
 import ProfileScreen from '@/screens/settings/ProfileScreen';
 import NotificationPrefsScreen from '@/screens/settings/NotificationPrefsScreen';
 import PrivacyPolicyScreen from '@/screens/settings/PrivacyPolicyScreen';
+import CompanionsScreen from '@/screens/companions/CompanionsScreen';
+import AchievementsScreen from '@/screens/gamification/AchievementsScreen';
+import VoiceCallScreen from '@/screens/speaking/VoiceCallScreen';
+import PremiumDashboardScreen from '@/screens/progress/PremiumDashboardScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -100,6 +104,26 @@ export default function RootNavigator() {
             name="PrivacyPolicy"
             component={PrivacyPolicyScreen}
             options={{ title: 'Privacy Policy' }}
+          />
+          <Stack.Screen
+            name="Companions"
+            component={CompanionsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Achievements"
+            component={AchievementsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="VoiceCall"
+            component={VoiceCallScreen}
+            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+          />
+          <Stack.Screen
+            name="PremiumDashboard"
+            component={PremiumDashboardScreen}
+            options={{ headerShown: false }}
           />
         </>
       )}

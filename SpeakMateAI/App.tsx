@@ -9,17 +9,25 @@ import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider, useAppTheme } from '@/contexts/ThemeContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { ProgressProvider } from '@/contexts/ProgressContext';
+import { GamificationProvider } from '@/contexts/GamificationContext';
+import { CompanionProvider } from '@/contexts/CompanionContext';
 import RootNavigator from '@/navigation/RootNavigator';
+import RewardModal from '@/components/feature/RewardModal';
 
 function ThemedApp() {
-  const { paperTheme, navTheme, isDark } = useAppTheme();
+  const { paperTheme, navTheme } = useAppTheme();
   return (
     <PaperProvider theme={paperTheme}>
       <NavigationContainer theme={navTheme}>
         <AuthProvider>
           <ProgressProvider>
-            <StatusBar style={isDark ? 'light' : 'dark'} />
-            <RootNavigator />
+            <GamificationProvider>
+              <CompanionProvider>
+                <StatusBar style="light" />
+                <RootNavigator />
+                <RewardModal />
+              </CompanionProvider>
+            </GamificationProvider>
           </ProgressProvider>
         </AuthProvider>
       </NavigationContainer>

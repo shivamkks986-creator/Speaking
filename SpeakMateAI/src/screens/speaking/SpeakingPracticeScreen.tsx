@@ -12,6 +12,7 @@ import { RootStackParamList } from '@/navigation/types';
 import { speechService } from '@/services/speechService';
 import { aiService } from '@/services/aiService';
 import { useProgress } from '@/contexts/ProgressContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import { SpeakingScore } from '@/types';
 import Card from '@/components/common/Card';
 import { todayKey } from '@/utils/helpers';
@@ -33,6 +34,7 @@ export default function SpeakingPracticeScreen() {
   const theme = useTheme();
   const navigation = useNavigation<Nav>();
   const { recordActivity, recordSpeakingScore, stats } = useProgress();
+  const { awardAction, checkBadges } = useGamification();
   const [phase, setPhase] = useState<Phase>('idle');
   const [transcript, setTranscript] = useState('');
   const [duration, setDuration] = useState(0);
@@ -115,12 +117,19 @@ export default function SpeakingPracticeScreen() {
       setPhase('result');
       recordActivity(Math.max(1, Math.round(sec / 60)), 'speaking').catch(() => {});
       recordSpeakingScore(result.overall).catch(() => {});
+      awardAction('SPEAKING_SESSION').catch(() => {});
+      if (result.overall >= 90) awardAction('PERFECT_SCORE_BONUS').catch(() => {});
+      checkBadges({
+        speakingSessions: stats.speakingScores.length + 1,
+        bestSpeakingScore: Math.max(stats.bestSpeakingScore, result.overall),
+        streak: stats.streak,
+      }).catch(() => {});
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Failed to process recording';
       setError(msg);
       setPhase('idle');
     }
-  }, [transcript, recordActivity, recordSpeakingScore]);
+  }, [transcript, recordActivity, recordSpeakingScore, awardAction, checkBadges, stats]);
 
   const onPlaybackPrompt = () => {
     speechService.speak(prompt);

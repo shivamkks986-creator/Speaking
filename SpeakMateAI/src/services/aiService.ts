@@ -63,7 +63,7 @@ const correctGrammarLocal = (text: string): string | null => {
 // ---------------- Public service ----------------
 
 export const aiService = {
-  async chat(userText: string): Promise<ChatMessage> {
+  async chat(userText: string, companionId?: string, systemPrompt?: string): Promise<ChatMessage> {
     try {
       const data = await postJson<{
         id: string;
@@ -71,7 +71,12 @@ export const aiService = {
         reply: string;
         correction?: string | null;
         suggestion?: string | null;
-      }>('/tutor/chat', { message: userText, session_id: tutorSessionId });
+      }>('/tutor/chat', {
+        message: userText,
+        session_id: tutorSessionId,
+        companion_id: companionId,
+        system_prompt: systemPrompt,
+      });
       tutorSessionId = data.session_id;
       return {
         id: data.id,

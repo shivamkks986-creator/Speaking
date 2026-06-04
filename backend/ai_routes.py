@@ -66,6 +66,8 @@ TUTOR_SYSTEM = (
 class TutorChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    companion_id: Optional[str] = None
+    system_prompt: Optional[str] = None
 
 
 class TutorChatResponse(BaseModel):
@@ -79,7 +81,8 @@ class TutorChatResponse(BaseModel):
 @router.post("/tutor/chat", response_model=TutorChatResponse)
 async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
-    chat = _new_chat(session_id, TUTOR_SYSTEM, "openai", "gpt-5.2")
+    system_msg = (req.system_prompt or TUTOR_SYSTEM).strip()
+    chat = _new_chat(session_id, system_msg, "openai", "gpt-5.2")
     raw = await chat.send_message(UserMessage(text=req.message))
     data = _extract_json(raw)
     return TutorChatResponse(

@@ -33,4 +33,8 @@ export type RootStackParamList = {
   Profile: undefined;
   NotificationPrefs: undefined;
   PrivacyPolicy: undefined;
+  Companions: undefined;
+  Achievements: undefined;
+  VoiceCall: undefined;
+  PremiumDashboard: undefined;
 };

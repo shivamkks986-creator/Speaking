@@ -13,6 +13,7 @@ import { getDailyChallenge } from '@/data/dailyChallenges';
 import { speechService } from '@/services/speechService';
 import { aiService } from '@/services/aiService';
 import { useProgress } from '@/contexts/ProgressContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import Card from '@/components/common/Card';
 import { todayKey } from '@/utils/helpers';
 import { radius } from '@/config/theme';
@@ -24,6 +25,7 @@ export default function DailyChallengeScreen() {
   const theme = useTheme();
   const navigation = useNavigation<Nav>();
   const { recordSpeakingScore, recordActivity, recordDailyChallenge, stats } = useProgress();
+  const { awardAction, checkBadges } = useGamification();
   const challenge = getDailyChallenge();
   const completedToday = stats.dailyChallengeCompletedDate === todayKey();
 
@@ -81,13 +83,16 @@ export default function DailyChallengeScreen() {
       await recordSpeakingScore(score.overall);
       await recordActivity(Math.max(1, Math.round(sec / 60)), 'speaking');
       await recordDailyChallenge();
+      await awardAction('DAILY_CHALLENGE');
+      await awardAction('SPEAKING_SESSION');
+      await checkBadges({ streak: stats.streak, dailyChallengeStreak: stats.dailyChallengeStreak + 1, bestSpeakingScore: Math.max(stats.bestSpeakingScore, score.overall) });
       setPhase('done');
       navigation.replace('SpeakingScore', { score, challengeId: challenge.id });
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Could not score');
       setPhase('idle');
     }
-  }, [recordSpeakingScore, recordActivity, recordDailyChallenge, navigation, challenge.id]);
+  }, [recordSpeakingScore, recordActivity, recordDailyChallenge, awardAction, checkBadges, navigation, challenge.id, stats]);
 
   const progress = Math.min(1, elapsed / challenge.durationSec);
 

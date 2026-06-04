@@ -8,6 +8,9 @@ export const STORAGE_KEYS = {
   ONBOARDING_DONE: '@speakmate/onboarding_done',
   NOTIFICATION_PREFS: '@speakmate/notification_prefs',
   CHAT_HISTORY: '@speakmate/chat_history',
+  GAMIFICATION: '@speakmate/gamification',
+  SELECTED_COMPANION: '@speakmate/selected_companion',
+  LAST_DAILY_LOGIN: '@speakmate/last_daily_login',
 };
 
 export const FREE_LIMITS = {

@@ -12,6 +12,7 @@ import { getTrackQuestions } from '@/data/interviewTracks';
 import { aiService } from '@/services/aiService';
 import { speechService } from '@/services/speechService';
 import { useProgress } from '@/contexts/ProgressContext';
+import { useGamification } from '@/contexts/GamificationContext';
 import { InterviewAnswer } from '@/types';
 import Card from '@/components/common/Card';
 
@@ -23,6 +24,7 @@ export default function InterviewSessionScreen() {
   const navigation = useNavigation<Nav>();
   const theme = useTheme();
   const { recordActivity, recordInterviewScore } = useProgress();
+  const { awardAction, checkBadges } = useGamification();
 
   const questions = useMemo(() => {
     if (route.params?.track) {
@@ -63,6 +65,7 @@ export default function InterviewSessionScreen() {
         { questionId: current.id, question: current.question, answer, score, feedback },
       ]);
       setPhase('reviewing');
+      awardAction('INTERVIEW_QUESTION').catch(() => {});
     } finally {
       setThinking(false);
     }
@@ -81,11 +84,14 @@ export default function InterviewSessionScreen() {
       const final = await aiService.scoreInterviewSession(track, results);
       await recordActivity(Math.max(2, questions.length), 'interview');
       await recordInterviewScore(final.overallScore);
+      await awardAction('INTERVIEW_SESSION_COMPLETE');
+      if (final.overallScore >= 90) await awardAction('PERFECT_SCORE_BONUS');
+      await checkBadges({ interviewsCount: 1, bestInterviewScore: final.overallScore });
       navigation.replace('InterviewResults', { result: final });
     } finally {
       setScoring(false);
     }
-  }, [index, questions.length, results, track, recordActivity, recordInterviewScore, navigation]);
+  }, [index, questions.length, results, track, recordActivity, recordInterviewScore, awardAction, checkBadges, navigation]);
 
   const lastResult = results[results.length - 1];
 
