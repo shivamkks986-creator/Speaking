@@ -37,4 +37,6 @@ export type RootStackParamList = {
   Achievements: undefined;
   VoiceCall: undefined;
   PremiumDashboard: undefined;
+  DailyMissions: undefined;
+  Flashcards: undefined;
 };

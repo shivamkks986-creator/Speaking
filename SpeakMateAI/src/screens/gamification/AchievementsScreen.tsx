@@ -33,7 +33,7 @@ export default function AchievementsScreen() {
           <View style={{ width: 36 }} />
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           <View style={styles.summary}>
             <View style={styles.summaryRow}>
               <View style={styles.coinBox}>

@@ -1,8 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
-import { useTheme } from 'react-native-paper';
-import { View, Text } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MainTabParamList } from './types';
 import HomeScreen from '@/screens/home/HomeScreen';
@@ -16,21 +15,27 @@ import SettingsScreen from '@/screens/settings/SettingsScreen';
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export default function MainTabNavigator() {
-  const theme = useTheme();
+  const insets = useSafeAreaInsets();
   return (
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.onSurfaceVariant,
+        tabBarActiveTintColor: '#A992FF',
+        tabBarInactiveTintColor: 'rgba(242,238,255,0.5)',
         tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopColor: theme.colors.outline,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
+          backgroundColor: 'rgba(10,4,24,0.95)',
+          borderTopColor: 'rgba(255,255,255,0.08)',
+          borderTopWidth: 1,
+          height: 60 + insets.bottom,
+          paddingBottom: insets.bottom + 6,
+          paddingTop: 8,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          elevation: 16,
         },
-        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700', marginTop: 2 },
         tabBarIcon: ({ color, focused, size }) => {
           let icon: keyof typeof Ionicons.glyphMap = 'home-outline';
           if (route.name === 'Home') icon = focused ? 'home' : 'home-outline';
@@ -48,26 +53,9 @@ export default function MainTabNavigator() {
       <Tab.Screen name="Tutor" component={AITutorScreen} options={{ title: 'Tutor' }} />
       <Tab.Screen name="Speaking" component={SpeakingPracticeScreen} options={{ title: 'Speak' }} />
       <Tab.Screen name="Interview" component={InterviewCoachScreen} options={{ title: 'Interview' }} />
-      <Tab.Screen
-        name="Premium"
-        component={PremiumScreen}
-        options={{
-          title: 'Premium',
-          tabBarIcon: ({ color, focused, size }) => (
-            <Ionicons name={focused ? 'diamond' : 'diamond-outline'} size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Progress"
-        component={ProgressScreen}
-        options={{ tabBarItemStyle: { display: 'none' } }}
-      />
-      <Tab.Screen
-        name="Settings"
-        component={SettingsScreen}
-        options={{ tabBarItemStyle: { display: 'none' } }}
-      />
+      <Tab.Screen name="Premium" component={PremiumScreen} options={{ title: 'Premium' }} />
+      <Tab.Screen name="Progress" component={ProgressScreen} options={{ tabBarItemStyle: { display: 'none' } }} />
+      <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarItemStyle: { display: 'none' } }} />
     </Tab.Navigator>
   );
 }

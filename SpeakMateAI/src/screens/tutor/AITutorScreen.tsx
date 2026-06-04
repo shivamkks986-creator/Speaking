@@ -18,6 +18,7 @@ import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
 
 import { ChatMessage } from '@/types';
 import { aiService } from '@/services/aiService';
+import { speechService } from '@/services/speechService';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useCompanion } from '@/contexts/CompanionContext';
 import { useGamification } from '@/contexts/GamificationContext';
@@ -193,6 +194,9 @@ const STARTERS = [
 
 function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: ReturnType<typeof useCompanion>['companion']; index: number }) {
   const isUser = msg.role === 'user';
+  const onSpeak = () => {
+    speechService.speakWithAI(msg.text, { companionId: companion.id });
+  };
   return (
     <Animated.View
       entering={FadeInUp.delay(index * 30).duration(250)}
@@ -224,6 +228,10 @@ function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: Return
                 <Text style={styles.metaText}>{msg.suggestion}</Text>
               </View>
             )}
+            <Pressable onPress={onSpeak} style={styles.speakBtn} testID={`tutor-speak-${msg.id}`}>
+              <Ionicons name="volume-high" size={12} color={companion.accent} />
+              <Text style={[styles.speakBtnText, { color: companion.accent }]}>Play</Text>
+            </Pressable>
           </View>
         )}
       </View>
@@ -287,6 +295,20 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(52,211,153,0.25)',
   },
   metaText: { color: '#F2EEFF', fontSize: 12, flex: 1 },
+  speakBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  speakBtnText: { fontSize: 11, fontWeight: '700' },
   thinkingRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.md, paddingBottom: spacing.sm, gap: 8 },
   typingBubble: {
     flexDirection: 'row',

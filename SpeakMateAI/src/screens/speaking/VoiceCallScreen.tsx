@@ -1,4 +1,4 @@
-// Voice call experience screen — full-screen companion with mic + STT/TTS placeholder
+// Voice call experience screen — full-screen companion with real STT (Whisper) + real TTS (OpenAI)
 import React, { useEffect, useRef, useState } from 'react';
 import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -6,13 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 
 import { useCompanion } from '@/contexts/CompanionContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { useProgress } from '@/contexts/ProgressContext';
 import { aiService } from '@/services/aiService';
+import { speechService } from '@/services/speechService';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import VoiceMicButton from '@/components/feature/VoiceMicButton';
 import { radius, spacing } from '@/config/theme';
@@ -28,6 +28,7 @@ export default function VoiceCallScreen() {
   const [transcript, setTranscript] = useState('');
   const [aiReply, setAiReply] = useState('');
   const [elapsed, setElapsed] = useState(0);
+  const [speed, setSpeed] = useState(1.0);
   const startedRef = useRef(Date.now());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -35,42 +36,48 @@ export default function VoiceCallScreen() {
     tickRef.current = setInterval(() => setElapsed(Math.floor((Date.now() - startedRef.current) / 1000)), 1000);
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
-      Speech.stop();
+      speechService.stopAudio();
     };
   }, []);
 
-  // Note: Real STT is not available in Expo Go without a dev build (expo-speech-recognition needs native).
-  // For now we simulate with a tap: user taps mic, we use a sample prompt and call the AI.
   const handleMicTap = async () => {
     if (state === 'speaking') {
-      Speech.stop();
+      await speechService.stopAudio();
       setState('idle');
       return;
     }
-    if (state === 'idle') {
+    if (state === 'listening') {
+      try {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        const { uri } = await speechService.stopRecording();
+        if (!uri) { setState('idle'); return; }
+        setState('thinking');
+        const text = await speechService.transcribe(uri);
+        if (!text) { setState('idle'); return; }
+        setTranscript(text);
+        await runAi(text);
+      } catch (e) {
+        console.warn('STT error', e);
+        setState('idle');
+      }
+      return;
+    }
+    try {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      await speechService.startRecording();
       setState('listening');
-      // simulate listening for 1.5s
-      setTimeout(() => {
-        const sample = pickSample();
-        setTranscript(sample);
-        runAi(sample);
-      }, 1500);
+    } catch (e) {
+      console.warn('Recording failed', e);
     }
   };
 
   const runAi = async (text: string) => {
-    setState('thinking');
     try {
-      const msg = await aiService.chat(text);
+      const msg = await aiService.chat(text, companion.id, companion.systemPrompt);
       setAiReply(msg.text);
       setState('speaking');
-      Speech.speak(msg.text, {
-        rate: 1,
-        pitch: 1,
-        onDone: () => setState('idle'),
-        onStopped: () => setState('idle'),
-      });
+      await speechService.speakWithAI(msg.text, { companionId: companion.id, speed });
+      setState('idle');
       await recordActivity(1, 'chat');
       await awardAction('CHAT_MESSAGE');
     } catch {
@@ -79,15 +86,15 @@ export default function VoiceCallScreen() {
   };
 
   const endCall = async () => {
-    Speech.stop();
+    await speechService.stopAudio();
     const minutes = Math.max(1, Math.round(elapsed / 60));
     await recordActivity(minutes, 'chat');
     navigation.goBack();
   };
 
   const stateLabel: Record<CallState, string> = {
-    idle: 'Tap mic to start',
-    listening: 'Listening...',
+    idle: 'Tap mic to talk',
+    listening: 'Listening... tap to send',
     thinking: 'Thinking...',
     speaking: 'Speaking',
   };
@@ -109,7 +116,18 @@ export default function VoiceCallScreen() {
             <View style={[styles.dot, { backgroundColor: '#34D399' }]} />
             <Text style={styles.callPillText}>{fmt(elapsed)}</Text>
           </View>
-          <View style={{ width: 36 }} />
+          <View style={styles.speedRow}>
+            {[0.75, 1.0, 1.25].map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => setSpeed(s)}
+                style={[styles.speedPill, speed === s && { backgroundColor: companion.accent }]}
+                testID={`voicecall-speed-${s}`}
+              >
+                <Text style={[styles.speedText, speed === s && { color: '#FFFFFF' }]}>{s}x</Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
         <View style={styles.center}>
@@ -140,7 +158,7 @@ export default function VoiceCallScreen() {
         <View style={styles.bottom}>
           <VoiceMicButton onPress={handleMicTap} recording={state === 'listening'} state={state} />
           <Text style={styles.hint}>
-            Note: Voice recognition needs a dev build. Tapping mic uses a sample prompt to demo the AI voice call flow.
+            Real-time AI voice powered by OpenAI Whisper + premium voices. Speak naturally.
           </Text>
         </View>
       </SafeAreaView>
@@ -148,61 +166,21 @@ export default function VoiceCallScreen() {
   );
 }
 
-const SAMPLES = [
-  'Hi, how are you today?',
-  'Can you help me improve my English speaking?',
-  'I want to practice for a job interview next week.',
-  'Tell me about your day.',
-  'What is the best way to learn new vocabulary?',
-];
-const pickSample = () => SAMPLES[Math.floor(Math.random() * SAMPLES.length)];
-
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  endBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    alignItems: 'center', justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-  },
-  callPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(52,211,153,0.15)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-  },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  endBtn: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.08)' },
+  callPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(52,211,153,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill },
   callPillText: { color: '#34D399', fontWeight: '700', fontSize: 12 },
+  speedRow: { flexDirection: 'row', gap: 4 },
+  speedPill: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.08)' },
+  speedText: { color: '#F2EEFF', fontSize: 11, fontWeight: '700' },
   dot: { width: 8, height: 8, borderRadius: 4 },
   center: { alignItems: 'center', marginTop: spacing.xl, gap: spacing.sm },
   name: { color: '#F2EEFF', fontSize: 28, fontWeight: '800', marginTop: spacing.md },
   role: { color: 'rgba(242,238,255,0.7)', fontSize: 14 },
-  stateChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginTop: spacing.sm,
-  },
+  stateChip: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.06)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: radius.pill, marginTop: spacing.sm },
   stateText: { color: '#F2EEFF', fontSize: 12, fontWeight: '700' },
-  bubble: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
+  bubble: { backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: radius.lg, padding: spacing.md, marginBottom: spacing.sm, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   bubbleLabel: { color: 'rgba(242,238,255,0.6)', fontSize: 11, fontWeight: '700', marginBottom: 4 },
   bubbleText: { color: '#F2EEFF', fontSize: 14, lineHeight: 20 },
   bottom: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },

@@ -32,7 +32,7 @@ export default function CompanionsScreen() {
           <Text style={styles.title}>AI Companions</Text>
           <View style={{ width: 36 }} />
         </View>
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           <Text style={styles.subtitle}>
             Pick the companion that matches your goal. Switch anytime.
           </Text>

@@ -24,6 +24,8 @@ import CompanionsScreen from '@/screens/companions/CompanionsScreen';
 import AchievementsScreen from '@/screens/gamification/AchievementsScreen';
 import VoiceCallScreen from '@/screens/speaking/VoiceCallScreen';
 import PremiumDashboardScreen from '@/screens/progress/PremiumDashboardScreen';
+import DailyMissionsScreen from '@/screens/gamification/DailyMissionsScreen';
+import FlashcardsScreen from '@/screens/vocabulary/FlashcardsScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -123,6 +125,16 @@ export default function RootNavigator() {
           <Stack.Screen
             name="PremiumDashboard"
             component={PremiumDashboardScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="DailyMissions"
+            component={DailyMissionsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Flashcards"
+            component={FlashcardsScreen}
             options={{ headerShown: false }}
           />
         </>

@@ -6,22 +6,30 @@ Multi-agent setup:
 - Interview (evaluate/followup/score-session): GPT-5.2
 - Vocabulary lookup: Gemini 3 Flash
 - Daily challenge evaluation: Claude Sonnet 4.6
+- TTS (premium voices): OpenAI tts-1
+- STT (Whisper): whisper-1
 """
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
+import tempfile
 import uuid
 from typing import List, Optional
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
-from fastapi import APIRouter, HTTPException
+from emergentintegrations.llm.openai import OpenAITextToSpeech, OpenAISpeechToText
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form
 from pydantic import BaseModel, Field
 
 EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
 
 router = APIRouter(prefix="/ai")
+
+_tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
+_stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
 
 
 # ---------------------- helpers ----------------------
@@ -319,3 +327,84 @@ async def daily_challenge_evaluate(req: ChallengeRequest) -> ChallengeResponse:
         feedback=str(data.get("feedback", "Good attempt!")),
         betterVersion=str(data.get("betterVersion", req.response)),
     )
+
+
+# ==================== TEXT-TO-SPEECH (OpenAI tts-1) ====================
+
+# Map our companion ids/preferences to OpenAI voices.
+COMPANION_VOICE = {
+    "alex": "echo",       # calm friendly male
+    "emma": "shimmer",    # cheerful female
+    "sophia": "nova",     # energetic female (interview coach)
+    "ryan": "onyx",       # deep male (business)
+    "maya": "coral",      # warm female (motivator)
+}
+
+
+class TTSRequest(BaseModel):
+    text: str = Field(min_length=1, max_length=4000)
+    companion_id: Optional[str] = None
+    voice: Optional[str] = None          # explicit override (alloy/echo/nova/shimmer/onyx/coral/ash/fable/sage)
+    speed: float = Field(default=1.0, ge=0.5, le=2.0)
+    model: str = "tts-1"
+
+
+class TTSResponse(BaseModel):
+    audio_base64: str
+    mime: str = "audio/mpeg"
+
+
+@router.post("/tts", response_model=TTSResponse)
+async def tts(req: TTSRequest) -> TTSResponse:
+    voice = req.voice or COMPANION_VOICE.get(req.companion_id or "", "alloy")
+    try:
+        audio_b64 = await _tts.generate_speech_base64(
+            text=req.text,
+            model=req.model,
+            voice=voice,
+            speed=req.speed,
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"TTS failed: {exc}") from exc
+    return TTSResponse(audio_base64=audio_b64)
+
+
+# ==================== SPEECH-TO-TEXT (Whisper) ====================
+
+class STTResponse(BaseModel):
+    text: str
+    duration_sec: Optional[float] = None
+
+
+@router.post("/stt", response_model=STTResponse)
+async def stt(file: UploadFile = File(...), language: str = Form("en")) -> STTResponse:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    suffix = os.path.splitext(file.filename)[1].lower() or ".m4a"
+    if suffix not in {".mp3", ".mp4", ".mpeg", ".mpga", ".m4a", ".wav", ".webm"}:
+        suffix = ".m4a"
+    contents = await file.read()
+    if len(contents) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Audio exceeds 25 MB limit")
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(contents)
+        tmp_path = tmp.name
+    try:
+        with open(tmp_path, "rb") as audio_file:
+            response = await _stt.transcribe(
+                file=audio_file,
+                model="whisper-1",
+                response_format="verbose_json",
+                language=language or "en",
+            )
+        return STTResponse(
+            text=str(getattr(response, "text", "")).strip(),
+            duration_sec=getattr(response, "duration", None),
+        )
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=f"STT failed: {exc}") from exc
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass

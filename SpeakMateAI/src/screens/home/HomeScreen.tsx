@@ -56,7 +56,7 @@ export default function HomeScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 24, paddingHorizontal: spacing.lg }}
+          contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
           <View style={styles.topBar}>
@@ -135,7 +135,7 @@ export default function HomeScreen() {
                   <Ionicons name="call" size={20} color="#F2EEFF" />
                 </Pressable>
                 <Pressable
-                  onPress={() => navigation.navigate('DailyChallenge')}
+                  onPress={() => navigation.navigate('DailyMissions')}
                   style={styles.iconBtn}
                   testID="home-daily-challenge-btn"
                 >
@@ -206,10 +206,10 @@ export default function HomeScreen() {
               />
               <QuickAction
                 icon="book"
-                title="Vocab"
-                sub="Build word bank"
+                title="Flashcards"
+                sub="Vocab + AI lookup"
                 colors={['#34D399', '#22D3EE']}
-                onPress={() => navigation.navigate('Vocabulary')}
+                onPress={() => navigation.navigate('Flashcards')}
                 testID="home-action-vocab"
               />
             </View>

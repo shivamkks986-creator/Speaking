@@ -111,6 +111,17 @@ SpeakMateAI/
   - Home screen redesigned (companion greeting, XP bar, daily goal, quick actions, premium CTA)
   - XP rewards wired into Speaking, Interview, Daily Challenge flows
   - Badge auto-checking on key milestones
+- ✅ **Production Voice + Missions Update (Feb 2026)**:
+  - **OpenAI TTS (tts-1)** integrated — natural human-like voices per companion (echo/shimmer/nova/onyx/coral)
+  - **OpenAI Whisper STT** integrated — real speech-to-text from device microphone
+  - VoiceCallScreen now uses real STT (Whisper) + real TTS (OpenAI) replacing robotic expo-speech
+  - Voice speed control (0.75x / 1.0x / 1.25x) in voice call header
+  - AI Tutor chat bubbles got a "Play" button to listen to AI response in companion voice
+  - Daily Missions screen (5 daily tasks with XP/coin rewards + progress bars)
+  - Flashcards screen (flip animation, AI-powered word lookup, listen-to-pronunciation button)
+  - Bottom tab bar fixed: floating glass dock with proper SafeArea bottom inset
+  - All screens updated with `paddingBottom: 140` to clear tab bar
+  - `speechService.ts` rewritten with `speakWithAI` (OpenAI voices) + `transcribe` (Whisper) + fallback to device TTS
 
 ### P0 (next)
 - Test all real-AI flows end-to-end on phone (Tutor chat, Speaking score, Interview eval/followup/session, Vocabulary lookup, Daily Challenge)

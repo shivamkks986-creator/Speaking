@@ -36,7 +36,7 @@ export default function PremiumDashboardScreen() {
           <Text style={styles.title}>Premium Dashboard</Text>
           <View style={{ width: 36 }} />
         </View>
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           <View style={styles.grid}>
             <ScoreCard label="Speaking" value={speaking} colors={['#FF6B9D', '#FFA496']} icon="mic" />
             <ScoreCard label="Confidence" value={confidence} colors={['#7C5CFF', '#A992FF']} icon="trending-up" />
