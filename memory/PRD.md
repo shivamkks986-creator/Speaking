@@ -122,6 +122,14 @@ SpeakMateAI/
   - Bottom tab bar fixed: floating glass dock with proper SafeArea bottom inset
   - All screens updated with `paddingBottom: 140` to clear tab bar
   - `speechService.ts` rewritten with `speakWithAI` (OpenAI voices) + `transcribe` (Whisper) + fallback to device TTS
+- ✅ **Interview Ready AI Upgrade (Feb 2026)**:
+  - **11 Interview Tracks**: HR, Fresher, Technical, Experienced, Business Analyst, Sales, Customer Support, Software Engineer, Data Analyst, Marketing, Banking
+  - Each track auto-assigned an AI interviewer companion (Sophia=HR/Banking/Experienced, Ryan=Tech/SWE/BA/Data, Alex=Fresher, Emma=Support, Maya=Sales/Marketing)
+  - **New backend `/api/ai/interview/live`** — accepts track + Q&A history + last answer → returns next question + **6-axis scoring** (communication/fluency/confidence/grammar/relevance/professionalism) + filler word detection + weak points + better version of answer + should_end flag
+  - **LiveInterviewScreen** — voice-driven back-and-forth: AI asks question (TTS via OpenAI voice), user speaks answer (Whisper STT), real-time 6-axis scoring shown after each answer with filler word callouts
+  - **Redesigned InterviewCoachScreen** — premium dark UI with readiness hero, 11 track cards (each shows AI interviewer avatar), premium gating on advanced tracks
+  - **InterviewDashboardScreen** — total interviews / best score / average / success rate, level badge, all tracks accessible
+  - **InterviewResultsScreen enhanced** — now shows all 6-axis breakdown (Communication, Confidence, Content/Relevance, Fluency, Grammar, Professionalism)
 
 ### P0 (next)
 - Test all real-AI flows end-to-end on phone (Tutor chat, Speaking score, Interview eval/followup/session, Vocabulary lookup, Daily Challenge)

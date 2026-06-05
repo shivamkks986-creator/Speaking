@@ -39,4 +39,6 @@ export type RootStackParamList = {
   PremiumDashboard: undefined;
   DailyMissions: undefined;
   Flashcards: undefined;
+  LiveInterview: { track: InterviewTrack; targetQuestions?: number };
+  InterviewDashboard: undefined;
 };

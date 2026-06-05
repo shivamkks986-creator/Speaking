@@ -1,26 +1,26 @@
+// Interview Coach hub — track selection with 11 tracks, AI interviewer assignment, dashboard CTA
 import React from 'react';
 import { View, StyleSheet, Pressable, ScrollView } from 'react-native';
-import { Text, useTheme, Appbar } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { RootStackParamList } from '@/navigation/types';
 import { INTERVIEW_TRACKS } from '@/data/interviewTracks';
+import { COMPANIONS } from '@/config/companions';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { aiService } from '@/services/aiService';
-import Card from '@/components/common/Card';
-import ReadinessCard from '@/components/feature/ReadinessCard';
-import PremiumBadge from '@/components/feature/PremiumBadge';
-import { radius } from '@/config/theme';
+import CompanionAvatar from '@/components/feature/CompanionAvatar';
+import { radius, spacing } from '@/config/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function InterviewCoachScreen() {
-  const theme = useTheme();
   const navigation = useNavigation<Nav>();
   const { stats } = useProgress();
   const { user } = useAuth();
@@ -33,148 +33,127 @@ export default function InterviewCoachScreen() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top']}>
-      <Appbar.Header style={{ backgroundColor: theme.colors.surface }} elevated>
-        <Appbar.Content title="AI Interview Coach" subtitle="Practise · Score · Improve" />
-      </Appbar.Header>
+    <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
+      <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
+      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.title}>Interview Coach</Text>
+            <Text style={styles.subtitle}>Live AI mock interviews · 11 tracks</Text>
+          </View>
+          <Pressable
+            onPress={() => navigation.navigate('InterviewDashboard')}
+            style={styles.dashBtn}
+            testID="interview-dashboard-btn"
+          >
+            <Ionicons name="stats-chart" size={18} color="#F2EEFF" />
+          </Pressable>
+        </View>
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <ReadinessCard
-          score={readiness}
-          interviewsCount={stats.interviewsCount}
-          bestScore={stats.bestInterviewScore}
-          onPress={() => navigation.navigate('Main', { screen: 'Progress' })}
-        />
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+          {/* Readiness hero */}
+          <LinearGradient colors={['#7C5CFF', '#FF6B9D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.readinessCard}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.readinessLabel}>Interview Readiness</Text>
+              <Text style={styles.readinessValue}>{readiness}<Text style={styles.readinessUnit}>/100</Text></Text>
+              <View style={styles.readinessBar}>
+                <View style={[styles.readinessFill, { width: `${readiness}%` }]} />
+              </View>
+              <Text style={styles.readinessMeta}>{stats.interviewsCount} interviews · Best {stats.bestInterviewScore}</Text>
+            </View>
+            <Ionicons name="trophy" size={48} color="#FFFFFF" />
+          </LinearGradient>
 
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Choose your track
-        </Text>
+          <Text style={styles.section}>Choose your track</Text>
 
-        {INTERVIEW_TRACKS.map((track, idx) => {
-          const locked = idx === 2 && !user?.isPremium; // Technical = premium
-          return (
-            <Pressable
-              key={track.id}
-              onPress={() => {
-                if (locked) {
-                  navigation.navigate('Premium');
-                  return;
-                }
-                navigation.navigate('InterviewSession', { track: track.id });
-              }}
-              testID={`coach-track-${track.id}`}
-            >
-              <LinearGradient
-                colors={track.colors}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.trackCard}
-              >
-                <View style={styles.trackIconBox}>
-                  <Ionicons name={track.icon} size={28} color="#fff" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.trackTitle}>{track.title}</Text>
-                    {locked ? (
-                      <View style={styles.lockedTag}>
-                        <Ionicons name="lock-closed" size={10} color="#fff" />
-                        <Text style={styles.lockedText}>PREMIUM</Text>
+          {INTERVIEW_TRACKS.map((track, i) => {
+            const locked = track.premium && !user?.isPremium;
+            const interviewer = COMPANIONS.find((c) => c.id === track.interviewer);
+            return (
+              <Animated.View key={track.id} entering={FadeInUp.delay(i * 40).duration(300)}>
+                <Pressable
+                  onPress={() => {
+                    if (locked) {
+                      navigation.navigate('Premium');
+                      return;
+                    }
+                    navigation.navigate('LiveInterview', { track: track.id, targetQuestions: 5 });
+                  }}
+                  testID={`track-${track.id}`}
+                  style={styles.trackOuter}
+                >
+                  <LinearGradient colors={track.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.trackCard}>
+                    <View style={styles.trackIconBox}>
+                      <Ionicons name={track.icon} size={26} color="#FFFFFF" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={styles.titleRow}>
+                        <Text style={styles.trackTitle}>{track.title}</Text>
+                        {locked && (
+                          <View style={styles.lockedTag}>
+                            <Ionicons name="lock-closed" size={9} color="#FFFFFF" />
+                            <Text style={styles.lockedText}>PREMIUM</Text>
+                          </View>
+                        )}
                       </View>
-                    ) : null}
-                  </View>
-                  <Text style={styles.trackDesc}>{track.description}</Text>
-                  <View style={styles.metaRow}>
-                    <View style={styles.metaPill}>
-                      <Ionicons name="time-outline" size={12} color="#fff" />
-                      <Text style={styles.metaText}>{track.duration}</Text>
+                      <Text style={styles.trackDesc} numberOfLines={2}>{track.description}</Text>
+                      <View style={styles.metaRow}>
+                        <View style={styles.metaPill}>
+                          <Ionicons name="time-outline" size={11} color="#FFFFFF" />
+                          <Text style={styles.metaText}>{track.duration}</Text>
+                        </View>
+                        <View style={styles.metaPill}>
+                          <Ionicons name="mic" size={11} color="#FFFFFF" />
+                          <Text style={styles.metaText}>Live voice</Text>
+                        </View>
+                      </View>
                     </View>
-                    <View style={styles.metaPill}>
-                      <Ionicons name="help-circle-outline" size={12} color="#fff" />
-                      <Text style={styles.metaText}>{track.questions.length} Qs</Text>
-                    </View>
-                  </View>
-                </View>
-                <Ionicons name="chevron-forward" size={22} color="#fff" />
-              </LinearGradient>
-            </Pressable>
-          );
-        })}
+                    {interviewer && (
+                      <View style={styles.interviewerWrap}>
+                        <CompanionAvatar companion={interviewer} size={36} />
+                        <Text style={styles.interviewerName}>{interviewer.name}</Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                </Pressable>
+              </Animated.View>
+            );
+          })}
 
-        <Text variant="titleMedium" style={styles.sectionTitle}>
-          Tips
-        </Text>
-        <Card>
-          <TipRow icon="git-branch-outline" text="Use the STAR framework: Situation, Task, Action, Result." />
-          <TipRow icon="happy-outline" text="Smile while answering — your voice carries warmth." />
-          <TipRow icon="time-outline" text="Aim for 60–90 second answers. Be specific, not generic." />
-          <TipRow icon="repeat-outline" text="Practise the same question 3× before moving on." last />
-        </Card>
-      </ScrollView>
-    </SafeAreaView>
-  );
-}
-
-function TipRow({
-  icon,
-  text,
-  last,
-}: {
-  icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap;
-  text: string;
-  last?: boolean;
-}) {
-  const theme = useTheme();
-  return (
-    <View style={[styles.tipRow, last ? null : styles.tipDivider]}>
-      <Ionicons name={icon} size={18} color={theme.colors.primary} />
-      <Text style={{ flex: 1, marginLeft: 10 }}>{text}</Text>
+          <Text style={styles.tipFooter}>
+            Tip: Use the STAR framework (Situation, Task, Action, Result) for behavioural questions.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  content: { padding: 16, gap: 14 },
-  sectionTitle: { fontWeight: '700', marginTop: 8 },
-  trackCard: {
-    borderRadius: radius.lg,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  trackIconBox: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  trackTitle: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  trackDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 13, marginTop: 2 },
-  metaRow: { flexDirection: 'row', marginTop: 8, gap: 8 },
-  metaPill: {
-    flexDirection: 'row',
-    backgroundColor: 'rgba(255,255,255,0.22)',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 10,
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: { color: '#fff', fontSize: 11, fontWeight: '600' },
-  lockedTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.35)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    gap: 3,
-  },
-  lockedText: { color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
-  tipRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-  tipDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(0,0,0,0.08)' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  title: { color: '#F2EEFF', fontSize: 22, fontWeight: '800' },
+  subtitle: { color: 'rgba(242,238,255,0.6)', fontSize: 12, marginTop: 2 },
+  dashBtn: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  readinessCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.lg, borderRadius: radius.xl, gap: spacing.lg },
+  readinessLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700' },
+  readinessValue: { color: '#FFFFFF', fontSize: 40, fontWeight: '800', marginTop: 4 },
+  readinessUnit: { fontSize: 18, fontWeight: '600' },
+  readinessBar: { height: 6, backgroundColor: 'rgba(0,0,0,0.3)', borderRadius: radius.pill, marginTop: 8, overflow: 'hidden' },
+  readinessFill: { height: '100%', backgroundColor: '#FFFFFF', borderRadius: radius.pill },
+  readinessMeta: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 6 },
+  section: { color: '#F2EEFF', fontWeight: '800', fontSize: 15, marginTop: spacing.xl, marginBottom: spacing.md },
+  trackOuter: { marginBottom: spacing.md },
+  trackCard: { flexDirection: 'row', alignItems: 'center', padding: spacing.md, borderRadius: radius.xl, gap: spacing.md, minHeight: 100 },
+  trackIconBox: { width: 50, height: 50, borderRadius: 25, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  trackTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
+  trackDesc: { color: 'rgba(255,255,255,0.9)', fontSize: 11, marginTop: 2 },
+  metaRow: { flexDirection: 'row', marginTop: 6, gap: 6 },
+  metaPill: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.22)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 },
+  metaText: { color: '#FFFFFF', fontSize: 10, fontWeight: '700' },
+  lockedTag: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, gap: 3 },
+  lockedText: { color: '#FFFFFF', fontSize: 9, fontWeight: '800', letterSpacing: 0.4 },
+  interviewerWrap: { alignItems: 'center', gap: 2 },
+  interviewerName: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
+  tipFooter: { color: 'rgba(242,238,255,0.4)', fontSize: 11, textAlign: 'center', marginTop: spacing.xl },
 });

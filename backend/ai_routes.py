@@ -408,3 +408,107 @@ async def stt(file: UploadFile = File(...), language: str = Form("en")) -> STTRe
             os.unlink(tmp_path)
         except OSError:
             pass
+
+
+# ==================== LIVE INTERVIEW (GPT-5.2) ====================
+
+LIVE_INTERVIEW_SYSTEM = (
+    "You are an expert {track} interviewer evaluating a candidate in real time. "
+    "Your job is twofold: (1) score the candidate's last answer on a 0-100 scale across 6 axes, "
+    "(2) ask the NEXT thoughtful interview question (or follow-up). "
+    "Always respond with ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"scores": {"communication": int, "fluency": int, "confidence": int, "grammar": int, "relevance": int, "professionalism": int}, '
+    '"feedback": "1-2 sentence actionable feedback on the last answer", '
+    '"filler_words": [string list of detected filler words like um/uh/like], '
+    '"weak_points": [list of 1-3 short bullets pointing what was weak], '
+    '"better_version": "a 1-2 sentence improved version of their answer", '
+    '"next_question": "the next interview question", '
+    '"should_end": boolean}'
+)
+
+
+class LiveAnswerItem(BaseModel):
+    question: str
+    answer: str
+
+
+class LiveInterviewRequest(BaseModel):
+    track: str
+    history: List[LiveAnswerItem] = Field(default_factory=list)
+    last_answer: Optional[str] = None   # if None and history empty → just get first question
+    last_question: Optional[str] = None
+    target_questions: int = Field(default=5, ge=1, le=15)
+
+
+class LiveScores(BaseModel):
+    communication: int
+    fluency: int
+    confidence: int
+    grammar: int
+    relevance: int
+    professionalism: int
+
+
+class LiveInterviewResponse(BaseModel):
+    scores: Optional[LiveScores] = None
+    feedback: Optional[str] = None
+    filler_words: List[str] = Field(default_factory=list)
+    weak_points: List[str] = Field(default_factory=list)
+    better_version: Optional[str] = None
+    next_question: str
+    should_end: bool = False
+    question_number: int
+
+
+@router.post("/interview/live", response_model=LiveInterviewResponse)
+async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
+    sys_msg = LIVE_INTERVIEW_SYSTEM.replace("{track}", req.track.replace("_", " "))
+    chat = _new_chat(str(uuid.uuid4()), sys_msg, "openai", "gpt-5.2")
+
+    # Build prompt with full conversation context
+    qa_log = "\n".join(
+        f"Q{i+1}: {h.question}\nA{i+1}: {h.answer}" for i, h in enumerate(req.history)
+    )
+    asked_count = len(req.history) + (1 if req.last_answer else 0)
+    should_end_hint = "true" if asked_count >= req.target_questions else "false"
+
+    if req.last_answer and req.last_question:
+        prompt = (
+            f"Conversation so far:\n{qa_log}\n\n"
+            f"Last question I asked: {req.last_question}\n"
+            f"Candidate's last answer: {req.last_answer}\n\n"
+            f"Target questions: {req.target_questions} · Asked so far: {asked_count}\n"
+            f"If asked_count >= target_questions then should_end=true and next_question can be a closing remark. "
+            f"Otherwise should_end={should_end_hint} and ask the next question.\n"
+            "Return the full JSON now."
+        )
+    else:
+        prompt = (
+            f"Start the interview. Ask the very first question. Set scores to null-equivalent (all zeros) "
+            f"and feedback to a brief warm welcome. Target questions: {req.target_questions}. "
+            "Return JSON now."
+        )
+
+    raw = await chat.send_message(UserMessage(text=prompt))
+    data = _extract_json(raw)
+    raw_scores = data.get("scores") or {}
+    scores_model: Optional[LiveScores] = None
+    if req.last_answer:
+        scores_model = LiveScores(
+            communication=int(raw_scores.get("communication", 0)),
+            fluency=int(raw_scores.get("fluency", 0)),
+            confidence=int(raw_scores.get("confidence", 0)),
+            grammar=int(raw_scores.get("grammar", 0)),
+            relevance=int(raw_scores.get("relevance", 0)),
+            professionalism=int(raw_scores.get("professionalism", 0)),
+        )
+    return LiveInterviewResponse(
+        scores=scores_model,
+        feedback=str(data.get("feedback") or "").strip() or None,
+        filler_words=[str(w) for w in (data.get("filler_words") or [])][:6],
+        weak_points=[str(w) for w in (data.get("weak_points") or [])][:3],
+        better_version=str(data.get("better_version") or "").strip() or None,
+        next_question=str(data.get("next_question") or "Tell me about yourself.").strip(),
+        should_end=bool(data.get("should_end", False)) or asked_count >= req.target_questions,
+        question_number=asked_count + 1,
+    )

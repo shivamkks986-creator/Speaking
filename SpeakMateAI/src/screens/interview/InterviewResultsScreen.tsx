@@ -70,11 +70,20 @@ export default function InterviewResultsScreen() {
             icon="rocket"
           />
           <ScoreBar
-            label="Content"
+            label="Content / Relevance"
             value={result.contentScore}
             color={theme.colors.tertiary}
             icon="bulb"
           />
+          {typeof result.fluencyScore === 'number' && (
+            <ScoreBar label="Fluency" value={result.fluencyScore} color="#22D3EE" icon="water" />
+          )}
+          {typeof result.grammarScore === 'number' && (
+            <ScoreBar label="Grammar" value={result.grammarScore} color="#34D399" icon="checkmark-done" />
+          )}
+          {typeof result.professionalismScore === 'number' && (
+            <ScoreBar label="Professionalism" value={result.professionalismScore} color="#F59E0B" icon="briefcase" />
+          )}
         </Card>
 
         {result.strengths.length > 0 ? (

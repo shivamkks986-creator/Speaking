@@ -26,6 +26,8 @@ import VoiceCallScreen from '@/screens/speaking/VoiceCallScreen';
 import PremiumDashboardScreen from '@/screens/progress/PremiumDashboardScreen';
 import DailyMissionsScreen from '@/screens/gamification/DailyMissionsScreen';
 import FlashcardsScreen from '@/screens/vocabulary/FlashcardsScreen';
+import LiveInterviewScreen from '@/screens/interview/LiveInterviewScreen';
+import InterviewDashboardScreen from '@/screens/interview/InterviewDashboardScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -135,6 +137,16 @@ export default function RootNavigator() {
           <Stack.Screen
             name="Flashcards"
             component={FlashcardsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="LiveInterview"
+            component={LiveInterviewScreen}
+            options={{ headerShown: false, presentation: 'fullScreenModal', gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="InterviewDashboard"
+            component={InterviewDashboardScreen}
             options={{ headerShown: false }}
           />
         </>

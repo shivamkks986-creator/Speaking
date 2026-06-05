@@ -30,7 +30,18 @@ export interface VocabWord {
   level: 'beginner' | 'intermediate' | 'advanced';
 }
 
-export type InterviewTrack = 'hr' | 'fresher' | 'technical';
+export type InterviewTrack =
+  | 'hr'
+  | 'fresher'
+  | 'technical'
+  | 'experienced'
+  | 'business_analyst'
+  | 'sales'
+  | 'customer_support'
+  | 'software_engineer'
+  | 'data_analyst'
+  | 'marketing'
+  | 'banking';
 
 export interface InterviewQuestion {
   id: string;
@@ -54,6 +65,10 @@ export interface InterviewResult {
   communicationScore: number;
   confidenceScore: number;
   contentScore: number;
+  fluencyScore?: number;
+  grammarScore?: number;
+  relevanceScore?: number;
+  professionalismScore?: number;
   suggestions: string[];
   strengths: string[];
   answers: InterviewAnswer[];
