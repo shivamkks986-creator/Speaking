@@ -6,35 +6,66 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "scheme": "speakmate",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0B1020"
+      "backgroundColor": "#0A0418"
     },
     "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.speakmate.ai"
+      "bundleIdentifier": "com.speakmate.ai",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SpeakMate AI needs microphone access for speaking practice and AI conversations."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0B1020"
+        "backgroundColor": "#0A0418"
       },
       "package": "com.speakmate.ai",
-      "permissions": ["RECORD_AUDIO", "MODIFY_AUDIO_SETTINGS", "INTERNET"]
+      "versionCode": 1,
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
     },
     "plugins": [
       [
         "expo-av",
         {
-          "microphonePermission": "Allow SpeakMate AI to access your microphone for speaking practice."
+          "microphonePermission": "Allow SpeakMate AI to access your microphone for speaking practice and AI voice conversations."
         }
       ],
       [
         "expo-notifications",
         {
-          "color": "#6D5BFF"
+          "color": "#7C5CFF"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "buildToolsVersion": "35.0.0",
+            "enableProguardInReleaseBuilds": true,
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "newArchEnabled": true
+          },
+          "ios": {
+            "deploymentTarget": "15.1",
+            "newArchEnabled": true
+          }
         }
       ]
     ],
