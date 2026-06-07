@@ -61,11 +61,11 @@
             "gradleVersion": "8.13",
             "enableProguardInReleaseBuilds": true,
             "enableShrinkResourcesInReleaseBuilds": true,
-            "newArchEnabled": false
+            "newArchEnabled": true
           },
           "ios": {
             "deploymentTarget": "15.1",
-            "newArchEnabled": false
+            "newArchEnabled": true
           }
         }
       ]
