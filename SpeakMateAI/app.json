@@ -59,8 +59,8 @@
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
             "gradleVersion": "8.13",
-            "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true,
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
             "newArchEnabled": true
           },
           "ios": {
