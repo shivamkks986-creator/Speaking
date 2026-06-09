@@ -2,6 +2,7 @@ import { NavigatorScreenParams } from '@react-navigation/native';
 import { InterviewResult, InterviewTrack, SpeakingScore } from '@/types';
 
 export type AuthStackParamList = {
+  Onboarding: undefined;
   Welcome: undefined;
   Login: undefined;
   Signup: undefined;
@@ -41,4 +42,6 @@ export type RootStackParamList = {
   Flashcards: undefined;
   LiveInterview: { track: InterviewTrack; targetQuestions?: number };
   InterviewDashboard: undefined;
+  Leaderboard: undefined;
+  InviteFriends: undefined;
 };

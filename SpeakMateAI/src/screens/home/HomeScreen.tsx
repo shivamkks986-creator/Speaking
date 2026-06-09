@@ -226,6 +226,48 @@ export default function HomeScreen() {
             <CompanionsStrip />
           </Animated.View>
 
+          {/* Social row — Leaderboard + Invite Friends */}
+          <Animated.View entering={FadeIn.delay(250).duration(500)}>
+            <View style={styles.socialRow}>
+              <Pressable
+                onPress={() => navigation.navigate('Leaderboard')}
+                style={{ flex: 1 }}
+                testID="home-leaderboard-btn"
+              >
+                <LinearGradient
+                  colors={['#FACC15', '#F59E0B']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.socialTile}
+                >
+                  <Ionicons name="trophy" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.socialTitle}>Leaderboard</Text>
+                    <Text style={styles.socialSub}>See your rank</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('InviteFriends')}
+                style={{ flex: 1 }}
+                testID="home-invite-btn"
+              >
+                <LinearGradient
+                  colors={['#34D399', '#22D3EE']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.socialTile}
+                >
+                  <Ionicons name="gift" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.socialTitle}>Invite Friends</Text>
+                    <Text style={styles.socialSub}>Get 7d free</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </Animated.View>
+
           {/* Premium dashboard preview */}
           <Animated.View entering={FadeIn.delay(280).duration(500)}>
             <Pressable
@@ -484,4 +526,14 @@ const styles = StyleSheet.create({
   },
   premiumCtaTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800' },
   premiumCtaSub: { color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 2 },
+  socialRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.lg },
+  socialTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+  },
+  socialTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
+  socialSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 1 },
 });

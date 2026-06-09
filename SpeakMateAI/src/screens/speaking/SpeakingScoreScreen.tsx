@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
 import Card from '@/components/common/Card';
 import ScoreRing from '@/components/feature/ScoreRing';
+import ShareScoreCard from '@/components/feature/ShareScoreCard';
 import { radius } from '@/config/theme';
 
 type Route = RouteProp<RootStackParamList, 'SpeakingScore'>;
@@ -78,6 +79,18 @@ export default function SpeakingScoreScreen() {
             </View>
           ))}
         </Card>
+
+        {/* Viral share */}
+        <ShareScoreCard
+          title="Speaking Score"
+          score={Math.round(score.overall)}
+          subtitle="Practice session"
+          breakdown={[
+            { label: 'Pronunciation', value: Math.round(score.pronunciation) },
+            { label: 'Fluency', value: Math.round(score.fluency) },
+            { label: 'Grammar', value: Math.round(score.grammar) },
+          ]}
+        />
 
         <Button
           mode="contained"

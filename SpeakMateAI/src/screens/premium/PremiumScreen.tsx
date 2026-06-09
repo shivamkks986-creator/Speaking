@@ -144,6 +144,32 @@ export default function PremiumScreen() {
             ))}
           </View>
 
+          {/* Free vs Premium comparison */}
+          <Text style={styles.section}>Free vs Premium</Text>
+          <View style={[styles.compareWrap]}>
+            <View style={styles.compareHeadRow}>
+              <Text style={[styles.compareHead, { flex: 2 }]}>Feature</Text>
+              <Text style={[styles.compareHead, { flex: 1, textAlign: 'center' }]}>Free</Text>
+              <Text style={[styles.compareHead, { flex: 1, textAlign: 'center', color: '#FACC15' }]}>Premium</Text>
+            </View>
+            {[
+              ['AI Tutor Chats', '5 / day', 'Unlimited'],
+              ['Voice Practice', '3 / day', 'Unlimited'],
+              ['Interview Mocks', '1 / day', 'Unlimited'],
+              ['AI Companions', '1 unlocked', 'All 5'],
+              ['IELTS Mode', '—', '✓'],
+              ['Resume Review', '—', '✓'],
+              ['Premium Voices', '—', '✓'],
+              ['Progress Reports', '—', '✓'],
+            ].map((row, i) => (
+              <View key={i} style={styles.compareRow}>
+                <Text style={[styles.compareCell, { flex: 2 }]}>{row[0]}</Text>
+                <Text style={[styles.compareCell, { flex: 1, textAlign: 'center', color: 'rgba(242,238,255,0.55)' }]}>{row[1]}</Text>
+                <Text style={[styles.compareCell, { flex: 1, textAlign: 'center', color: '#34D399', fontWeight: '700' }]}>{row[2]}</Text>
+              </View>
+            ))}
+          </View>
+
           {/* CTA */}
           <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
             <Pressable
@@ -198,4 +224,29 @@ const styles = StyleSheet.create({
   cta: { paddingVertical: 16, borderRadius: radius.pill, alignItems: 'center', shadowColor: '#7C5CFF', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 10 },
   ctaText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
   legal: { color: 'rgba(242,238,255,0.45)', fontSize: 11, textAlign: 'center', marginTop: spacing.md, paddingHorizontal: spacing.md, lineHeight: 16 },
+  compareWrap: {
+    marginHorizontal: spacing.lg,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    overflow: 'hidden',
+  },
+  compareHeadRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: 'rgba(124,92,255,0.18)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  compareHead: { color: '#F2EEFF', fontWeight: '800', fontSize: 12 },
+  compareRow: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.05)',
+  },
+  compareCell: { color: '#F2EEFF', fontSize: 12, fontWeight: '600' },
 });

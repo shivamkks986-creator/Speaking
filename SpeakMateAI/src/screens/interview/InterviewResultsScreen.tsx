@@ -12,6 +12,7 @@ import { InterviewResult } from '@/types';
 import { INTERVIEW_TRACKS } from '@/data/interviewTracks';
 import Card from '@/components/common/Card';
 import ScoreRing from '@/components/feature/ScoreRing';
+import ShareScoreCard from '@/components/feature/ShareScoreCard';
 import { radius } from '@/config/theme';
 
 type Route = RouteProp<RootStackParamList, 'InterviewResults'>;
@@ -151,6 +152,22 @@ export default function InterviewResultsScreen() {
             </View>
           ))}
         </Card>
+
+        {/* Viral share */}
+        <ShareScoreCard
+          title="Interview Result"
+          score={Math.round(result.overallScore)}
+          subtitle={`${trackMeta?.title || 'Mock Interview'} · ${result.answers.length} answers`}
+          breakdown={[
+            { label: 'Communication', value: Math.round(result.communicationScore) },
+            { label: 'Confidence', value: Math.round(result.confidenceScore) },
+            { label: 'Content', value: Math.round(result.contentScore) },
+            ...(result.fluencyScore != null
+              ? [{ label: 'Fluency', value: Math.round(result.fluencyScore) }]
+              : []),
+          ]}
+          hashtags={['SpeakMateAI', 'InterviewReady', 'GotHired']}
+        />
 
         <Button
           mode="contained"

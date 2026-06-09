@@ -8,6 +8,7 @@ import {
   Platform,
   Pressable,
   TextInput as RNTextInput,
+  ScrollView,
 } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -154,6 +155,30 @@ export default function AITutorScreen() {
               <Text style={{ color: '#FF6B6B', fontSize: 13 }}>{error}</Text>
             </View>
           )}
+
+          {/* Quick action chips — prefill the input */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.quickRow}
+          >
+            {[
+              { icon: 'construct' as const, label: 'Fix my grammar', prompt: 'Fix the grammar of this: ' },
+              { icon: 'sparkles' as const, label: 'Improve sentence', prompt: 'Make this sound more natural: ' },
+              { icon: 'book' as const, label: 'Explain meaning', prompt: 'Explain the meaning of: ' },
+              { icon: 'language' as const, label: 'Translate Hindi → English', prompt: 'Translate to English: ' },
+            ].map((q) => (
+              <Pressable
+                key={q.label}
+                onPress={() => setInput(q.prompt)}
+                style={styles.quickChip}
+                testID={`tutor-quick-${q.label.split(' ')[0].toLowerCase()}`}
+              >
+                <Ionicons name={q.icon} size={14} color="#A992FF" />
+                <Text style={styles.quickChipText}>{q.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
           <View style={styles.inputBar}>
             <RNTextInput
@@ -320,6 +345,24 @@ const styles = StyleSheet.create({
   },
   typingDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A992FF' },
   errorBar: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
+  quickRow: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    gap: 8,
+  },
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(124,92,255,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    marginRight: 6,
+  },
+  quickChipText: { color: '#F2EEFF', fontSize: 12, fontWeight: '700' },
   inputBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',

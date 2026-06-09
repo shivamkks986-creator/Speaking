@@ -1,5 +1,5 @@
 export const APP_NAME = 'SpeakMate AI';
-export const TAGLINE = 'Speak English with confidence';
+export const TAGLINE = 'Speak Better. Get Hired Faster.';
 
 export const STORAGE_KEYS = {
   THEME_MODE: '@speakmate/theme_mode',

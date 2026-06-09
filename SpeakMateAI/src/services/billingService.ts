@@ -7,23 +7,23 @@ const products: PremiumProduct[] = [
   {
     id: 'speakmate_monthly',
     title: 'Monthly',
-    price: '₹199',
+    price: '₹99',
     durationMonths: 1,
   },
   {
     id: 'speakmate_quarterly',
     title: '3 Months',
-    price: '₹499',
+    price: '₹249',
     durationMonths: 3,
-    savings: 'Save 17%',
+    savings: 'Save 16%',
     popular: true,
   },
   {
     id: 'speakmate_yearly',
     title: 'Yearly',
-    price: '₹1,499',
+    price: '₹999',
     durationMonths: 12,
-    savings: 'Save 38%',
+    savings: 'Save 16%',
   },
 ];
 
