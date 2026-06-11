@@ -13,6 +13,7 @@ import { GamificationProvider } from '@/contexts/GamificationContext';
 import { CompanionProvider } from '@/contexts/CompanionContext';
 import RootNavigator from '@/navigation/RootNavigator';
 import RewardModal from '@/components/feature/RewardModal';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 
 function ThemedApp() {
   const { paperTheme, navTheme } = useAppTheme();
@@ -37,12 +38,14 @@ function ThemedApp() {
 
 export default function App() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <ThemedApp />
-        </ThemeProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <ThemedApp />
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }

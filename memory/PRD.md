@@ -73,6 +73,13 @@ Premium AI-powered English learning + Interview coaching app for Indian users.
 - ✅ Quick actions grid
 - ✅ **NEW: Leaderboard + Invite Friends tiles**
 
+### 🛡️ Production Polish (NEW v2)
+- ✅ **ErrorBoundary** wrapping the entire app — catches React errors and shows a beautiful recovery UI with "Try Again" button
+- ✅ **Skeleton loader** component (animated shimmer) for loading states
+- ✅ **Hybrid AI fallback chain** in backend — auto-switches between GPT-5.2 → Claude 4.5 → Gemini 3 Flash if any provider fails
+- ✅ **Premium Login + Signup redesign** — gradient hero, trust badges (4.8★ · 50K+ Convos · 1000+ Learners), benefit chips, Google CTA, glass-style fields
+- ✅ **Word of the Day** card on Home — 10 curated words rotated daily with phonetic, meaning, usage
+
 ## Tech Stack
 - **Mobile:** React Native + Expo SDK 54 (CNG via `expo prebuild` for Android Studio)
 - **Backend:** FastAPI + Multi-agent LLM (GPT-5.2, Claude 4.5, Gemini 3 Flash)

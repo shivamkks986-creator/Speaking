@@ -16,6 +16,7 @@ import { useCompanion } from '@/contexts/CompanionContext';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import XPBar from '@/components/feature/XPBar';
 import GlassCard from '@/components/common/GlassCard';
+import WordOfTheDayCard from '@/components/feature/WordOfTheDayCard';
 import { radius, spacing } from '@/config/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -224,6 +225,11 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <CompanionsStrip />
+          </Animated.View>
+
+          {/* Word of the Day */}
+          <Animated.View entering={FadeIn.delay(180).duration(500)}>
+            <WordOfTheDayCard />
           </Animated.View>
 
           {/* Social row — Leaderboard + Invite Friends */}
