@@ -42,6 +42,40 @@ def _new_chat(session_id: str, system_message: str, provider: str, model: str) -
     ).with_model(provider, model)
 
 
+# Hybrid model routing: premium users get the most capable model,
+# free users get a faster/cheaper one, with automatic fallback on failure.
+PRIMARY_CHAIN = [
+    ("openai", "gpt-5.2"),
+    ("anthropic", "claude-sonnet-4-5-20250929"),
+    ("gemini", "gemini-3-flash-preview"),
+]
+
+FREE_CHAIN = [
+    ("gemini", "gemini-3-flash-preview"),
+    ("anthropic", "claude-sonnet-4-5-20250929"),
+    ("openai", "gpt-5.2"),
+]
+
+
+async def _send_with_fallback(
+    session_id: str,
+    system_message: str,
+    user_msg: UserMessage,
+    is_premium: bool = True,
+) -> str:
+    """Send message trying each model in the chain; falls back on errors."""
+    chain = PRIMARY_CHAIN if is_premium else FREE_CHAIN
+    last_err: Exception | None = None
+    for provider, model in chain:
+        try:
+            chat = _new_chat(session_id, system_message, provider, model)
+            return await chat.send_message(user_msg)
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            continue
+    raise RuntimeError(f"All AI providers failed: {last_err}")
+
+
 def _extract_json(text: str) -> dict:
     """Strip code fences and parse first JSON object from model output."""
     cleaned = text.strip()
