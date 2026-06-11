@@ -74,6 +74,14 @@ export default function HomeScreen() {
                 <Ionicons name="logo-bitcoin" size={14} color="#FACC15" />
                 <Text style={styles.coinText}>{gam.coins}</Text>
               </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('Main', { screen: 'Settings' })}
+                style={styles.settingsBtn}
+                testID="home-settings-btn"
+                hitSlop={6}
+              >
+                <Ionicons name="settings-outline" size={20} color="#F2EEFF" />
+              </Pressable>
               <Pressable onPress={() => navigation.navigate('Profile')} testID="home-profile-btn">
                 {user?.photoURL ? (
                   <Avatar.Image size={40} source={{ uri: user.photoURL }} />
@@ -542,4 +550,15 @@ const styles = StyleSheet.create({
   },
   socialTitle: { color: '#fff', fontWeight: '800', fontSize: 14 },
   socialSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 1 },
+  settingsBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 4,
+  },
 });

@@ -17,7 +17,7 @@ import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import VoiceMicButton from '@/components/feature/VoiceMicButton';
 import { radius, spacing } from '@/config/theme';
 
-type CallState = 'idle' | 'listening' | 'thinking' | 'speaking';
+type CallState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error';
 
 export default function VoiceCallScreen() {
   const navigation = useNavigation();
@@ -29,6 +29,7 @@ export default function VoiceCallScreen() {
   const [aiReply, setAiReply] = useState('');
   const [elapsed, setElapsed] = useState(0);
   const [speed, setSpeed] = useState(1.0);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const startedRef = useRef(Date.now());
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -41,6 +42,7 @@ export default function VoiceCallScreen() {
   }, []);
 
   const handleMicTap = async () => {
+    setErrorMsg(null);
     if (state === 'speaking') {
       await speechService.stopAudio();
       setState('idle');
@@ -50,15 +52,24 @@ export default function VoiceCallScreen() {
       try {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         const { uri } = await speechService.stopRecording();
-        if (!uri) { setState('idle'); return; }
+        if (!uri) {
+          setErrorMsg('No audio recorded. Please try again.');
+          setState('error');
+          return;
+        }
         setState('thinking');
         const text = await speechService.transcribe(uri);
-        if (!text) { setState('idle'); return; }
+        if (!text) {
+          setErrorMsg("Couldn't understand. Speak clearly and try again.");
+          setState('error');
+          return;
+        }
         setTranscript(text);
         await runAi(text);
-      } catch (e) {
+      } catch (e: any) {
         console.warn('STT error', e);
-        setState('idle');
+        setErrorMsg(e?.message || "We couldn't connect right now. Please try again.");
+        setState('error');
       }
       return;
     }
@@ -66,8 +77,10 @@ export default function VoiceCallScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       await speechService.startRecording();
       setState('listening');
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Recording failed', e);
+      setErrorMsg(e?.message || 'Microphone access denied. Please enable mic permission in Settings.');
+      setState('error');
     }
   };
 
@@ -80,8 +93,10 @@ export default function VoiceCallScreen() {
       setState('idle');
       await recordActivity(1, 'chat');
       await awardAction('CHAT_MESSAGE');
-    } catch {
-      setState('idle');
+    } catch (e: any) {
+      console.warn('AI error', e);
+      setErrorMsg(e?.message || "AI couldn't respond. Check your internet and try again.");
+      setState('error');
     }
   };
 
@@ -97,6 +112,7 @@ export default function VoiceCallScreen() {
     listening: 'Listening... tap to send',
     thinking: 'Thinking...',
     speaking: 'Speaking',
+    error: 'Tap mic to try again',
   };
 
   const fmt = (s: number) => `${Math.floor(s / 60).toString().padStart(2, '0')}:${(s % 60).toString().padStart(2, '0')}`;
@@ -131,13 +147,19 @@ export default function VoiceCallScreen() {
         </View>
 
         <View style={styles.center}>
-          <CompanionAvatar companion={companion} size={160} showRing state={state} />
+          <CompanionAvatar companion={companion} size={160} showRing state={state === 'error' ? 'idle' : state} />
           <Text style={styles.name}>{companion.name}</Text>
           <Text style={styles.role}>{companion.role}</Text>
           <View style={styles.stateChip}>
-            <View style={[styles.dot, { backgroundColor: state === 'listening' ? '#22D3EE' : state === 'speaking' ? '#34D399' : state === 'thinking' ? '#FACC15' : '#9C8FFF' }]} />
+            <View style={[styles.dot, { backgroundColor: state === 'listening' ? '#22D3EE' : state === 'speaking' ? '#34D399' : state === 'thinking' ? '#FACC15' : state === 'error' ? '#FF6B6B' : '#9C8FFF' }]} />
             <Text style={styles.stateText}>{stateLabel[state]}</Text>
           </View>
+          {errorMsg && (
+            <View style={styles.errorCard}>
+              <Ionicons name="alert-circle" size={16} color="#FF6B6B" />
+              <Text style={styles.errorCardText}>{errorMsg}</Text>
+            </View>
+          )}
         </View>
 
         <ScrollView style={{ maxHeight: 200 }} contentContainerStyle={{ padding: spacing.lg }}>
@@ -156,7 +178,7 @@ export default function VoiceCallScreen() {
         </ScrollView>
 
         <View style={styles.bottom}>
-          <VoiceMicButton onPress={handleMicTap} recording={state === 'listening'} state={state} />
+          <VoiceMicButton onPress={handleMicTap} recording={state === 'listening'} state={state === 'error' ? 'idle' : state} />
           <Text style={styles.hint}>
             Real-time AI voice powered by OpenAI Whisper + premium voices. Speak naturally.
           </Text>
@@ -185,4 +207,18 @@ const styles = StyleSheet.create({
   bubbleText: { color: '#F2EEFF', fontSize: 14, lineHeight: 20 },
   bottom: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md },
   hint: { color: 'rgba(242,238,255,0.5)', fontSize: 11, textAlign: 'center', marginTop: spacing.sm, paddingHorizontal: spacing.lg },
+  errorCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(255,107,107,0.12)',
+    borderColor: 'rgba(255,107,107,0.35)',
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+  },
+  errorCardText: { color: '#FF6B6B', fontSize: 12, fontWeight: '600', flex: 1 },
 });

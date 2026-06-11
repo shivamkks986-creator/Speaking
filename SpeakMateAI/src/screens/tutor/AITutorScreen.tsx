@@ -44,8 +44,8 @@ export default function AITutorScreen() {
     setMessages([]);
   }, [companion.id]);
 
-  const onSend = useCallback(async () => {
-    const text = input.trim();
+  const onSend = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
     if (!text || thinking) return;
     const userMsg: ChatMessage = {
       id: randomId(),
@@ -156,22 +156,26 @@ export default function AITutorScreen() {
             </View>
           )}
 
-          {/* Quick action chips — prefill the input */}
+          {/* Quick action chips — auto-send the prompt for instant feedback */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.quickRow}
+            keyboardShouldPersistTaps="handled"
           >
             {[
-              { icon: 'construct' as const, label: 'Fix my grammar', prompt: 'Fix the grammar of this: ' },
-              { icon: 'sparkles' as const, label: 'Improve sentence', prompt: 'Make this sound more natural: ' },
-              { icon: 'book' as const, label: 'Explain meaning', prompt: 'Explain the meaning of: ' },
-              { icon: 'language' as const, label: 'Translate Hindi → English', prompt: 'Translate to English: ' },
+              { icon: 'construct' as const, label: 'Fix my grammar', prompt: 'Please correct the grammar of my recent message and explain the mistakes.' },
+              { icon: 'sparkles' as const, label: 'Improve sentence', prompt: 'Suggest a more natural, advanced way to say my last message.' },
+              { icon: 'book' as const, label: 'Explain meaning', prompt: 'Explain the meaning of any difficult word I used recently, with examples.' },
+              { icon: 'language' as const, label: 'Translate Hindi → English', prompt: 'Help me translate Hindi to English. Ask me what sentence I want to translate.' },
+              { icon: 'briefcase' as const, label: 'Interview prep', prompt: 'Ask me one common HR interview question. I will answer.' },
+              { icon: 'chatbubbles' as const, label: 'Daily conversation', prompt: "Let's have a casual English conversation. Start with a fun question." },
             ].map((q) => (
               <Pressable
                 key={q.label}
-                onPress={() => setInput(q.prompt)}
-                style={styles.quickChip}
+                onPress={() => onSend(q.prompt)}
+                disabled={thinking}
+                style={({ pressed }) => [styles.quickChip, pressed && { opacity: 0.6 }]}
                 testID={`tutor-quick-${q.label.split(' ')[0].toLowerCase()}`}
               >
                 <Ionicons name={q.icon} size={14} color="#A992FF" />
@@ -191,7 +195,7 @@ export default function AITutorScreen() {
               testID="tutor-input"
             />
             <Pressable
-              onPress={onSend}
+              onPress={() => onSend()}
               disabled={!input.trim() || thinking}
               style={[styles.sendBtn, !input.trim() && { opacity: 0.4 }]}
               testID="tutor-send-btn"
