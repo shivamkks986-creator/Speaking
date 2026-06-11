@@ -28,6 +28,7 @@
       },
       "package": "com.speakmate.ai",
       "versionCode": 1,
+      "jsEngine": "jsc",
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
@@ -61,11 +62,11 @@
             "gradleVersion": "8.13",
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false,
-            "newArchEnabled": true
+            "newArchEnabled": false
           },
           "ios": {
             "deploymentTarget": "15.1",
-            "newArchEnabled": true
+            "newArchEnabled": false
           }
         }
       ]
