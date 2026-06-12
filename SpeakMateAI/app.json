@@ -28,7 +28,7 @@
       },
       "package": "com.speakmate.ai",
       "versionCode": 1,
-      "jsEngine": "jsc",
+      "jsEngine": "hermes",
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
