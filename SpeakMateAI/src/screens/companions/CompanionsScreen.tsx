@@ -6,7 +6,7 @@ import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { useCompanion } from '@/contexts/CompanionContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,7 +40,7 @@ export default function CompanionsScreen() {
             const active = c.id === selected.id;
             const locked = c.isPremium && !user?.isPremium;
             return (
-              <Animated.View key={c.id} entering={FadeInUp.delay(i * 80).duration(400)}>
+              <FadeInView key={c.id} delay={i * 80} duration={400} direction="up">
                 <Pressable
                   onPress={() => {
                     if (locked) {
@@ -88,7 +88,7 @@ export default function CompanionsScreen() {
                   </View>
                   <Text style={styles.bio}>{c.bio}</Text>
                 </Pressable>
-              </Animated.View>
+              </FadeInView>
             );
           })}
         </ScrollView>

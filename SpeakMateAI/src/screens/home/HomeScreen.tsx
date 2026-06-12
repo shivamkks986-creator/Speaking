@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInDown, FadeIn } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { RootStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,7 +98,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Companion hero card */}
-          <Animated.View entering={FadeInDown.duration(500)}>
+          <FadeInView duration={500} direction="down">
             <LinearGradient
               colors={[`${companion.accent}30`, 'rgba(124,92,255,0.08)']}
               style={styles.heroCard}
@@ -152,10 +152,10 @@ export default function HomeScreen() {
                 </Pressable>
               </View>
             </LinearGradient>
-          </Animated.View>
+          </FadeInView>
 
           {/* Progression card */}
-          <Animated.View entering={FadeInDown.delay(80).duration(500)}>
+          <FadeInView delay={80} duration={500} direction="down">
             <GlassCard style={{ marginTop: spacing.lg }}>
               <XPBar />
               <View style={styles.progRow}>
@@ -183,10 +183,10 @@ export default function HomeScreen() {
                 </View>
               </View>
             </GlassCard>
-          </Animated.View>
+          </FadeInView>
 
           {/* Quick actions grid */}
-          <Animated.View entering={FadeInDown.delay(140).duration(500)}>
+          <FadeInView delay={140} duration={500} direction="down">
             <Text style={styles.section}>Quick start</Text>
             <View style={styles.grid}>
               <QuickAction
@@ -222,10 +222,10 @@ export default function HomeScreen() {
                 testID="home-action-vocab"
               />
             </View>
-          </Animated.View>
+          </FadeInView>
 
           {/* Companions strip */}
-          <Animated.View entering={FadeIn.delay(220).duration(500)}>
+          <FadeInView delay={220} duration={500}>
             <View style={styles.sectionRow}>
               <Text style={styles.section}>AI Companions</Text>
               <Pressable onPress={() => navigation.navigate('Companions')} testID="home-see-all-companions">
@@ -233,15 +233,15 @@ export default function HomeScreen() {
               </Pressable>
             </View>
             <CompanionsStrip />
-          </Animated.View>
+          </FadeInView>
 
           {/* Word of the Day */}
-          <Animated.View entering={FadeIn.delay(180).duration(500)}>
+          <FadeInView delay={180} duration={500}>
             <WordOfTheDayCard />
-          </Animated.View>
+          </FadeInView>
 
           {/* Social row — Leaderboard + Invite Friends */}
-          <Animated.View entering={FadeIn.delay(250).duration(500)}>
+          <FadeInView delay={250} duration={500}>
             <View style={styles.socialRow}>
               <Pressable
                 onPress={() => navigation.navigate('Leaderboard')}
@@ -280,10 +280,10 @@ export default function HomeScreen() {
                 </LinearGradient>
               </Pressable>
             </View>
-          </Animated.View>
+          </FadeInView>
 
           {/* Premium dashboard preview */}
-          <Animated.View entering={FadeIn.delay(280).duration(500)}>
+          <FadeInView delay={280} duration={500}>
             <Pressable
               onPress={() => navigation.navigate('PremiumDashboard')}
               testID="home-premium-dashboard-btn"
@@ -303,11 +303,11 @@ export default function HomeScreen() {
                 </View>
               </GlassCard>
             </Pressable>
-          </Animated.View>
+          </FadeInView>
 
           {/* Premium CTA */}
           {!user?.isPremium && (
-            <Animated.View entering={FadeIn.delay(340).duration(500)}>
+            <FadeInView delay={340} duration={500}>
               <Pressable
                 onPress={() => navigation.navigate('Premium')}
                 testID="home-premium-cta"
@@ -326,7 +326,7 @@ export default function HomeScreen() {
                   <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
                 </LinearGradient>
               </Pressable>
-            </Animated.View>
+            </FadeInView>
           )}
         </ScrollView>
       </SafeAreaView>

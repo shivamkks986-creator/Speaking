@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { ChatMessage } from '@/types';
 import { aiService } from '@/services/aiService';
@@ -140,14 +140,14 @@ export default function AITutorScreen() {
           )}
 
           {thinking && (
-            <Animated.View entering={FadeIn.duration(200)} style={styles.thinkingRow}>
+            <FadeInView duration={200} style={styles.thinkingRow}>
               <CompanionAvatar companion={companion} size={28} />
               <View style={styles.typingBubble}>
                 <View style={styles.typingDot} />
                 <View style={styles.typingDot} />
                 <View style={styles.typingDot} />
               </View>
-            </Animated.View>
+            </FadeInView>
           )}
 
           {error && (
@@ -227,8 +227,10 @@ function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: Return
     speechService.speakWithAI(msg.text, { companionId: companion.id });
   };
   return (
-    <Animated.View
-      entering={FadeInUp.delay(index * 30).duration(250)}
+    <FadeInView
+      delay={index * 30}
+      duration={250}
+      direction="up"
       style={[styles.bubbleRow, isUser && { justifyContent: 'flex-end' }]}
     >
       {!isUser && <CompanionAvatar companion={companion} size={28} style={{ marginRight: 8 }} />}
@@ -264,7 +266,7 @@ function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: Return
           </View>
         )}
       </View>
-    </Animated.View>
+    </FadeInView>
   );
 }
 

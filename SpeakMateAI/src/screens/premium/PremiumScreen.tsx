@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { billingService } from '@/services/billingService';
@@ -91,7 +91,7 @@ export default function PremiumScreen() {
               products.map((p, i) => {
                 const active = selected === p.id;
                 return (
-                  <Animated.View key={p.id} entering={FadeInDown.delay(i * 60).duration(400)}>
+                  <FadeInView key={p.id} delay={i * 60} duration={400} direction="down">
                     <Pressable
                       onPress={() => setSelected(p.id)}
                       style={[
@@ -121,7 +121,7 @@ export default function PremiumScreen() {
                         </View>
                       )}
                     </Pressable>
-                  </Animated.View>
+                  </FadeInView>
                 );
               })
             )}
@@ -131,7 +131,7 @@ export default function PremiumScreen() {
           <Text style={styles.section}>What you unlock</Text>
           <View style={styles.benefitsWrap}>
             {BENEFITS.map((b, i) => (
-              <Animated.View key={b.title} entering={FadeInDown.delay(i * 40).duration(300)} style={styles.benefitRow}>
+              <FadeInView key={b.title} delay={i * 40} duration={300} direction="down" style={styles.benefitRow}>
                 <View style={styles.benefitIcon}>
                   <Ionicons name={b.icon} size={18} color="#A992FF" />
                 </View>
@@ -140,7 +140,7 @@ export default function PremiumScreen() {
                   <Text style={styles.benefitSub}>{b.sub}</Text>
                 </View>
                 <Ionicons name="checkmark-circle" size={20} color="#34D399" />
-              </Animated.View>
+              </FadeInView>
             ))}
           </View>
 

@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { AuthStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -69,7 +69,7 @@ export default function LoginScreen({ navigation }: Props) {
             showsVerticalScrollIndicator={false}
           >
             {/* Hero */}
-            <Animated.View entering={FadeIn.duration(500)} style={styles.hero}>
+            <FadeInView duration={500} style={styles.hero}>
               <LinearGradient
                 colors={['#FACC15', '#FF6B9D', '#7C5CFF']}
                 start={{ x: 0, y: 0 }}
@@ -89,17 +89,17 @@ export default function LoginScreen({ navigation }: Props) {
                 <TrustBadge icon="mic" text="50K+ Convos" color="#FF6B9D" />
                 <TrustBadge icon="people" text="1000+ Learners" color="#22D3EE" />
               </View>
-            </Animated.View>
+            </FadeInView>
 
             {/* Google CTA */}
-            <Animated.View entering={FadeInUp.delay(150).duration(500)}>
+            <FadeInView delay={150} duration={500} direction="up">
               <Pressable onPress={onGoogle} style={styles.googleBtn} testID="login-google-btn">
                 <View style={styles.googleIcon}>
                   <Ionicons name="logo-google" size={18} color="#0B0618" />
                 </View>
                 <Text style={styles.googleText}>Continue with Google</Text>
               </Pressable>
-            </Animated.View>
+            </FadeInView>
 
             {/* Divider */}
             <View style={styles.divider}>
@@ -109,7 +109,7 @@ export default function LoginScreen({ navigation }: Props) {
             </View>
 
             {/* Form */}
-            <Animated.View entering={FadeInUp.delay(220).duration(500)}>
+            <FadeInView delay={220} duration={500} direction="up">
               <Field
                 icon="mail"
                 placeholder="Email"
@@ -159,7 +159,7 @@ export default function LoginScreen({ navigation }: Props) {
                   <Text style={styles.ctaText}>{loading ? 'Logging in…' : 'Log In'}</Text>
                 </LinearGradient>
               </Pressable>
-            </Animated.View>
+            </FadeInView>
 
             {/* Footer */}
             <View style={styles.footer}>

@@ -7,7 +7,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { RootStackParamList } from '@/navigation/types';
 import { INTERVIEW_TRACKS } from '@/data/interviewTracks';
@@ -70,7 +70,7 @@ export default function InterviewCoachScreen() {
             const locked = track.premium && !user?.isPremium;
             const interviewer = COMPANIONS.find((c) => c.id === track.interviewer);
             return (
-              <Animated.View key={track.id} entering={FadeInUp.delay(i * 40).duration(300)}>
+              <FadeInView key={track.id} delay={i * 40} duration={300} direction="up">
                 <Pressable
                   onPress={() => {
                     if (locked) {
@@ -116,7 +116,7 @@ export default function InterviewCoachScreen() {
                     )}
                   </LinearGradient>
                 </Pressable>
-              </Animated.View>
+              </FadeInView>
             );
           })}
 

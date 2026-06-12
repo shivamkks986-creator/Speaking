@@ -7,7 +7,7 @@ import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { RootStackParamList } from '@/navigation/types';
 import { useProgress } from '@/contexts/ProgressContext';
@@ -146,7 +146,7 @@ export default function DailyMissionsScreen() {
             const pct = Math.min(1, m.current / m.target);
             const done = pct >= 1;
             return (
-              <Animated.View key={m.id} entering={FadeInUp.delay(i * 60).duration(300)}>
+              <FadeInView key={m.id} delay={i * 60} duration={300} direction="up">
                 <Pressable onPress={m.action} style={[styles.card, done && { opacity: 0.7 }]} testID={m.testID}>
                   <LinearGradient
                     colors={done ? ['#34D399', '#22D3EE'] : m.colors}
@@ -173,7 +173,7 @@ export default function DailyMissionsScreen() {
                   </View>
                   <Ionicons name="chevron-forward" size={20} color="rgba(242,238,255,0.5)" />
                 </Pressable>
-              </Animated.View>
+              </FadeInView>
             );
           })}
 

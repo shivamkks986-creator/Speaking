@@ -1,49 +1,41 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Modal, Pressable } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Modal, Pressable, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-  Easing,
-} from 'react-native-reanimated';
 
 import { useGamification, PendingReward } from '@/contexts/GamificationContext';
 import { radius, spacing } from '@/config/theme';
 
-const AnimatedView = Animated.createAnimatedComponent(View);
-
 export const RewardModal: React.FC = () => {
   const { state, popReward } = useGamification();
   const [current, setCurrent] = useState<PendingReward | null>(null);
-  const scale = useSharedValue(0);
+  const scale = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (!current && state.pendingRewards.length > 0) {
       const next = popReward();
       if (next) {
         setCurrent(next);
-        scale.value = 0;
-        scale.value = withSpring(1, { damping: 12, stiffness: 120 });
+        scale.setValue(0);
+        Animated.spring(scale, {
+          toValue: 1,
+          damping: 12,
+          stiffness: 120,
+          useNativeDriver: true,
+        }).start();
       }
     }
   }, [state.pendingRewards, current, popReward, scale]);
 
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: scale.value,
-  }));
-
   if (!current) return null;
 
   const handleClose = () => {
-    scale.value = withTiming(0, { duration: 200, easing: Easing.in(Easing.quad) }, (finished) => {
-      if (finished) {
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-      }
-    });
+    Animated.timing(scale, {
+      toValue: 0,
+      duration: 200,
+      easing: Easing.in(Easing.quad),
+      useNativeDriver: true,
+    }).start();
     setTimeout(() => setCurrent(null), 220);
   };
 
@@ -52,7 +44,7 @@ export const RewardModal: React.FC = () => {
   return (
     <Modal transparent visible animationType="fade" onRequestClose={handleClose}>
       <View style={styles.backdrop}>
-        <AnimatedView style={[styles.cardWrap, animStyle]}>
+        <Animated.View style={[styles.cardWrap, { opacity: scale, transform: [{ scale }] }]}>
           <LinearGradient
             colors={[current.color, '#7C5CFF']}
             start={{ x: 0, y: 0 }}
@@ -86,7 +78,7 @@ export const RewardModal: React.FC = () => {
               <Text style={styles.ctaText}>Awesome!</Text>
             </Pressable>
           </LinearGradient>
-        </AnimatedView>
+        </Animated.View>
       </View>
     </Modal>
   );

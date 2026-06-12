@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { AuthStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,7 +83,7 @@ export default function SignupScreen({ navigation }: Props) {
             </Pressable>
 
             {/* Hero */}
-            <Animated.View entering={FadeIn.duration(500)} style={styles.hero}>
+            <FadeInView duration={500} style={styles.hero}>
               <LinearGradient
                 colors={['#FACC15', '#FF6B9D', '#7C5CFF']}
                 start={{ x: 0, y: 0 }}
@@ -96,10 +96,10 @@ export default function SignupScreen({ navigation }: Props) {
               <Text style={styles.heroSub}>
                 Master speaking, pronunciation, confidence and interviews.
               </Text>
-            </Animated.View>
+            </FadeInView>
 
             {/* Benefits */}
-            <Animated.View entering={FadeInUp.delay(100).duration(500)} style={styles.benefitsGrid}>
+            <FadeInView delay={100} duration={500} direction="up" style={styles.benefitsGrid}>
               {BENEFITS.map((b) => (
                 <View key={b.text} style={styles.benefit}>
                   <View style={styles.benefitDot}>
@@ -108,15 +108,15 @@ export default function SignupScreen({ navigation }: Props) {
                   <Text style={styles.benefitText}>{b.text}</Text>
                 </View>
               ))}
-            </Animated.View>
+            </FadeInView>
 
             {/* Google CTA */}
-            <Animated.View entering={FadeInUp.delay(180).duration(500)}>
+            <FadeInView delay={180} duration={500} direction="up">
               <Pressable onPress={onGoogle} style={styles.googleBtn} testID="signup-google-btn">
                 <Ionicons name="logo-google" size={18} color="#0B0618" />
                 <Text style={styles.googleText}>Sign up with Google</Text>
               </Pressable>
-            </Animated.View>
+            </FadeInView>
 
             {/* Divider */}
             <View style={styles.divider}>
@@ -126,7 +126,7 @@ export default function SignupScreen({ navigation }: Props) {
             </View>
 
             {/* Form */}
-            <Animated.View entering={FadeInUp.delay(240).duration(500)}>
+            <FadeInView delay={240} duration={500} direction="up">
               <Field
                 icon="person"
                 placeholder="Full name"
@@ -181,7 +181,7 @@ export default function SignupScreen({ navigation }: Props) {
               <Text style={styles.terms}>
                 By signing up you agree to our Terms of Service and Privacy Policy.
               </Text>
-            </Animated.View>
+            </FadeInView>
 
             {/* Footer */}
             <View style={styles.footer}>

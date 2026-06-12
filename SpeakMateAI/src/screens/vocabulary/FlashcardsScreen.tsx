@@ -1,12 +1,11 @@
 // Flashcards screen — swipeable vocabulary flashcards with AI lookup
-import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator, Animated } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import Animated, { FadeIn, FadeOut, useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 
 import { useGamification } from '@/contexts/GamificationContext';
 import { speechService } from '@/services/speechService';
@@ -42,13 +41,13 @@ export default function FlashcardsScreen() {
   const [flipped, setFlipped] = useState(false);
   const [card, setCard] = useState<CardData | null>(null);
   const [loading, setLoading] = useState(true);
-  const flip = useSharedValue(0);
+  const flip = useRef(new Animated.Value(0)).current;
 
   const fetchCard = useCallback(async (wordIdx: number) => {
     const wordItem = WORDS[wordIdx % WORDS.length];
     setLoading(true);
     setFlipped(false);
-    flip.value = 0;
+    flip.setValue(0);
     try {
       const res = await fetch(`${AI}/vocabulary/lookup`, {
         method: 'POST',
@@ -76,8 +75,13 @@ export default function FlashcardsScreen() {
   }, [index, fetchCard]);
 
   const onFlip = () => {
-    setFlipped(!flipped);
-    flip.value = withSpring(flipped ? 0 : 180, { damping: 12 });
+    const next = !flipped;
+    setFlipped(next);
+    Animated.spring(flip, {
+      toValue: next ? 180 : 0,
+      damping: 12,
+      useNativeDriver: true,
+    }).start();
   };
 
   const onNext = async () => {
@@ -85,14 +89,12 @@ export default function FlashcardsScreen() {
     setIndex((i) => i + 1);
   };
 
-  const frontStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1000 }, { rotateY: `${flip.value}deg` }],
-    opacity: flip.value < 90 ? 1 : 0,
-  }));
-  const backStyle = useAnimatedStyle(() => ({
-    transform: [{ perspective: 1000 }, { rotateY: `${flip.value - 180}deg` }],
-    opacity: flip.value >= 90 ? 1 : 0,
-  }));
+  const frontRotate = flip.interpolate({ inputRange: [0, 180], outputRange: ['0deg', '180deg'] });
+  const backRotate = flip.interpolate({ inputRange: [0, 180], outputRange: ['180deg', '360deg'] });
+  const frontOpacity = flip.interpolate({ inputRange: [0, 89, 90, 180], outputRange: [1, 1, 0, 0] });
+  const backOpacity = flip.interpolate({ inputRange: [0, 89, 90, 180], outputRange: [0, 0, 1, 1] });
+  const frontStyle = { transform: [{ perspective: 1000 }, { rotateY: frontRotate }], opacity: frontOpacity };
+  const backStyle = { transform: [{ perspective: 1000 }, { rotateY: backRotate }], opacity: backOpacity };
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>

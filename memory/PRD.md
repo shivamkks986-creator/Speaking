@@ -4,6 +4,9 @@
 Premium AI-powered English learning + Interview coaching app for Indian users.
 **Tagline:** "Speak Better. Get Hired Faster."
 
+## ⚠️ Critical Build Note (Feb 2026)
+Due to persistent Windows local-build C++ compilation failures with `react-native-reanimated`, the entire app has been **migrated to stock React Native `Animated` API**. A reusable `FadeInView` helper at `src/components/common/FadeInView.tsx` replaces all `FadeIn / FadeInUp / FadeInDown` entrance animations. `react-native-reanimated` is completely removed from `package.json` and `babel.config.js`. This unblocks the local APK build.
+
 ## Target Users
 - College students, freshers, job seekers
 - Working professionals upgrading interview skills

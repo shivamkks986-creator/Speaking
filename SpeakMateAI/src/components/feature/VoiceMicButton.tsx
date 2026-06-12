@@ -1,16 +1,7 @@
-import React, { useEffect } from 'react';
-import { View, StyleSheet, Pressable, ViewStyle, StyleProp } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { View, StyleSheet, Pressable, ViewStyle, StyleProp, Animated, Easing } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  withSequence,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
 
 interface Props {
   onPress: () => void;
@@ -20,8 +11,6 @@ interface Props {
   style?: StyleProp<ViewStyle>;
 }
 
-const AnimatedView = Animated.createAnimatedComponent(View);
-
 export const VoiceMicButton: React.FC<Props> = ({
   onPress,
   recording,
@@ -29,31 +18,46 @@ export const VoiceMicButton: React.FC<Props> = ({
   size = 120,
   style,
 }) => {
-  const pulse = useSharedValue(0);
+  const pulse = useRef(new Animated.Value(0)).current;
+  const loopRef = useRef<Animated.CompositeAnimation | null>(null);
 
   useEffect(() => {
+    loopRef.current?.stop();
     if (recording || state === 'listening') {
-      pulse.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 800, easing: Easing.out(Easing.quad) }),
-          withTiming(0, { duration: 800, easing: Easing.in(Easing.quad) })
-        ),
-        -1,
-        false
+      const seq = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, {
+            toValue: 1,
+            duration: 800,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulse, {
+            toValue: 0,
+            duration: 800,
+            easing: Easing.in(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ])
       );
+      loopRef.current = seq;
+      seq.start();
     } else {
-      pulse.value = withTiming(0, { duration: 200 });
+      Animated.timing(pulse, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
     }
+    return () => {
+      loopRef.current?.stop();
+    };
   }, [recording, state, pulse]);
 
-  const ring1Style = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.35]) }],
-    opacity: interpolate(pulse.value, [0, 1], [0.45, 0]),
-  }));
-  const ring2Style = useAnimatedStyle(() => ({
-    transform: [{ scale: interpolate(pulse.value, [0, 1], [1, 1.7]) }],
-    opacity: interpolate(pulse.value, [0, 1], [0.25, 0]),
-  }));
+  const scale1 = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
+  const opacity1 = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.45, 0] });
+  const scale2 = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.7] });
+  const opacity2 = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0] });
 
   const colors: [string, string] =
     state === 'speaking'
@@ -69,18 +73,16 @@ export const VoiceMicButton: React.FC<Props> = ({
 
   return (
     <Pressable onPress={onPress} style={[{ width: size + 60, height: size + 60, alignItems: 'center', justifyContent: 'center' }, style]}>
-      <AnimatedView
+      <Animated.View
         style={[
           styles.ring,
-          ring2Style,
-          { width: size, height: size, borderRadius: size / 2, backgroundColor: colors[0] },
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: colors[0], transform: [{ scale: scale2 }], opacity: opacity2 },
         ]}
       />
-      <AnimatedView
+      <Animated.View
         style={[
           styles.ring,
-          ring1Style,
-          { width: size, height: size, borderRadius: size / 2, backgroundColor: colors[0] },
+          { width: size, height: size, borderRadius: size / 2, backgroundColor: colors[0], transform: [{ scale: scale1 }], opacity: opacity1 },
         ]}
       />
       <LinearGradient

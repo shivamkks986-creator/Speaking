@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Animated, { FadeIn, FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { radius, spacing } from '@/config/theme';
 
@@ -164,7 +164,7 @@ export default function OnboardingScreen() {
 function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
   return (
     <View style={[styles.slide, { width }]}>
-      <Animated.View entering={FadeIn.duration(450)} style={styles.illustrationWrap}>
+      <FadeInView duration={450} style={styles.illustrationWrap}>
         <LinearGradient
           colors={slide.gradient as [string, string]}
           start={{ x: 0, y: 0 }}
@@ -176,12 +176,12 @@ function SlideView({ slide, active }: { slide: Slide; active: boolean }) {
           </View>
         </LinearGradient>
         {active && <RingGlow color={slide.accent} />}
-      </Animated.View>
+      </FadeInView>
 
-      <Animated.View entering={FadeInUp.delay(150).duration(500)}>
+      <FadeInView delay={150} duration={500} direction="up">
         <Text style={styles.title}>{slide.title}</Text>
         <Text style={styles.sub}>{slide.subtitle}</Text>
-      </Animated.View>
+      </FadeInView>
     </View>
   );
 }

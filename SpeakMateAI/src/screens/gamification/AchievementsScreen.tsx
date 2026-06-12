@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import FadeInView from '@/components/common/FadeInView';
 
 import { useGamification } from '@/contexts/GamificationContext';
 import { useProgress } from '@/contexts/ProgressContext';
@@ -97,9 +97,11 @@ export default function AchievementsScreen() {
               })();
               const progress = Math.min(1, stat / b.criteria.threshold);
               return (
-                <Animated.View
+                <FadeInView
                   key={b.id}
-                  entering={FadeInUp.delay(i * 50).duration(300)}
+                  delay={i * 50}
+                  duration={300}
+                  direction="up"
                   style={styles.badgeCardWrap}
                 >
                   <LinearGradient
@@ -125,7 +127,7 @@ export default function AchievementsScreen() {
                       {Math.min(stat, b.criteria.threshold)}/{b.criteria.threshold}
                     </Text>
                   </LinearGradient>
-                </Animated.View>
+                </FadeInView>
               );
             })}
           </View>
