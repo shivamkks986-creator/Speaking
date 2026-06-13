@@ -94,15 +94,32 @@ def _extract_json(text: str) -> dict:
 # ==================== AI TUTOR (GPT-5.2) ====================
 
 TUTOR_SYSTEM = (
-    "You are SpeakMate, a warm, encouraging English tutor for Indian learners. "
-    "The user may write in English, Hinglish, or Hindi. Your job: "
-    "1) If their message has grammar mistakes, gently correct it. "
-    "2) Suggest a more natural/native phrasing when possible. "
-    "3) Reply conversationally (1-3 sentences) so the practice continues. "
-    "4) If the user writes in Hindi, give the English translation. "
-    "Always respond with ONLY a JSON object — no prose, no code fences — in this exact shape: "
-    '{"reply": "...", "correction": "..." or null, "suggestion": "..." or null}'
+    "You are SpeakMate, a world-class English coach for Indian learners (Hindi/Hinglish/English). "
+    "You have ONE job per turn: directly answer what the user wants AND help them improve.\n\n"
+    "ABSOLUTE RULES — NEVER VIOLATE:\n"
+    "1. NEVER use empty filler phrases like: 'Great question', 'Nice try', 'Excellent', "
+    "'I understand what you mean', 'That's a great point', 'Your English is improving'. "
+    "These add zero value and make you sound robotic.\n"
+    "2. NEVER ignore the user's actual request. If they ask 'what does X mean?' — give the meaning. "
+    "If they ask for translation — translate. If they ask for an interview question — ask one.\n"
+    "3. NEVER repeat the same opening across messages. Vary openers naturally.\n"
+    "4. ALWAYS do ONE of these four things in `reply`: (a) TEACH a new concept, "
+    "(b) CORRECT a specific mistake, (c) EXPLAIN why something is right/wrong, (d) CHALLENGE with a follow-up question.\n\n"
+    "OUTPUT FORMAT — ONLY return a single JSON object (no prose, no fences):\n"
+    "{\n"
+    '  "reply": "1-3 sentence response that DIRECTLY addresses the user AND teaches/challenges",\n'
+    '  "correction": "if user had a grammar/spelling mistake: original → corrected version with brief why. Else null",\n'
+    '  "suggestion": "a more natural/native phrasing of what they tried to say. Else null",\n'
+    '  "vocab": {"word": "...", "meaning": "...", "hindi": "..."} or null,\n'
+    '  "followup": "a short follow-up question to keep the conversation alive (5-12 words)" or null\n'
+    "}\n"
+    "Always include `followup` unless the user explicitly says goodbye."
 )
+
+
+class TutorChatHistoryItem(BaseModel):
+    role: str  # "user" | "assistant"
+    text: str
 
 
 class TutorChatRequest(BaseModel):
@@ -110,6 +127,13 @@ class TutorChatRequest(BaseModel):
     session_id: Optional[str] = None
     companion_id: Optional[str] = None
     system_prompt: Optional[str] = None
+    history: List[TutorChatHistoryItem] = Field(default_factory=list)
+
+
+class TutorVocab(BaseModel):
+    word: str
+    meaning: str
+    hindi: Optional[str] = None
 
 
 class TutorChatResponse(BaseModel):
@@ -118,21 +142,46 @@ class TutorChatResponse(BaseModel):
     reply: str
     correction: Optional[str] = None
     suggestion: Optional[str] = None
+    vocab: Optional[TutorVocab] = None
+    followup: Optional[str] = None
 
 
 @router.post("/tutor/chat", response_model=TutorChatResponse)
 async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
     system_msg = (req.system_prompt or TUTOR_SYSTEM).strip()
-    chat = _new_chat(session_id, system_msg, "openai", "gpt-5.2")
-    raw = await chat.send_message(UserMessage(text=req.message))
+
+    # Inject conversation memory (last 6 turns) so the AI never forgets context.
+    history_block = ""
+    if req.history:
+        recent = req.history[-6:]
+        lines = [f"{('User' if h.role == 'user' else 'Tutor')}: {h.text}" for h in recent]
+        history_block = "Recent conversation (for context, do NOT repeat):\n" + "\n".join(lines) + "\n\n"
+    user_text = f"{history_block}User's new message: {req.message}"
+
+    raw = await _send_with_fallback(
+        session_id=session_id,
+        system_message=system_msg,
+        user_msg=UserMessage(text=user_text),
+        is_premium=True,
+    )
     data = _extract_json(raw)
+    vocab_raw = data.get("vocab")
+    vocab_model: Optional[TutorVocab] = None
+    if isinstance(vocab_raw, dict) and vocab_raw.get("word"):
+        vocab_model = TutorVocab(
+            word=str(vocab_raw.get("word", "")),
+            meaning=str(vocab_raw.get("meaning", "")),
+            hindi=str(vocab_raw.get("hindi") or "") or None,
+        )
     return TutorChatResponse(
         id=str(uuid.uuid4()),
         session_id=session_id,
-        reply=data.get("reply", "").strip() or "Let's keep practising!",
+        reply=data.get("reply", "").strip() or "Let's continue — tell me what you want to practise.",
         correction=(data.get("correction") or None),
         suggestion=(data.get("suggestion") or None),
+        vocab=vocab_model,
+        followup=(str(data.get("followup") or "").strip() or None),
     )
 
 

@@ -17,6 +17,8 @@ export interface ChatMessage {
   text: string;
   correction?: string;
   suggestion?: string;
+  vocab?: { word: string; meaning: string; hindi?: string | null };
+  followup?: string;
   timestamp: number;
 }
 

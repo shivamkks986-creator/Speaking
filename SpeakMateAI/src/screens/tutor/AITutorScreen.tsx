@@ -9,12 +9,14 @@ import {
   Pressable,
   TextInput as RNTextInput,
   ScrollView,
+  Alert,
 } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import * as Clipboard from 'expo-clipboard';
 import FadeInView from '@/components/common/FadeInView';
 
 import { ChatMessage } from '@/types';
@@ -29,6 +31,7 @@ import { radius, spacing } from '@/config/theme';
 
 export default function AITutorScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { recordActivity } = useProgress();
   const { companion } = useCompanion();
   const { awardAction } = useGamification();
@@ -53,12 +56,14 @@ export default function AITutorScreen() {
       text,
       timestamp: Date.now(),
     };
+    // Capture history BEFORE adding the new user message so we send the last 6 turns of context.
+    const historyForApi = messages.slice(-6).map((m) => ({ role: m.role, text: m.text }));
     setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setThinking(true);
     setError(null);
     try {
-      const reply = await aiService.chat(text, companion.id, companion.systemPrompt);
+      const reply = await aiService.chat(text, companion.id, companion.systemPrompt, historyForApi);
       setMessages((prev) => [...prev, reply]);
       recordActivity(1, 'chat').catch(() => {});
       awardAction('CHAT_MESSAGE').catch(() => {});
@@ -68,13 +73,36 @@ export default function AITutorScreen() {
     } finally {
       setThinking(false);
     }
-  }, [input, thinking, recordActivity, awardAction, companion.id, companion.systemPrompt]);
+  }, [input, thinking, recordActivity, awardAction, companion.id, companion.systemPrompt, messages]);
 
   const onClear = useCallback(() => {
     setMessages([]);
     setError(null);
     aiService.resetTutorSession?.();
   }, []);
+
+  const onLongPressMessage = useCallback((msg: ChatMessage) => {
+    Alert.alert(
+      'Message options',
+      undefined,
+      [
+        { text: 'Copy', onPress: () => Clipboard.setStringAsync(msg.text) },
+        { text: 'Speak', onPress: () => speechService.speakWithAI(msg.text, { companionId: companion.id }) },
+        ...(msg.role === 'ai'
+          ? [{ text: 'Regenerate', onPress: () => {
+              // Remove last AI reply and resend the previous user message
+              const lastUserIdx = [...messages].reverse().findIndex((m) => m.role === 'user');
+              if (lastUserIdx < 0) return;
+              const realIdx = messages.length - 1 - lastUserIdx;
+              const lastUser = messages[realIdx];
+              setMessages((prev) => prev.slice(0, realIdx + 1));
+              onSend(lastUser.text);
+            } }]
+          : []),
+        { text: 'Cancel', style: 'cancel' as const },
+      ]
+    );
+  }, [companion.id, messages, onSend]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
@@ -110,8 +138,8 @@ export default function AITutorScreen() {
 
         <KeyboardAvoidingView
           style={styles.flex}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          keyboardVerticalOffset={64}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
           {messages.length === 0 ? (
             <View style={styles.welcome}>
@@ -133,7 +161,9 @@ export default function AITutorScreen() {
               ref={listRef}
               data={messages}
               keyExtractor={(m) => m.id}
-              renderItem={({ item, index }) => <Bubble msg={item} companion={companion} index={index} />}
+              renderItem={({ item, index }) => (
+                <Bubble msg={item} companion={companion} index={index} onLongPress={onLongPressMessage} onUseFollowup={(t) => onSend(t)} />
+              )}
               contentContainerStyle={styles.list}
               onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: true })}
             />
@@ -184,7 +214,7 @@ export default function AITutorScreen() {
             ))}
           </ScrollView>
 
-          <View style={styles.inputBar}>
+          <View style={[styles.inputBar, { paddingBottom: spacing.md + Math.max(0, insets.bottom - 8) }]}>
             <RNTextInput
               placeholder="Type or speak in English / Hindi…"
               placeholderTextColor="rgba(242,238,255,0.4)"
@@ -221,7 +251,19 @@ const STARTERS = [
   'Teach me a new word',
 ];
 
-function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: ReturnType<typeof useCompanion>['companion']; index: number }) {
+function Bubble({
+  msg,
+  companion,
+  index,
+  onLongPress,
+  onUseFollowup,
+}: {
+  msg: ChatMessage;
+  companion: ReturnType<typeof useCompanion>['companion'];
+  index: number;
+  onLongPress: (msg: ChatMessage) => void;
+  onUseFollowup: (text: string) => void;
+}) {
   const isUser = msg.role === 'user';
   const onSpeak = () => {
     speechService.speakWithAI(msg.text, { companionId: companion.id });
@@ -234,18 +276,20 @@ function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: Return
       style={[styles.bubbleRow, isUser && { justifyContent: 'flex-end' }]}
     >
       {!isUser && <CompanionAvatar companion={companion} size={28} style={{ marginRight: 8 }} />}
-      <View style={{ maxWidth: '78%' }}>
+      <View style={{ maxWidth: '78%', flexShrink: 1 }}>
         {isUser ? (
-          <LinearGradient
-            colors={companion.gradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[styles.bubble, styles.bubbleUser]}
-          >
-            <Text style={styles.bubbleTextUser}>{msg.text}</Text>
-          </LinearGradient>
+          <Pressable onLongPress={() => onLongPress(msg)} delayLongPress={250}>
+            <LinearGradient
+              colors={companion.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={[styles.bubble, styles.bubbleUser]}
+            >
+              <Text style={styles.bubbleTextUser}>{msg.text}</Text>
+            </LinearGradient>
+          </Pressable>
         ) : (
-          <View style={[styles.bubble, styles.bubbleAi]}>
+          <Pressable onLongPress={() => onLongPress(msg)} delayLongPress={250} style={[styles.bubble, styles.bubbleAi]}>
             <Text style={styles.bubbleTextAi}>{msg.text}</Text>
             {msg.correction && (
               <View style={styles.metaCard}>
@@ -254,16 +298,39 @@ function Bubble({ msg, companion, index }: { msg: ChatMessage; companion: Return
               </View>
             )}
             {msg.suggestion && (
-              <View style={[styles.metaCard, { borderColor: 'rgba(250,204,21,0.3)' }]}>
+              <View style={[styles.metaCard, { borderColor: 'rgba(250,204,21,0.3)', backgroundColor: 'rgba(250,204,21,0.08)' }]}>
                 <Ionicons name="bulb" size={14} color="#FACC15" />
                 <Text style={styles.metaText}>{msg.suggestion}</Text>
               </View>
             )}
-            <Pressable onPress={onSpeak} style={styles.speakBtn} testID={`tutor-speak-${msg.id}`}>
-              <Ionicons name="volume-high" size={12} color={companion.accent} />
-              <Text style={[styles.speakBtnText, { color: companion.accent }]}>Play</Text>
-            </Pressable>
-          </View>
+            {msg.vocab && (
+              <View style={[styles.metaCard, { borderColor: 'rgba(34,211,238,0.3)', backgroundColor: 'rgba(34,211,238,0.08)' }]}>
+                <Ionicons name="book" size={14} color="#22D3EE" />
+                <Text style={styles.metaText}>
+                  <Text style={{ fontWeight: '800' }}>{msg.vocab.word}</Text> — {msg.vocab.meaning}
+                  {msg.vocab.hindi ? `  ·  ${msg.vocab.hindi}` : ''}
+                </Text>
+              </View>
+            )}
+            <View style={styles.bubbleActionsRow}>
+              <Pressable onPress={onSpeak} style={styles.speakBtn} testID={`tutor-speak-${msg.id}`}>
+                <Ionicons name="volume-high" size={12} color={companion.accent} />
+                <Text style={[styles.speakBtnText, { color: companion.accent }]}>Play</Text>
+              </Pressable>
+              {msg.followup && (
+                <Pressable
+                  onPress={() => onUseFollowup(msg.followup!)}
+                  style={[styles.followupChip, { borderColor: `${companion.accent}55` }]}
+                  testID={`tutor-followup-${msg.id}`}
+                >
+                  <Ionicons name="arrow-forward" size={11} color={companion.accent} />
+                  <Text style={[styles.followupChipText, { color: companion.accent }]} numberOfLines={1}>
+                    {msg.followup}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </Pressable>
         )}
       </View>
     </FadeInView>
@@ -356,6 +423,25 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
     gap: 8,
   },
+  bubbleActionsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    flexWrap: 'wrap',
+  },
+  followupChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    maxWidth: 200,
+  },
+  followupChipText: { fontSize: 11, fontWeight: '700' },
   quickChip: {
     flexDirection: 'row',
     alignItems: 'center',

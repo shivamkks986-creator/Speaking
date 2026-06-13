@@ -9,7 +9,7 @@ import {
   InterviewTrack,
   SpeakingScore,
 } from '@/types';
-import { delay, pickRandom, randomId } from '@/utils/helpers';
+import { delay, randomId } from '@/utils/helpers';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const AI = BACKEND_URL ? `${BACKEND_URL.replace(/\/$/, '')}/api/ai` : '';
@@ -39,13 +39,6 @@ async function postJson<T>(path: string, body: unknown, timeoutMs = 30000): Prom
 
 // ---------------- Mock fallbacks (kept minimal, used only if backend down) ----------------
 
-const friendlyReplies = [
-  "That's a great point! Let me share my thoughts.",
-  'I understand what you mean. Have you tried explaining it this way?',
-  'Excellent! Your English is improving. Keep practising every day.',
-  'Nice try! Let me suggest a more natural phrasing.',
-];
-
 const correctGrammarLocal = (text: string): string | null => {
   let out = text;
   let changed = false;
@@ -63,7 +56,12 @@ const correctGrammarLocal = (text: string): string | null => {
 // ---------------- Public service ----------------
 
 export const aiService = {
-  async chat(userText: string, companionId?: string, systemPrompt?: string): Promise<ChatMessage> {
+  async chat(
+    userText: string,
+    companionId?: string,
+    systemPrompt?: string,
+    history: { role: 'user' | 'ai'; text: string }[] = []
+  ): Promise<ChatMessage> {
     try {
       const data = await postJson<{
         id: string;
@@ -71,11 +69,17 @@ export const aiService = {
         reply: string;
         correction?: string | null;
         suggestion?: string | null;
+        vocab?: { word: string; meaning: string; hindi?: string | null } | null;
+        followup?: string | null;
       }>('/tutor/chat', {
         message: userText,
         session_id: tutorSessionId,
         companion_id: companionId,
         system_prompt: systemPrompt,
+        history: history.map((h) => ({
+          role: h.role === 'ai' ? 'assistant' : 'user',
+          text: h.text,
+        })),
       });
       tutorSessionId = data.session_id;
       return {
@@ -84,6 +88,8 @@ export const aiService = {
         text: data.reply,
         correction: data.correction || undefined,
         suggestion: data.suggestion || undefined,
+        vocab: data.vocab || undefined,
+        followup: data.followup || undefined,
         timestamp: Date.now(),
       };
     } catch (err) {
@@ -92,7 +98,7 @@ export const aiService = {
       return {
         id: randomId(),
         role: 'ai',
-        text: pickRandom(friendlyReplies),
+        text: 'Backend offline. Try again in a moment.',
         correction: correctGrammarLocal(userText) ?? undefined,
         timestamp: Date.now(),
       };

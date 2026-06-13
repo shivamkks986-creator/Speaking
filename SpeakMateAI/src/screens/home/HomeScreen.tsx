@@ -17,6 +17,7 @@ import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import XPBar from '@/components/feature/XPBar';
 import GlassCard from '@/components/common/GlassCard';
 import WordOfTheDayCard from '@/components/feature/WordOfTheDayCard';
+import { computeDynamicGreeting } from '@/utils/greetings';
 import { radius, spacing } from '@/config/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -35,18 +36,25 @@ export default function HomeScreen() {
     claimDailyLogin();
   }, [claimDailyLogin]);
 
-  const greeting = useMemo(() => {
-    const h = new Date().getHours();
-    if (h < 12) return 'Good morning';
-    if (h < 18) return 'Good afternoon';
-    return 'Good evening';
-  }, []);
-
   const firstName = (user?.displayName || 'Learner').split(' ')[0];
 
   const dailyGoalMinutes = 10;
   const todayMinutes = stats.weeklyMinutes[new Date().getDay() === 0 ? 6 : new Date().getDay() - 1] || 0;
   const goalProgress = Math.min(1, todayMinutes / dailyGoalMinutes);
+
+  const dynamicGreeting = useMemo(
+    () =>
+      computeDynamicGreeting({
+        firstName,
+        hour: new Date().getHours(),
+        xp: gam.xp,
+        streak: stats.streak,
+        todayMinutes,
+        dailyGoalMinutes,
+        isPremium: !!user?.isPremium,
+      }),
+    [firstName, gam.xp, stats.streak, todayMinutes, user?.isPremium]
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
@@ -61,9 +69,10 @@ export default function HomeScreen() {
         >
           {/* Top bar */}
           <View style={styles.topBar}>
-            <View>
-              <Text style={styles.dim}>{greeting},</Text>
-              <Text style={styles.userName}>{firstName} 👋</Text>
+            <View style={{ flex: 1, paddingRight: 12 }}>
+              <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
+              <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
+              <Text style={styles.nudge} numberOfLines={2}>{dynamicGreeting.nudge}</Text>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
               <Pressable
@@ -428,6 +437,7 @@ const styles = StyleSheet.create({
   },
   dim: { color: 'rgba(242,238,255,0.6)', fontSize: 12 },
   userName: { color: '#F2EEFF', fontSize: 22, fontWeight: '800', marginTop: 2 },
+  nudge: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 6, lineHeight: 17 },
   coinChip: {
     flexDirection: 'row',
     alignItems: 'center',
