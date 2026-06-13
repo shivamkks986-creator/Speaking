@@ -14,8 +14,9 @@ import {
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Clipboard from 'expo-clipboard';
 import FadeInView from '@/components/common/FadeInView';
 
@@ -31,7 +32,9 @@ import { radius, spacing } from '@/config/theme';
 
 export default function AITutorScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
+  // AITutorScreen lives inside MainTabNavigator, so the bottom tab bar overlays it.
+  // We add this height as bottom padding to the input bar so nothing is hidden.
+  const tabBarHeight = useBottomTabBarHeight();
   const { recordActivity } = useProgress();
   const { companion } = useCompanion();
   const { awardAction } = useGamification();
@@ -214,7 +217,7 @@ export default function AITutorScreen() {
             ))}
           </ScrollView>
 
-          <View style={[styles.inputBar, { paddingBottom: spacing.md + Math.max(0, insets.bottom - 8) }]}>
+          <View style={[styles.inputBar, { paddingBottom: spacing.md, marginBottom: tabBarHeight }]}>
             <RNTextInput
               placeholder="Type or speak in English / Hindi…"
               placeholderTextColor="rgba(242,238,255,0.4)"
