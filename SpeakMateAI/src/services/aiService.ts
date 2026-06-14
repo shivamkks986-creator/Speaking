@@ -60,7 +60,8 @@ export const aiService = {
     userText: string,
     companionId?: string,
     systemPrompt?: string,
-    history: { role: 'user' | 'ai'; text: string }[] = []
+    history: { role: 'user' | 'ai'; text: string }[] = [],
+    agent?: string
   ): Promise<ChatMessage> {
     try {
       const data = await postJson<{
@@ -76,6 +77,7 @@ export const aiService = {
         session_id: tutorSessionId,
         companion_id: companionId,
         system_prompt: systemPrompt,
+        agent,
         history: history.map((h) => ({
           role: h.role === 'ai' ? 'assistant' : 'user',
           text: h.text,
@@ -109,11 +111,12 @@ export const aiService = {
     tutorSessionId = null;
   },
 
-  async scoreSpeaking(transcript: string, durationSec: number): Promise<SpeakingScore> {
+  async scoreSpeaking(transcript: string, durationSec: number, prompt?: string): Promise<SpeakingScore> {
     try {
       const data = await postJson<SpeakingScore>('/speaking/score', {
         transcript,
         duration_sec: durationSec,
+        prompt,
       });
       return data;
     } catch (err) {
@@ -127,6 +130,10 @@ export const aiService = {
         pronunciation: Math.round(overall - 3),
         fluency: Math.round(overall + 2),
         grammar: Math.round(overall),
+        vocabulary: Math.round(overall - 2),
+        mistakes: [],
+        corrected: transcript,
+        suggested: '',
         feedback: 'Backend unavailable — basic offline score shown.',
       };
     }

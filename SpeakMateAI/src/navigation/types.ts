@@ -40,7 +40,7 @@ export type RootStackParamList = {
   PremiumDashboard: undefined;
   DailyMissions: undefined;
   Flashcards: undefined;
-  LiveInterview: { track: InterviewTrack; targetQuestions?: number };
+  LiveInterview: { track: InterviewTrack; targetQuestions?: number; difficulty?: 'beginner' | 'intermediate' | 'advanced' };
   InterviewDashboard: undefined;
   Leaderboard: undefined;
   InviteFriends: undefined;

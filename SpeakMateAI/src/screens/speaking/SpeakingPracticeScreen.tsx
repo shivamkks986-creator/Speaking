@@ -112,7 +112,7 @@ export default function SpeakingPracticeScreen() {
       const sample =
         transcript.trim() ||
         'I usually spend my weekends with family. We watch movies and sometimes go out for dinner.';
-      const result = await aiService.scoreSpeaking(sample, sec);
+      const result = await aiService.scoreSpeaking(sample, sec, prompt);
       setScore(result);
       setPhase('result');
       recordActivity(Math.max(1, Math.round(sec / 60)), 'speaking').catch(() => {});
@@ -285,6 +285,41 @@ export default function SpeakingPracticeScreen() {
             <ScoreRow label="Pronunciation" value={score.pronunciation} color={theme.colors.primary} />
             <ScoreRow label="Fluency" value={score.fluency} color={theme.colors.secondary} />
             <ScoreRow label="Grammar" value={score.grammar} color={theme.colors.tertiary} />
+            {typeof score.vocabulary === 'number' && (
+              <ScoreRow label="Vocabulary" value={score.vocabulary} color="#22D3EE" />
+            )}
+
+            {score.mistakes && score.mistakes.length > 0 ? (
+              <View style={[styles.feedbackBox, { backgroundColor: 'rgba(239,68,68,0.12)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }]}>
+                <Text style={{ fontWeight: '800', color: '#FCA5A5', marginBottom: 6 }}>
+                  Mistakes ({score.mistakes.length})
+                </Text>
+                {score.mistakes.map((m, i) => (
+                  <View key={i} style={{ flexDirection: 'row', marginTop: 4 }}>
+                    <Text style={{ color: '#FCA5A5', marginRight: 6 }}>•</Text>
+                    <Text style={{ color: '#FECACA', flex: 1, fontSize: 13, lineHeight: 18 }}>{m}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+
+            {score.corrected ? (
+              <View style={[styles.feedbackBox, { backgroundColor: 'rgba(52,211,153,0.1)', borderWidth: 1, borderColor: 'rgba(52,211,153,0.3)' }]}>
+                <Text style={{ fontWeight: '800', color: '#34D399', marginBottom: 4 }}>
+                  ✓ Corrected version
+                </Text>
+                <Text style={{ color: '#A7F3D0', fontSize: 13, lineHeight: 19 }}>{score.corrected}</Text>
+              </View>
+            ) : null}
+
+            {score.suggested ? (
+              <View style={[styles.feedbackBox, { backgroundColor: 'rgba(124,92,255,0.12)', borderWidth: 1, borderColor: 'rgba(124,92,255,0.3)' }]}>
+                <Text style={{ fontWeight: '800', color: '#A992FF', marginBottom: 4 }}>
+                  ⭐ Native-speaker version
+                </Text>
+                <Text style={{ color: '#DDD6FE', fontSize: 13, lineHeight: 19 }}>{score.suggested}</Text>
+              </View>
+            ) : null}
 
             <View
               style={[

@@ -116,6 +116,63 @@ TUTOR_SYSTEM = (
     "Always include `followup` unless the user explicitly says goodbye."
 )
 
+# Specialized "single-task" agents — used when user picks a quick action from the tutor screen.
+# Each prompt enforces a tight scope so the AI never wanders or gives generic responses.
+AGENT_PROMPTS = {
+    "fix_grammar": (
+        "You are a strict English grammar editor. The user will send a sentence (in English, Hindi or Hinglish). "
+        "Fix ALL grammar, spelling, capitalization and punctuation errors. "
+        "Return ONLY this JSON: "
+        '{"reply": "Here is the corrected version.", "correction": "Original → Corrected. Brief reason.", '
+        '"suggestion": "More natural alternative" or null, "vocab": null, "followup": "Want me to explain any rule?"}'
+    ),
+    "improve_sentence": (
+        "You are a native English writer. The user gives a sentence that is grammatically OK but sounds basic. "
+        "Rewrite it in 2 more natural/advanced ways: a casual version and a formal version. "
+        "Return ONLY this JSON: "
+        '{"reply": "Casual: <text>\\nFormal: <text>", "correction": null, "suggestion": "The most idiomatic version", '
+        '"vocab": {"word": "<a useful word from your rewrite>", "meaning": "<meaning>", "hindi": "<Hindi>"} or null, '
+        '"followup": "Want to try a different tone?"}'
+    ),
+    "translate": (
+        "You are a precise English↔Hindi translator for Indian English learners. "
+        "Auto-detect the input language. If it is Hindi/Hinglish, translate to natural English. "
+        "If it is English, translate to natural Hindi (in Devanagari + Hinglish in brackets). "
+        "Return ONLY this JSON: "
+        '{"reply": "Translation: <text>", "correction": null, "suggestion": "More natural way to say it", '
+        '"vocab": {"word": "<key word>", "meaning": "<meaning>", "hindi": "<Hindi>"} or null, '
+        '"followup": "Want another example with this phrase?"}'
+    ),
+    "explain_meaning": (
+        "You are an English dictionary teacher for Indian learners. The user sends a word or phrase. "
+        "Explain its meaning clearly: part of speech, definition, Hindi meaning, 2 example sentences, "
+        "synonyms and antonyms. "
+        "Return ONLY this JSON: "
+        '{"reply": "<part of speech>: <definition>. Hindi: <hindi>. Examples: 1) ... 2) ... Synonyms: a, b. Antonyms: x, y.", '
+        '"correction": null, "suggestion": null, '
+        '"vocab": {"word": "<the word>", "meaning": "<definition>", "hindi": "<hindi>"}, '
+        '"followup": "Want a quick quiz on this word?"}'
+    ),
+    "interview_practice": (
+        "You are a senior interviewer running a mock interview. Ask ONE clear, role-appropriate interview question "
+        "(HR/tech/behavioural/sales). If the user has already answered, give a 0-100 score in `correction` plus "
+        "tips, then ask the next question. "
+        "Return ONLY this JSON: "
+        '{"reply": "<interview question OR feedback + next question>", '
+        '"correction": "<if scoring last answer: \\"Score X/100. Tip: ...\\"> or null", '
+        '"suggestion": "<a model answer in 2 sentences> or null", "vocab": null, '
+        '"followup": "Ready for the next question?"}'
+    ),
+    "daily_conversation": (
+        "You are a friendly English-speaking partner helping an Indian learner practise daily conversation. "
+        "Start a natural casual chat or continue it. Use simple, everyday English. Keep it short and warm. "
+        "Return ONLY this JSON: "
+        '{"reply": "<1-2 friendly sentences>", "correction": "<if user made an error: brief fix> or null", '
+        '"suggestion": "<a more natural way> or null", "vocab": null, '
+        '"followup": "<a casual question to keep the chat going>"}'
+    ),
+}
+
 
 class TutorChatHistoryItem(BaseModel):
     role: str  # "user" | "assistant"
@@ -127,6 +184,7 @@ class TutorChatRequest(BaseModel):
     session_id: Optional[str] = None
     companion_id: Optional[str] = None
     system_prompt: Optional[str] = None
+    agent: Optional[str] = None  # "fix_grammar" | "improve_sentence" | "translate" | "explain_meaning" | "interview_practice" | "daily_conversation"
     history: List[TutorChatHistoryItem] = Field(default_factory=list)
 
 
@@ -149,7 +207,13 @@ class TutorChatResponse(BaseModel):
 @router.post("/tutor/chat", response_model=TutorChatResponse)
 async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
     session_id = req.session_id or str(uuid.uuid4())
-    system_msg = (req.system_prompt or TUTOR_SYSTEM).strip()
+    # Priority: explicit system_prompt > specialized agent > default tutor
+    if req.system_prompt:
+        system_msg = req.system_prompt.strip()
+    elif req.agent and req.agent in AGENT_PROMPTS:
+        system_msg = AGENT_PROMPTS[req.agent]
+    else:
+        system_msg = TUTOR_SYSTEM
 
     # Inject conversation memory (last 6 turns) so the AI never forgets context.
     history_block = ""
@@ -189,16 +253,22 @@ async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
 
 SPEAKING_SYSTEM = (
     "You are an expert English speaking coach evaluating a learner's spoken response. "
-    "Given a transcript and duration, score the speech and give brief, actionable feedback. "
+    "Given a transcript and duration, score the speech on FOUR axes and give actionable, specific feedback. "
+    "Be honest — vary scores realistically (don't always give 70-80). Penalise short or off-topic answers. "
     "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
     '{"overall": int(0-100), "pronunciation": int(0-100), "fluency": int(0-100), '
-    '"grammar": int(0-100), "feedback": "1-2 sentence coaching feedback"}'
+    '"grammar": int(0-100), "vocabulary": int(0-100), '
+    '"mistakes": ["specific mistake 1", "specific mistake 2"], '
+    '"corrected": "the user transcript rewritten with all errors fixed", '
+    '"suggested": "a native-speaker-quality answer (2-3 sentences) to the same prompt", '
+    '"feedback": "1-2 sentence coaching focus area"}'
 )
 
 
 class SpeakingScoreRequest(BaseModel):
     transcript: str
     duration_sec: float = Field(ge=0)
+    prompt: Optional[str] = None  # the question the user was answering
 
 
 class SpeakingScoreResponse(BaseModel):
@@ -206,6 +276,10 @@ class SpeakingScoreResponse(BaseModel):
     pronunciation: int
     fluency: int
     grammar: int
+    vocabulary: int
+    mistakes: List[str] = Field(default_factory=list)
+    corrected: str = ""
+    suggested: str = ""
     feedback: str
 
 
@@ -213,6 +287,7 @@ class SpeakingScoreResponse(BaseModel):
 async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
     chat = _new_chat(str(uuid.uuid4()), SPEAKING_SYSTEM, "anthropic", "claude-sonnet-4-6")
     prompt = (
+        f"Prompt the user was answering: \"{req.prompt or 'general speaking practice'}\"\n"
         f"Transcript: \"{req.transcript}\"\n"
         f"Duration: {req.duration_sec:.1f} seconds\n"
         f"Word count: {len(req.transcript.split())}\n"
@@ -220,11 +295,18 @@ async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
     )
     raw = await chat.send_message(UserMessage(text=prompt))
     data = _extract_json(raw)
+    mistakes_raw = data.get("mistakes") or []
+    if not isinstance(mistakes_raw, list):
+        mistakes_raw = []
     return SpeakingScoreResponse(
         overall=int(data.get("overall", 0)),
         pronunciation=int(data.get("pronunciation", 0)),
         fluency=int(data.get("fluency", 0)),
         grammar=int(data.get("grammar", 0)),
+        vocabulary=int(data.get("vocabulary", 0)),
+        mistakes=[str(m) for m in mistakes_raw][:5],
+        corrected=str(data.get("corrected", "")),
+        suggested=str(data.get("suggested", "")),
         feedback=str(data.get("feedback", "Keep practising!")),
     )
 
@@ -521,6 +603,7 @@ class LiveInterviewRequest(BaseModel):
     last_answer: Optional[str] = None   # if None and history empty → just get first question
     last_question: Optional[str] = None
     target_questions: int = Field(default=5, ge=1, le=15)
+    difficulty: Optional[str] = "intermediate"  # "beginner" | "intermediate" | "advanced"
 
 
 class LiveScores(BaseModel):
@@ -546,6 +629,13 @@ class LiveInterviewResponse(BaseModel):
 @router.post("/interview/live", response_model=LiveInterviewResponse)
 async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
     sys_msg = LIVE_INTERVIEW_SYSTEM.replace("{track}", req.track.replace("_", " "))
+    # Inject difficulty cue so the AI tunes question depth + grading strictness.
+    difficulty_note = {
+        "beginner": "Difficulty: BEGINNER. Ask simple, common questions. Be generous with scores (typically 60-80). Give encouraging feedback.",
+        "intermediate": "Difficulty: INTERMEDIATE. Ask realistic interview questions. Score honestly (typically 50-85).",
+        "advanced": "Difficulty: ADVANCED. Ask tough, probing questions including unexpected follow-ups. Be strict with scores (typically 40-80). Demand specificity.",
+    }.get((req.difficulty or "intermediate").lower(), "")
+    sys_msg = f"{sys_msg}\n\n{difficulty_note}"
     chat = _new_chat(str(uuid.uuid4()), sys_msg, "openai", "gpt-5.2")
 
     # Build prompt with full conversation context

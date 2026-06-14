@@ -24,6 +24,27 @@ const BENEFITS = [
   { icon: 'shield-checkmark' as const, title: 'Streak Protection',         sub: 'Never lose your streak' },
 ];
 
+const TESTIMONIALS = [
+  {
+    name: 'Priya S.',
+    role: 'IELTS 7.5 Achiever',
+    quote: 'In 6 weeks I jumped from 6.0 to 7.5 in speaking. Best ₹249 spent.',
+    rating: 5,
+  },
+  {
+    name: 'Rohit K.',
+    role: 'Software Engineer',
+    quote: 'Cracked Wipro interview after 2 weeks of mock practice. Confidence sky-high!',
+    rating: 5,
+  },
+  {
+    name: 'Anjali M.',
+    role: 'Sales Manager',
+    quote: 'Daily 15-min chats fixed my grammar. Boss even noticed the change.',
+    rating: 5,
+  },
+];
+
 export default function PremiumScreen() {
   const navigation = useNavigation();
   const { user, updateProfile } = useAuth();
@@ -80,6 +101,24 @@ export default function PremiumScreen() {
             <View style={styles.trialPill}>
               <Ionicons name="gift" size={14} color="#FACC15" />
               <Text style={styles.trialText}>7-day free trial · Cancel anytime</Text>
+            </View>
+
+            {/* Social proof bar */}
+            <View style={styles.socialProofRow}>
+              <View style={styles.socialProofItem}>
+                <Ionicons name="star" size={14} color="#FACC15" />
+                <Text style={styles.socialProofText}>4.8</Text>
+              </View>
+              <View style={styles.socialProofDivider} />
+              <View style={styles.socialProofItem}>
+                <Ionicons name="people" size={14} color="#A992FF" />
+                <Text style={styles.socialProofText}>10,000+ learners</Text>
+              </View>
+              <View style={styles.socialProofDivider} />
+              <View style={styles.socialProofItem}>
+                <Ionicons name="checkmark-circle" size={14} color="#34D399" />
+                <Text style={styles.socialProofText}>Cancel anytime</Text>
+              </View>
             </View>
           </View>
 
@@ -170,29 +209,64 @@ export default function PremiumScreen() {
             ))}
           </View>
 
-          {/* CTA */}
+          {/* Testimonials */}
+          <Text style={styles.section}>What learners say</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}
+          >
+            {TESTIMONIALS.map((t, i) => (
+              <FadeInView key={t.name} delay={i * 80} duration={400} direction="up" style={styles.testimonialCard}>
+                <View style={{ flexDirection: 'row', gap: 2, marginBottom: 8 }}>
+                  {Array.from({ length: t.rating }).map((_, idx) => (
+                    <Ionicons key={idx} name="star" size={12} color="#FACC15" />
+                  ))}
+                </View>
+                <Text style={styles.testimonialQuote}>"{t.quote}"</Text>
+                <View style={{ marginTop: 10 }}>
+                  <Text style={styles.testimonialName}>{t.name}</Text>
+                  <Text style={styles.testimonialRole}>{t.role}</Text>
+                </View>
+              </FadeInView>
+            ))}
+          </ScrollView>
+
+          {/* Urgency banner */}
+          <View style={styles.urgencyBanner}>
+            <Ionicons name="flame" size={16} color="#FACC15" />
+            <Text style={styles.urgencyText}>
+              <Text style={{ fontWeight: '800' }}>Launch offer</Text> — save up to 67% on yearly plan
+            </Text>
+          </View>
+
+          {/* CTA inside scroll (kept for non-sticky devices) */}
           <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg }}>
-            <Pressable
-              onPress={onPurchase}
-              disabled={purchasing || !!user?.isPremium}
-              testID="premium-purchase-btn"
-            >
-              <LinearGradient
-                colors={['#FACC15', '#FF6B9D', '#7C5CFF']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.cta}
-              >
-                <Text style={styles.ctaText}>
-                  {user?.isPremium ? "You're Premium 🎉" : 'Start 7-day Free Trial'}
-                </Text>
-              </LinearGradient>
-            </Pressable>
             <Text style={styles.legal}>
               No commitment. Cancel anytime via Google Play. After trial: auto-renews unless cancelled 24h before period end.
             </Text>
           </View>
         </ScrollView>
+
+        {/* Sticky bottom CTA — always visible */}
+        <View style={styles.stickyCtaWrap}>
+          <Pressable
+            onPress={onPurchase}
+            disabled={purchasing || !!user?.isPremium}
+            testID="premium-purchase-btn"
+          >
+            <LinearGradient
+              colors={['#FACC15', '#FF6B9D', '#7C5CFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.cta}
+            >
+              <Text style={styles.ctaText}>
+                {user?.isPremium ? "You're Premium 🎉" : purchasing ? 'Processing…' : 'Start 7-day Free Trial'}
+              </Text>
+            </LinearGradient>
+          </Pressable>
+        </View>
       </SafeAreaView>
     </View>
   );
@@ -249,4 +323,55 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   compareCell: { color: '#F2EEFF', fontSize: 12, fontWeight: '600' },
+  socialProofRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.pill,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  socialProofItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  socialProofText: { color: '#F2EEFF', fontSize: 11, fontWeight: '700' },
+  socialProofDivider: { width: 1, height: 14, backgroundColor: 'rgba(255,255,255,0.15)' },
+  testimonialCard: {
+    width: 260,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+  },
+  testimonialQuote: { color: '#F2EEFF', fontSize: 13, fontWeight: '600', lineHeight: 20, fontStyle: 'italic' },
+  testimonialName: { color: '#F2EEFF', fontSize: 13, fontWeight: '800' },
+  testimonialRole: { color: '#A992FF', fontSize: 11, fontWeight: '700', marginTop: 2 },
+  urgencyBanner: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.lg,
+    backgroundColor: 'rgba(250,204,21,0.12)',
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(250,204,21,0.3)',
+  },
+  urgencyText: { color: '#FACC15', fontSize: 12, fontWeight: '700' },
+  stickyCtaWrap: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
+    backgroundColor: 'rgba(10,4,24,0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
+  },
 });

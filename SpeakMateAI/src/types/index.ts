@@ -98,6 +98,10 @@ export interface SpeakingScore {
   pronunciation: number;
   fluency: number;
   grammar: number;
+  vocabulary?: number;
+  mistakes?: string[];
+  corrected?: string;
+  suggested?: string;
   feedback: string;
 }
 

@@ -50,7 +50,7 @@ export default function AITutorScreen() {
     setMessages([]);
   }, [companion.id]);
 
-  const onSend = useCallback(async (overrideText?: string) => {
+  const onSend = useCallback(async (overrideText?: string, agent?: string) => {
     const text = (overrideText ?? input).trim();
     if (!text || thinking) return;
     const userMsg: ChatMessage = {
@@ -66,7 +66,7 @@ export default function AITutorScreen() {
     setThinking(true);
     setError(null);
     try {
-      const reply = await aiService.chat(text, companion.id, companion.systemPrompt, historyForApi);
+      const reply = await aiService.chat(text, companion.id, companion.systemPrompt, historyForApi, agent);
       setMessages((prev) => [...prev, reply]);
       recordActivity(1, 'chat').catch(() => {});
       awardAction('CHAT_MESSAGE').catch(() => {});
@@ -145,20 +145,40 @@ export default function AITutorScreen() {
           keyboardVerticalOffset={Platform.OS === 'ios' ? 64 : 0}
         >
           {messages.length === 0 ? (
-            <View style={styles.welcome}>
-              <CompanionAvatar companion={companion} size={84} showRing />
+            <ScrollView contentContainerStyle={styles.welcome} keyboardShouldPersistTaps="handled">
+              <CompanionAvatar companion={companion} size={72} showRing />
               <Text style={styles.welcomeTitle}>{companion.greeting}</Text>
               <Text style={styles.welcomeSub}>
-                Type in English or Hindi — I'll fix grammar and suggest natural phrasing.
+                Tap any action below or type a message — I'll teach, correct or challenge you.
               </Text>
-              <View style={styles.starterRow}>
-                {STARTERS.map((s) => (
-                  <Pressable key={s} onPress={() => setInput(s)} style={styles.starter} testID={`tutor-starter-${s.slice(0, 8)}`}>
-                    <Text style={styles.starterText}>{s}</Text>
+              <View style={styles.actionGrid}>
+                {QUICK_ACTIONS.map((q) => (
+                  <Pressable
+                    key={q.id}
+                    onPress={() => {
+                      if (q.autoSend) {
+                        onSend(q.prompt, q.id);
+                      } else {
+                        setInput(q.prompt);
+                      }
+                    }}
+                    style={({ pressed }) => [styles.actionTile, pressed && { opacity: 0.7 }]}
+                    testID={`tutor-action-${q.id}`}
+                  >
+                    <LinearGradient
+                      colors={q.gradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.actionIcon}
+                    >
+                      <Ionicons name={q.icon} size={20} color="#FFFFFF" />
+                    </LinearGradient>
+                    <Text style={styles.actionLabel} numberOfLines={1}>{q.label}</Text>
+                    <Text style={styles.actionSub} numberOfLines={1}>{q.sub}</Text>
                   </Pressable>
                 ))}
               </View>
-            </View>
+            </ScrollView>
           ) : (
             <FlatList
               ref={listRef}
@@ -189,27 +209,23 @@ export default function AITutorScreen() {
             </View>
           )}
 
-          {/* Quick action chips — auto-send the prompt for instant feedback */}
+          {/* Quick action chips — auto-trigger specialized agents for instant single-task replies */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.quickRow}
             keyboardShouldPersistTaps="handled"
           >
-            {[
-              { icon: 'construct' as const, label: 'Fix my grammar', prompt: 'Please correct the grammar of my recent message and explain the mistakes.' },
-              { icon: 'sparkles' as const, label: 'Improve sentence', prompt: 'Suggest a more natural, advanced way to say my last message.' },
-              { icon: 'book' as const, label: 'Explain meaning', prompt: 'Explain the meaning of any difficult word I used recently, with examples.' },
-              { icon: 'language' as const, label: 'Translate Hindi → English', prompt: 'Help me translate Hindi to English. Ask me what sentence I want to translate.' },
-              { icon: 'briefcase' as const, label: 'Interview prep', prompt: 'Ask me one common HR interview question. I will answer.' },
-              { icon: 'chatbubbles' as const, label: 'Daily conversation', prompt: "Let's have a casual English conversation. Start with a fun question." },
-            ].map((q) => (
+            {QUICK_ACTIONS.map((q) => (
               <Pressable
-                key={q.label}
-                onPress={() => onSend(q.prompt)}
+                key={q.id}
+                onPress={() => {
+                  if (q.autoSend) onSend(q.prompt, q.id);
+                  else setInput(q.prompt);
+                }}
                 disabled={thinking}
                 style={({ pressed }) => [styles.quickChip, pressed && { opacity: 0.6 }]}
-                testID={`tutor-quick-${q.label.split(' ')[0].toLowerCase()}`}
+                testID={`tutor-quick-${q.id}`}
               >
                 <Ionicons name={q.icon} size={14} color="#A992FF" />
                 <Text style={styles.quickChipText}>{q.label}</Text>
@@ -248,10 +264,22 @@ export default function AITutorScreen() {
   );
 }
 
-const STARTERS = [
-  'How are you today?',
-  'मुझे interview की तैयारी करनी है',
-  'Teach me a new word',
+// Quick-action tiles — each calls a specialized backend agent for single-task, no-filler responses.
+const QUICK_ACTIONS: {
+  id: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  sub: string;
+  gradient: readonly [string, string];
+  prompt: string;
+  autoSend?: boolean;
+}[] = [
+  { id: 'fix_grammar',        icon: 'construct',  label: 'Fix Grammar',     sub: 'Paste any sentence',  gradient: ['#FF6B9D', '#FACC15'] as const, prompt: 'Fix the grammar of: ' },
+  { id: 'improve_sentence',   icon: 'sparkles',   label: 'Improve It',      sub: 'Sound natural',       gradient: ['#7C5CFF', '#A992FF'] as const, prompt: 'Improve this sentence: ' },
+  { id: 'translate',          icon: 'language',   label: 'Translate',       sub: 'Hindi ↔ English',     gradient: ['#22D3EE', '#7C5CFF'] as const, prompt: 'Translate: ' },
+  { id: 'explain_meaning',    icon: 'book',       label: 'Explain Meaning', sub: 'Word or phrase',      gradient: ['#34D399', '#22D3EE'] as const, prompt: 'Explain the meaning of: ' },
+  { id: 'interview_practice', icon: 'briefcase',  label: 'Interview Prep',  sub: 'Mock HR/Tech Qs',     gradient: ['#FACC15', '#FF6B9D'] as const, prompt: 'Ask me one common interview question.', autoSend: true },
+  { id: 'daily_conversation', icon: 'chatbubbles',label: 'Daily Chat',      sub: 'Casual practice',     gradient: ['#FF7A6B', '#FFA396'] as const, prompt: "Let's have a casual English conversation. Start with a fun question.", autoSend: true },
 ];
 
 function Bubble({
@@ -359,9 +387,36 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     backgroundColor: 'rgba(255,255,255,0.06)',
   },
-  welcome: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.lg, gap: spacing.md },
+  welcome: { alignItems: 'center', padding: spacing.lg, gap: spacing.md, paddingTop: spacing.xl },
   welcomeTitle: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', textAlign: 'center', marginTop: spacing.md },
-  welcomeSub: { color: 'rgba(242,238,255,0.6)', fontSize: 13, textAlign: 'center' },
+  welcomeSub: { color: 'rgba(242,238,255,0.6)', fontSize: 13, textAlign: 'center', paddingHorizontal: spacing.md, marginBottom: spacing.sm },
+  actionGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  actionTile: {
+    width: '48%',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: radius.xl,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    gap: 4,
+  },
+  actionIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  actionLabel: { color: '#F2EEFF', fontSize: 14, fontWeight: '800' },
+  actionSub: { color: 'rgba(242,238,255,0.55)', fontSize: 11, fontWeight: '600' },
   starterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: spacing.lg },
   starter: {
     backgroundColor: 'rgba(255,255,255,0.06)',

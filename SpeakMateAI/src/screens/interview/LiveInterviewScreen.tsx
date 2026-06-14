@@ -68,6 +68,7 @@ export default function LiveInterviewScreen() {
 
   const track = route.params?.track || 'hr';
   const targetQuestions = route.params?.targetQuestions || 5;
+  const difficulty = route.params?.difficulty || 'intermediate';
   const meta = getTrackMeta(track);
   const interviewer = getCompanion(meta.interviewer);
 
@@ -92,7 +93,7 @@ export default function LiveInterviewScreen() {
       const res = await fetch(`${AI}/interview/live`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ track, history: [], target_questions: targetQuestions }),
+        body: JSON.stringify({ track, difficulty, history: [], target_questions: targetQuestions }),
       });
       const data = (await res.json()) as LiveResponse;
       setCurrentQuestion(data.next_question);
@@ -152,7 +153,7 @@ export default function LiveInterviewScreen() {
           history: history.map((h) => ({ question: h.question, answer: h.answer })),
           last_question: currentQuestion,
           last_answer: answer,
-          target_questions: targetQuestions,
+          target_questions: targetQuestions, difficulty,
         }),
       });
       const data = (await res.json()) as LiveResponse;

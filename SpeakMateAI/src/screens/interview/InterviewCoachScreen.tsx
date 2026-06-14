@@ -24,6 +24,7 @@ export default function InterviewCoachScreen() {
   const navigation = useNavigation<Nav>();
   const { stats } = useProgress();
   const { user } = useAuth();
+  const [difficulty, setDifficulty] = React.useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
 
   const readiness = aiService.computeInterviewReadiness({
     interviewsCount: stats.interviewsCount,
@@ -31,6 +32,12 @@ export default function InterviewCoachScreen() {
     streak: stats.streak,
     speakingScores: stats.speakingScores,
   });
+
+  const DIFFICULTY_OPTIONS: { id: 'beginner' | 'intermediate' | 'advanced'; label: string; desc: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+    { id: 'beginner', label: 'Beginner', desc: 'Easy questions, gentle feedback', icon: 'flower' },
+    { id: 'intermediate', label: 'Intermediate', desc: 'Real interview pace', icon: 'flame' },
+    { id: 'advanced', label: 'Advanced', desc: 'Tough follow-ups, deep grading', icon: 'rocket' },
+  ];
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
@@ -64,6 +71,28 @@ export default function InterviewCoachScreen() {
             <Ionicons name="trophy" size={48} color="#FFFFFF" />
           </LinearGradient>
 
+          {/* Difficulty selector */}
+          <Text style={styles.section}>Difficulty level</Text>
+          <View style={styles.difficultyRow}>
+            {DIFFICULTY_OPTIONS.map((d) => {
+              const active = difficulty === d.id;
+              return (
+                <Pressable
+                  key={d.id}
+                  onPress={() => setDifficulty(d.id)}
+                  testID={`difficulty-${d.id}`}
+                  style={[styles.difficultyPill, active && styles.difficultyPillActive]}
+                >
+                  <Ionicons name={d.icon} size={16} color={active ? '#FACC15' : 'rgba(242,238,255,0.6)'} />
+                  <Text style={[styles.difficultyLabel, active && { color: '#F2EEFF' }]}>{d.label}</Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.difficultyDesc}>
+            {DIFFICULTY_OPTIONS.find((d) => d.id === difficulty)?.desc}
+          </Text>
+
           <Text style={styles.section}>Choose your track</Text>
 
           {INTERVIEW_TRACKS.map((track, i) => {
@@ -77,7 +106,7 @@ export default function InterviewCoachScreen() {
                       navigation.navigate('Premium');
                       return;
                     }
-                    navigation.navigate('LiveInterview', { track: track.id, targetQuestions: 5 });
+                    navigation.navigate('LiveInterview', { track: track.id, targetQuestions: 5, difficulty });
                   }}
                   testID={`track-${track.id}`}
                   style={styles.trackOuter}
@@ -156,4 +185,23 @@ const styles = StyleSheet.create({
   interviewerWrap: { alignItems: 'center', gap: 2 },
   interviewerName: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
   tipFooter: { color: 'rgba(242,238,255,0.4)', fontSize: 11, textAlign: 'center', marginTop: spacing.xl },
+  difficultyRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.sm },
+  difficultyPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    paddingVertical: 10,
+    borderRadius: radius.pill,
+  },
+  difficultyPillActive: {
+    backgroundColor: 'rgba(250,204,21,0.12)',
+    borderColor: 'rgba(250,204,21,0.5)',
+  },
+  difficultyLabel: { color: 'rgba(242,238,255,0.6)', fontSize: 12, fontWeight: '800' },
+  difficultyDesc: { color: 'rgba(242,238,255,0.45)', fontSize: 11, fontStyle: 'italic', marginBottom: spacing.sm },
 });
