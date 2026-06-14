@@ -44,4 +44,5 @@ export type RootStackParamList = {
   InterviewDashboard: undefined;
   Leaderboard: undefined;
   InviteFriends: undefined;
+  AdminConfig: undefined;
 };

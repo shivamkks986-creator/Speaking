@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { Text, TextInput, Button, useTheme, Avatar, HelperText } from 'react-native-paper';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { validateName } from '@/utils/validators';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import Card from '@/components/common/Card';
+import { RootStackParamList } from '@/navigation/types';
+import { isAdminUser } from '@/screens/admin/AdminConfigScreen';
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { user, updateProfile } = useAuth();
   const [name, setName] = useState(user?.displayName ?? '');
   const [saving, setSaving] = useState(false);
@@ -82,6 +87,28 @@ export default function ProfileScreen() {
           Save changes
         </Button>
       </Card>
+
+      {isAdminUser(user?.email) && (
+        <Card style={{ marginTop: 12, backgroundColor: 'rgba(250,204,21,0.08)', borderWidth: 1, borderColor: 'rgba(250,204,21,0.3)' }}>
+          <Text variant="titleSmall" style={{ fontWeight: '700', marginBottom: 4, color: '#FACC15' }}>
+            🚀 Admin Console
+          </Text>
+          <Text variant="bodySmall" style={{ marginBottom: 12, opacity: 0.7 }}>
+            Manage kill switches, daily budget and maintenance message.
+          </Text>
+          <Button
+            mode="contained"
+            onPress={() => navigation.navigate('AdminConfig')}
+            style={{ borderRadius: 12 }}
+            contentStyle={{ height: 44 }}
+            buttonColor="#FACC15"
+            textColor="#0A0418"
+            testID="open-admin-config"
+          >
+            Open Admin Settings
+          </Button>
+        </Card>
+      )}
     </ScreenContainer>
   );
 }

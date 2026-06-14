@@ -23,6 +23,7 @@ db = client[os.environ['DB_NAME']]
 app = FastAPI()
 
 from ai_routes import router as ai_router
+from system_routes import router as system_router
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -69,6 +70,7 @@ async def get_status_checks():
     return status_checks
 
 api_router.include_router(ai_router)
+api_router.include_router(system_router)
 
 # Include the router in the main app
 app.include_router(api_router)

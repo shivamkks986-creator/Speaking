@@ -11,6 +11,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { ProgressProvider } from '@/contexts/ProgressContext';
 import { GamificationProvider } from '@/contexts/GamificationContext';
 import { CompanionProvider } from '@/contexts/CompanionContext';
+import { RemoteConfigProvider } from '@/contexts/RemoteConfigContext';
 import RootNavigator from '@/navigation/RootNavigator';
 import RewardModal from '@/components/feature/RewardModal';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
@@ -21,15 +22,17 @@ function ThemedApp() {
     <PaperProvider theme={paperTheme}>
       <NavigationContainer theme={navTheme}>
         <AuthProvider>
-          <ProgressProvider>
-            <GamificationProvider>
-              <CompanionProvider>
-                <StatusBar style="light" />
-                <RootNavigator />
-                <RewardModal />
-              </CompanionProvider>
-            </GamificationProvider>
-          </ProgressProvider>
+          <RemoteConfigProvider>
+            <ProgressProvider>
+              <GamificationProvider>
+                <CompanionProvider>
+                  <StatusBar style="light" />
+                  <RootNavigator />
+                  <RewardModal />
+                </CompanionProvider>
+              </GamificationProvider>
+            </ProgressProvider>
+          </RemoteConfigProvider>
         </AuthProvider>
       </NavigationContainer>
     </PaperProvider>

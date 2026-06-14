@@ -24,12 +24,35 @@ from emergentintegrations.llm.openai import OpenAITextToSpeech, OpenAISpeechToTe
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form
 from pydantic import BaseModel, Field
 
+import usage_tracker as ut
+
 EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
 
 router = APIRouter(prefix="/ai")
 
 _tts = OpenAITextToSpeech(api_key=EMERGENT_LLM_KEY)
 _stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
+
+
+# ---------------------- budget kill switch ----------------------
+
+async def _guard(endpoint: str) -> None:
+    """Raises 503 if the daily budget is exhausted or AI is globally disabled.
+    Call BEFORE each LLM round-trip in every public endpoint."""
+    reason = await ut.check_budget(endpoint)
+    if reason:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": "service_disabled", "reason": reason},
+        )
+
+
+async def _record(endpoint: str) -> None:
+    try:
+        await ut.record_call(endpoint)
+    except Exception:
+        # Never let usage tracking failure break a user-facing call.
+        pass
 
 
 # ---------------------- helpers ----------------------
@@ -206,6 +229,7 @@ class TutorChatResponse(BaseModel):
 
 @router.post("/tutor/chat", response_model=TutorChatResponse)
 async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
+    await _guard("tutor_chat")
     session_id = req.session_id or str(uuid.uuid4())
     # Priority: explicit system_prompt > specialized agent > default tutor
     if req.system_prompt:
@@ -229,6 +253,7 @@ async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
         user_msg=UserMessage(text=user_text),
         is_premium=True,
     )
+    await _record("tutor_chat")
     data = _extract_json(raw)
     vocab_raw = data.get("vocab")
     vocab_model: Optional[TutorVocab] = None
@@ -285,6 +310,7 @@ class SpeakingScoreResponse(BaseModel):
 
 @router.post("/speaking/score", response_model=SpeakingScoreResponse)
 async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
+    await _guard("speaking_score")
     chat = _new_chat(str(uuid.uuid4()), SPEAKING_SYSTEM, "anthropic", "claude-sonnet-4-6")
     prompt = (
         f"Prompt the user was answering: \"{req.prompt or 'general speaking practice'}\"\n"
@@ -294,6 +320,7 @@ async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
         "Now return the JSON evaluation."
     )
     raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("speaking_score")
     data = _extract_json(raw)
     mistakes_raw = data.get("mistakes") or []
     if not isinstance(mistakes_raw, list):
@@ -628,6 +655,7 @@ class LiveInterviewResponse(BaseModel):
 
 @router.post("/interview/live", response_model=LiveInterviewResponse)
 async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
+    await _guard("interview_live")
     sys_msg = LIVE_INTERVIEW_SYSTEM.replace("{track}", req.track.replace("_", " "))
     # Inject difficulty cue so the AI tunes question depth + grading strictness.
     difficulty_note = {
@@ -663,6 +691,7 @@ async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
         )
 
     raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("interview_live")
     data = _extract_json(raw)
     raw_scores = data.get("scores") or {}
     scores_model: Optional[LiveScores] = None

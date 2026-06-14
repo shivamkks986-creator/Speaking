@@ -11,6 +11,29 @@ import InterviewCoachScreen from '@/screens/interview/InterviewCoachScreen';
 import PremiumScreen from '@/screens/premium/PremiumScreen';
 import ProgressScreen from '@/screens/progress/ProgressScreen';
 import SettingsScreen from '@/screens/settings/SettingsScreen';
+import KillSwitchGuard from '@/components/feature/KillSwitchGuard';
+
+// Kill-switch wrapped variants — admin can disable a module from Firestore.
+const TutorGuarded = () => (
+  <KillSwitchGuard module="tutor" moduleLabel="AI Tutor">
+    <AITutorScreen />
+  </KillSwitchGuard>
+);
+const SpeakingGuarded = () => (
+  <KillSwitchGuard module="speaking" moduleLabel="Speaking Practice">
+    <SpeakingPracticeScreen />
+  </KillSwitchGuard>
+);
+const InterviewGuarded = () => (
+  <KillSwitchGuard module="interview" moduleLabel="Interview Coach">
+    <InterviewCoachScreen />
+  </KillSwitchGuard>
+);
+const PremiumGuarded = () => (
+  <KillSwitchGuard module="premium" moduleLabel="Premium Store">
+    <PremiumScreen />
+  </KillSwitchGuard>
+);
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -50,10 +73,10 @@ export default function MainTabNavigator() {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Tutor" component={AITutorScreen} options={{ title: 'Tutor' }} />
-      <Tab.Screen name="Speaking" component={SpeakingPracticeScreen} options={{ title: 'Speak' }} />
-      <Tab.Screen name="Interview" component={InterviewCoachScreen} options={{ title: 'Interview' }} />
-      <Tab.Screen name="Premium" component={PremiumScreen} options={{ title: 'Premium' }} />
+      <Tab.Screen name="Tutor" component={TutorGuarded} options={{ title: 'Tutor' }} />
+      <Tab.Screen name="Speaking" component={SpeakingGuarded} options={{ title: 'Speak' }} />
+      <Tab.Screen name="Interview" component={InterviewGuarded} options={{ title: 'Interview' }} />
+      <Tab.Screen name="Premium" component={PremiumGuarded} options={{ title: 'Premium' }} />
       <Tab.Screen name="Progress" component={ProgressScreen} options={{ tabBarItemStyle: { display: 'none' } }} />
       <Tab.Screen name="Settings" component={SettingsScreen} options={{ tabBarItemStyle: { display: 'none' } }} />
     </Tab.Navigator>
