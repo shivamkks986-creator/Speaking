@@ -209,29 +209,31 @@ export default function AITutorScreen() {
             </View>
           )}
 
-          {/* Quick action chips — auto-trigger specialized agents for instant single-task replies */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.quickRow}
-            keyboardShouldPersistTaps="handled"
-          >
-            {QUICK_ACTIONS.map((q) => (
-              <Pressable
-                key={q.id}
-                onPress={() => {
-                  if (q.autoSend) onSend(q.prompt, q.id);
-                  else setInput(q.prompt);
-                }}
-                disabled={thinking}
-                style={({ pressed }) => [styles.quickChip, pressed && { opacity: 0.6 }]}
-                testID={`tutor-quick-${q.id}`}
-              >
-                <Ionicons name={q.icon} size={14} color="#A992FF" />
-                <Text style={styles.quickChipText}>{q.label}</Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          {/* Quick action chips at bottom — only when chat has messages (grid handles empty state) */}
+          {messages.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.quickRow}
+              keyboardShouldPersistTaps="handled"
+            >
+              {QUICK_ACTIONS.map((q) => (
+                <Pressable
+                  key={q.id}
+                  onPress={() => {
+                    if (q.autoSend) onSend(q.prompt, q.id);
+                    else setInput(q.prompt);
+                  }}
+                  disabled={thinking}
+                  style={({ pressed }) => [styles.quickChip, pressed && { opacity: 0.6 }]}
+                  testID={`tutor-quick-${q.id}`}
+                >
+                  <Ionicons name={q.icon} size={14} color="#A992FF" />
+                  <Text style={styles.quickChipText}>{q.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          )}
 
           <View style={[styles.inputBar, { paddingBottom: spacing.md, marginBottom: tabBarHeight }]}>
             <RNTextInput
