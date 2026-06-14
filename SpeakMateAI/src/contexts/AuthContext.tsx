@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { AppUser } from '@/types';
 import { authService } from '@/services/authService';
+import { setAiAuthContext } from '@/services/aiService';
 
 interface AuthCtx {
   user: AppUser | null;
@@ -23,6 +24,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = authService.onAuthStateChanged((u) => {
       setUser(u);
       setInitializing(false);
+      // Keep aiService headers in sync — backend uses these for per-user quota.
+      setAiAuthContext(u?.uid ?? null, !!u?.isPremium);
     });
     return unsub;
   }, []);

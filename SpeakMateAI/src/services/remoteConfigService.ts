@@ -113,6 +113,30 @@ export async function fetchBackendStatus(): Promise<Pick<RemoteConfig, 'budgetRe
   }
 }
 
+export interface UserQuotaStatus {
+  used: number;
+  limit: number;     // -1 = unlimited (premium)
+  remaining: number; // -1 = unlimited
+  is_premium: boolean;
+}
+
+export async function fetchUserQuota(uid: string | null, isPremium: boolean): Promise<UserQuotaStatus | null> {
+  const url = process.env.EXPO_PUBLIC_BACKEND_URL;
+  if (!url) return null;
+  try {
+    const res = await fetch(`${url.replace(/\/$/, '')}/api/system/quota`, {
+      headers: {
+        'X-User-Id': uid || 'anonymous',
+        'X-Is-Premium': isPremium ? 'true' : 'false',
+      },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as UserQuotaStatus;
+  } catch {
+    return null;
+  }
+}
+
 // Admin-only — flip Firestore flags (called from AdminConfigScreen).
 export async function adminUpdateConfig(patch: Partial<RemoteConfig>): Promise<void> {
   const payload: Record<string, unknown> = { updatedAt: new Date().toISOString() };
@@ -128,7 +152,7 @@ export async function adminUpdateConfig(patch: Partial<RemoteConfig>): Promise<v
 // Admin-only — call backend admin-toggle for budget/force-disabled.
 export async function adminBackendToggle(
   email: string,
-  patch: { force_disabled?: boolean; global_ai_enabled?: boolean; daily_budget_inr?: number; maintenance_message?: string }
+  patch: { force_disabled?: boolean; global_ai_enabled?: boolean; daily_budget_inr?: number; user_daily_free_limit?: number; maintenance_message?: string }
 ): Promise<void> {
   const url = process.env.EXPO_PUBLIC_BACKEND_URL;
   if (!url) throw new Error('Backend URL not configured');

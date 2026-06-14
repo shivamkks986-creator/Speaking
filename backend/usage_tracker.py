@@ -1,16 +1,20 @@
 """Usage tracker + budget kill switch for SpeakMate AI backend.
 
-Tracks daily API calls per endpoint in MongoDB and auto-disables the AI
-endpoints when the daily INR budget is exceeded. Admin can also force a
-shutdown via the `force_disabled` flag in `system_state` collection.
+Tracks daily API calls per endpoint AND per user in MongoDB. Auto-disables
+the AI endpoints when:
+  • daily INR budget is exhausted (global kill), OR
+  • a single user exceeds their daily free quota (soft paywall — upsells to premium).
+
+Admin can also force a shutdown via the `force_disabled` flag in `system_state`.
 
 Schema:
 - Collection `api_usage` (one doc per day per endpoint):
-    { date: "YYYY-MM-DD", endpoint: "tutor|speaking|interview|...",
-      calls: int, estimated_cost_inr: float }
+    { date: "YYYY-MM-DD", endpoint, calls, estimated_cost_inr }
+- Collection `user_usage` (one doc per user per day):
+    { uid, date, calls }
 - Collection `system_state` (single doc, _id="config"):
-    { global_ai_enabled: bool, force_disabled: bool, daily_budget_inr: float,
-      maintenance_message: str, updated_at: ISO string }
+    { global_ai_enabled, force_disabled, daily_budget_inr,
+      user_daily_free_limit, maintenance_message, updated_at }
 """
 from __future__ import annotations
 
@@ -27,6 +31,7 @@ _db = _client[_db_name]
 
 # Default budget — admin can override via /api/system/admin-toggle.
 DEFAULT_DAILY_BUDGET_INR = float(os.environ.get("DAILY_BUDGET_INR", "500"))
+DEFAULT_USER_DAILY_LIMIT = int(os.environ.get("USER_DAILY_FREE_LIMIT", "30"))
 
 # Rough INR cost estimates per call by endpoint.
 # Tune these as you learn real usage. Conservative estimates below.
@@ -54,6 +59,7 @@ async def _get_state() -> dict:
         "global_ai_enabled": True,
         "force_disabled": False,
         "daily_budget_inr": DEFAULT_DAILY_BUDGET_INR,
+        "user_daily_free_limit": DEFAULT_USER_DAILY_LIMIT,
         "maintenance_message": "We're temporarily upgrading our AI servers. Please try again in a few hours!",
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -109,3 +115,52 @@ async def record_call(endpoint: str, override_cost_inr: Optional[float] = None) 
         {"$inc": {"calls": 1, "estimated_cost_inr": cost}},
         upsert=True,
     )
+
+
+# ---------------------- per-user quota ----------------------
+
+async def get_user_today(uid: str) -> int:
+    """Returns how many AI calls this user has made today (UTC)."""
+    doc = await _db.user_usage.find_one({"uid": uid, "date": _today_key()}, {"_id": 0, "calls": 1})
+    return int((doc or {}).get("calls", 0))
+
+
+async def check_user_quota(uid: Optional[str], is_premium: bool) -> Optional[str]:
+    """Returns None if user has quota left, else a reason string.
+    Premium users are unlimited. Anonymous (no uid) requests fall back to
+    a single shared anonymous bucket so curl/preview clients don't abuse.
+    """
+    if is_premium:
+        return None
+    state = await _get_state()
+    limit = int(state.get("user_daily_free_limit", DEFAULT_USER_DAILY_LIMIT))
+    used = await get_user_today(uid or "anonymous")
+    if used >= limit:
+        return f"user_quota_exceeded:{used}/{limit}"
+    return None
+
+
+async def record_user_call(uid: Optional[str]) -> int:
+    """Increments this user's daily counter. Returns the NEW count."""
+    key = uid or "anonymous"
+    res = await _db.user_usage.find_one_and_update(
+        {"uid": key, "date": _today_key()},
+        {"$inc": {"calls": 1}},
+        upsert=True,
+        return_document=True,
+    )
+    return int((res or {}).get("calls", 1))
+
+
+async def get_user_quota_status(uid: Optional[str], is_premium: bool) -> dict:
+    """Public view of a user's quota for the frontend status bar."""
+    state = await _get_state()
+    limit = int(state.get("user_daily_free_limit", DEFAULT_USER_DAILY_LIMIT))
+    used = await get_user_today(uid or "anonymous")
+    return {
+        "uid": uid or "anonymous",
+        "is_premium": is_premium,
+        "used": used,
+        "limit": limit if not is_premium else -1,  # -1 = unlimited
+        "remaining": max(0, limit - used) if not is_premium else -1,
+    }

@@ -16,6 +16,30 @@ const AI = BACKEND_URL ? `${BACKEND_URL.replace(/\/$/, '')}/api/ai` : '';
 
 let tutorSessionId: string | null = null;
 
+// Identity headers — set by AuthContext after login. Used by backend's per-user
+// quota tracker so free-tier users get 30 calls/day and premium are unlimited.
+let currentUserId: string | null = null;
+let currentIsPremium = false;
+
+export function setAiAuthContext(uid: string | null, isPremium: boolean) {
+  currentUserId = uid;
+  currentIsPremium = isPremium;
+}
+
+function authHeaders(): Record<string, string> {
+  const h: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (currentUserId) h['X-User-Id'] = currentUserId;
+  h['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';
+  return h;
+}
+
+/** Thrown when the backend returns 429 user_quota_exceeded. Frontend should show paywall. */
+export class QuotaExceededError extends Error {
+  constructor(public readonly used: number, public readonly limit: number) {
+    super('quota_exceeded');
+  }
+}
+
 async function postJson<T>(path: string, body: unknown, timeoutMs = 30000): Promise<T> {
   if (!AI) throw new Error('EXPO_PUBLIC_BACKEND_URL not set');
   const controller = new AbortController();
@@ -23,10 +47,16 @@ async function postJson<T>(path: string, body: unknown, timeoutMs = 30000): Prom
   try {
     const res = await fetch(`${AI}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: authHeaders(),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({}));
+      const reason = String(data?.detail?.reason || '');
+      const m = reason.match(/(\d+)\/(\d+)/);
+      throw new QuotaExceededError(m ? parseInt(m[1], 10) : 0, m ? parseInt(m[2], 10) : 30);
+    }
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`HTTP ${res.status}: ${text}`);
@@ -120,6 +150,7 @@ export const aiService = {
       });
       return data;
     } catch (err) {
+      if (err instanceof QuotaExceededError) throw err;
       console.warn('[aiService.scoreSpeaking] backend failed, using mock:', err);
       await delay(500);
       const words = transcript.trim().split(/\s+/).filter(Boolean).length;

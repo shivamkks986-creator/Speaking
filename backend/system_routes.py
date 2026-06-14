@@ -31,6 +31,7 @@ class SystemConfigResponse(BaseModel):
     global_ai_enabled: bool
     force_disabled: bool
     daily_budget_inr: float
+    user_daily_free_limit: int
     maintenance_message: str
     today_cost_inr: float
     today_calls: int
@@ -47,11 +48,22 @@ async def system_config() -> SystemConfigResponse:
         global_ai_enabled=bool(state.get("global_ai_enabled", True)),
         force_disabled=bool(state.get("force_disabled", False)),
         daily_budget_inr=budget,
+        user_daily_free_limit=int(state.get("user_daily_free_limit", ut.DEFAULT_USER_DAILY_LIMIT)),
         maintenance_message=str(state.get("maintenance_message", "")),
         today_cost_inr=float(usage["total_cost_inr"]),
         today_calls=int(usage["total_calls"]),
         budget_remaining_pct=round(remaining, 1),
     )
+
+
+@router.get("/quota")
+async def user_quota(
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+):
+    """Returns the calling user's daily quota status (used/limit/remaining)."""
+    is_premium = (x_is_premium or "").lower() in {"1", "true", "yes"}
+    return await ut.get_user_quota_status(x_user_id, is_premium)
 
 
 @router.get("/usage")
@@ -65,6 +77,7 @@ class AdminTogglePayload(BaseModel):
     global_ai_enabled: Optional[bool] = None
     force_disabled: Optional[bool] = None
     daily_budget_inr: Optional[float] = Field(default=None, ge=0)
+    user_daily_free_limit: Optional[int] = Field(default=None, ge=0, le=10000)
     maintenance_message: Optional[str] = None
 
 

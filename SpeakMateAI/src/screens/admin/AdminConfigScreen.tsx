@@ -30,6 +30,7 @@ export default function AdminConfigScreen() {
   const { config, refresh } = useRemoteConfig();
   const [saving, setSaving] = useState<string | null>(null);
   const [budgetInput, setBudgetInput] = useState('500');
+  const [quotaInput, setQuotaInput] = useState('30');
   const [maintInput, setMaintInput] = useState(config.maintenanceMessage);
 
   useEffect(() => {
@@ -84,6 +85,24 @@ export default function AdminConfigScreen() {
       await adminBackendToggle(user!.email!, { daily_budget_inr: v });
       await refresh();
       Alert.alert('Saved', `Daily budget set to ₹${v}`);
+    } catch (e) {
+      Alert.alert('Error', e instanceof Error ? e.message : 'Failed to save');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const saveQuota = async () => {
+    const v = parseInt(quotaInput, 10);
+    if (isNaN(v) || v < 0) {
+      Alert.alert('Invalid', 'Enter a valid daily limit (e.g. 30)');
+      return;
+    }
+    setSaving('quota');
+    try {
+      await adminBackendToggle(user!.email!, { user_daily_free_limit: v });
+      await refresh();
+      Alert.alert('Saved', `Free users now get ${v} AI calls/day`);
     } catch (e) {
       Alert.alert('Error', e instanceof Error ? e.message : 'Failed to save');
     } finally {
@@ -193,6 +212,37 @@ export default function AdminConfigScreen() {
                 testID="admin-budget-save"
               >
                 <Text style={styles.savePillText}>{saving === 'budget' ? '…' : 'Save'}</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Per-user daily free limit */}
+          <Text style={styles.section}>Free user daily limit</Text>
+          <View style={styles.card}>
+            <Text style={styles.cardSub}>
+              Free users get this many AI calls per day. Premium users are unlimited. Hitting the
+              limit shows a soft paywall.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, alignItems: 'center' }}>
+              <View style={styles.budgetInputWrap}>
+                <Ionicons name="flash" size={14} color="#A992FF" style={{ marginRight: 4 }} />
+                <TextInput
+                  value={quotaInput}
+                  onChangeText={setQuotaInput}
+                  keyboardType="numeric"
+                  placeholder="30"
+                  placeholderTextColor="rgba(242,238,255,0.4)"
+                  style={styles.budgetInput}
+                  testID="admin-quota-input"
+                />
+              </View>
+              <Pressable
+                onPress={saveQuota}
+                disabled={saving === 'quota'}
+                style={styles.savePill}
+                testID="admin-quota-save"
+              >
+                <Text style={styles.savePillText}>{saving === 'quota' ? '…' : 'Save'}</Text>
               </Pressable>
             </View>
           </View>

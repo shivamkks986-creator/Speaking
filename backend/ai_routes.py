@@ -21,7 +21,7 @@ from typing import List, Optional
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAITextToSpeech, OpenAISpeechToText
-from fastapi import APIRouter, File, HTTPException, UploadFile, Form
+from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Header
 from pydantic import BaseModel, Field
 
 import usage_tracker as ut
@@ -36,23 +36,38 @@ _stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
 
 # ---------------------- budget kill switch ----------------------
 
-async def _guard(endpoint: str) -> None:
-    """Raises 503 if the daily budget is exhausted or AI is globally disabled.
-    Call BEFORE each LLM round-trip in every public endpoint."""
+async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = False) -> None:
+    """Two-layer kill switch:
+    1. Global budget/maintenance (affects everyone).
+    2. Per-user free-tier daily quota (premium users bypass).
+    Raises 503 for global outages, 429 for personal quota exceeded.
+    """
     reason = await ut.check_budget(endpoint)
     if reason:
         raise HTTPException(
             status_code=503,
             detail={"code": "service_disabled", "reason": reason},
         )
+    user_reason = await ut.check_user_quota(uid, is_premium)
+    if user_reason:
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "user_quota_exceeded", "reason": user_reason, "upgrade": True},
+        )
 
 
-async def _record(endpoint: str) -> None:
+async def _record(endpoint: str, uid: Optional[str] = None) -> None:
+    """Records both the global endpoint usage and the per-user counter."""
     try:
         await ut.record_call(endpoint)
+        await ut.record_user_call(uid)
     except Exception:
         # Never let usage tracking failure break a user-facing call.
         pass
+
+
+def _is_premium_hdr(val: Optional[str]) -> bool:
+    return (val or "").strip().lower() in {"1", "true", "yes"}
 
 
 # ---------------------- helpers ----------------------
@@ -228,8 +243,13 @@ class TutorChatResponse(BaseModel):
 
 
 @router.post("/tutor/chat", response_model=TutorChatResponse)
-async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
-    await _guard("tutor_chat")
+async def tutor_chat(
+    req: TutorChatRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> TutorChatResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("tutor_chat", uid=x_user_id, is_premium=is_premium)
     session_id = req.session_id or str(uuid.uuid4())
     # Priority: explicit system_prompt > specialized agent > default tutor
     if req.system_prompt:
@@ -253,7 +273,7 @@ async def tutor_chat(req: TutorChatRequest) -> TutorChatResponse:
         user_msg=UserMessage(text=user_text),
         is_premium=True,
     )
-    await _record("tutor_chat")
+    await _record("tutor_chat", uid=x_user_id)
     data = _extract_json(raw)
     vocab_raw = data.get("vocab")
     vocab_model: Optional[TutorVocab] = None
@@ -309,8 +329,13 @@ class SpeakingScoreResponse(BaseModel):
 
 
 @router.post("/speaking/score", response_model=SpeakingScoreResponse)
-async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
-    await _guard("speaking_score")
+async def speaking_score(
+    req: SpeakingScoreRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> SpeakingScoreResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("speaking_score", uid=x_user_id, is_premium=is_premium)
     chat = _new_chat(str(uuid.uuid4()), SPEAKING_SYSTEM, "anthropic", "claude-sonnet-4-6")
     prompt = (
         f"Prompt the user was answering: \"{req.prompt or 'general speaking practice'}\"\n"
@@ -320,7 +345,7 @@ async def speaking_score(req: SpeakingScoreRequest) -> SpeakingScoreResponse:
         "Now return the JSON evaluation."
     )
     raw = await chat.send_message(UserMessage(text=prompt))
-    await _record("speaking_score")
+    await _record("speaking_score", uid=x_user_id)
     data = _extract_json(raw)
     mistakes_raw = data.get("mistakes") or []
     if not isinstance(mistakes_raw, list):
@@ -654,8 +679,13 @@ class LiveInterviewResponse(BaseModel):
 
 
 @router.post("/interview/live", response_model=LiveInterviewResponse)
-async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
-    await _guard("interview_live")
+async def interview_live(
+    req: LiveInterviewRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> LiveInterviewResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("interview_live", uid=x_user_id, is_premium=is_premium)
     sys_msg = LIVE_INTERVIEW_SYSTEM.replace("{track}", req.track.replace("_", " "))
     # Inject difficulty cue so the AI tunes question depth + grading strictness.
     difficulty_note = {
@@ -691,7 +721,7 @@ async def interview_live(req: LiveInterviewRequest) -> LiveInterviewResponse:
         )
 
     raw = await chat.send_message(UserMessage(text=prompt))
-    await _record("interview_live")
+    await _record("interview_live", uid=x_user_id)
     data = _extract_json(raw)
     raw_scores = data.get("scores") or {}
     scores_model: Optional[LiveScores] = None

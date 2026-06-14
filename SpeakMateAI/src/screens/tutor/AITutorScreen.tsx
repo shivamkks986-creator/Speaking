@@ -10,6 +10,7 @@ import {
   TextInput as RNTextInput,
   ScrollView,
   Alert,
+  Modal,
 } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,11 +22,12 @@ import * as Clipboard from 'expo-clipboard';
 import FadeInView from '@/components/common/FadeInView';
 
 import { ChatMessage } from '@/types';
-import { aiService } from '@/services/aiService';
+import { aiService, QuotaExceededError } from '@/services/aiService';
 import { speechService } from '@/services/speechService';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useCompanion } from '@/contexts/CompanionContext';
 import { useGamification } from '@/contexts/GamificationContext';
+import { useUserQuota } from '@/hooks/useUserQuota';
 import { randomId } from '@/utils/helpers';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import { radius, spacing } from '@/config/theme';
@@ -38,10 +40,12 @@ export default function AITutorScreen() {
   const { recordActivity } = useProgress();
   const { companion } = useCompanion();
   const { awardAction } = useGamification();
+  const { quota, refresh: refreshQuota } = useUserQuota();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showPaywall, setShowPaywall] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   // Reset chat session when companion changes
@@ -70,13 +74,21 @@ export default function AITutorScreen() {
       setMessages((prev) => [...prev, reply]);
       recordActivity(1, 'chat').catch(() => {});
       awardAction('CHAT_MESSAGE').catch(() => {});
+      refreshQuota();
       requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
-    } catch {
-      setError('Could not reach the AI tutor. Try again.');
+    } catch (e) {
+      if (e instanceof QuotaExceededError) {
+        setShowPaywall(true);
+        // Strip the user message we just added, since the call didn't happen.
+        setMessages((prev) => prev.filter((m) => m.id !== userMsg.id));
+        refreshQuota();
+      } else {
+        setError('Could not reach the AI tutor. Try again.');
+      }
     } finally {
       setThinking(false);
     }
-  }, [input, thinking, recordActivity, awardAction, companion.id, companion.systemPrompt, messages]);
+  }, [input, thinking, recordActivity, awardAction, companion.id, companion.systemPrompt, messages, refreshQuota]);
 
   const onClear = useCallback(() => {
     setMessages([]);
@@ -138,6 +150,27 @@ export default function AITutorScreen() {
             )}
           </View>
         </View>
+
+        {/* Quota chip — only for free users, shows remaining daily calls */}
+        {quota && !quota.is_premium && quota.limit > 0 && (
+          <Pressable
+            onPress={() => quota.remaining < 5 && setShowPaywall(true)}
+            style={[styles.quotaChip, quota.remaining < 5 && styles.quotaChipWarn]}
+            testID="tutor-quota-chip"
+          >
+            <Ionicons
+              name={quota.remaining < 5 ? 'warning' : 'flash'}
+              size={12}
+              color={quota.remaining < 5 ? '#FACC15' : '#A992FF'}
+            />
+            <Text style={[styles.quotaChipText, quota.remaining < 5 && { color: '#FACC15' }]}>
+              {quota.remaining > 0
+                ? `${quota.remaining}/${quota.limit} free AI calls left today`
+                : 'Daily free limit reached — upgrade for unlimited'}
+            </Text>
+            {quota.remaining < 5 && <Ionicons name="diamond" size={12} color="#FACC15" />}
+          </Pressable>
+        )}
 
         <KeyboardAvoidingView
           style={styles.flex}
@@ -262,6 +295,50 @@ export default function AITutorScreen() {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      {/* Soft paywall — shown when free daily quota is exhausted */}
+      <Modal visible={showPaywall} transparent animationType="fade" onRequestClose={() => setShowPaywall(false)}>
+        <View style={styles.paywallBackdrop}>
+          <View style={styles.paywallCard}>
+            <LinearGradient
+              colors={['#FACC15', '#FF6B9D', '#7C5CFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.paywallIconWrap}
+            >
+              <Ionicons name="diamond" size={32} color="#FFFFFF" />
+            </LinearGradient>
+            <Text style={styles.paywallTitle}>You're loving SpeakMate!</Text>
+            <Text style={styles.paywallBody}>
+              Daily free limit reached ({quota?.used}/{quota?.limit}). Upgrade to{' '}
+              <Text style={{ fontWeight: '800', color: '#FACC15' }}>Premium</Text> for unlimited AI
+              tutor, speaking practice and interview coaching.
+            </Text>
+            <View style={styles.paywallActions}>
+              <Pressable onPress={() => setShowPaywall(false)} style={styles.paywallSecondary} testID="paywall-later">
+                <Text style={styles.paywallSecondaryText}>Maybe later</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  setShowPaywall(false);
+                  navigation.navigate('Premium' as never);
+                }}
+                testID="paywall-upgrade"
+              >
+                <LinearGradient
+                  colors={['#FACC15', '#FF6B9D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.paywallPrimary}
+                >
+                  <Text style={styles.paywallPrimaryText}>Upgrade to Premium</Text>
+                </LinearGradient>
+              </Pressable>
+            </View>
+            <Text style={styles.paywallNote}>Free quota resets at 12 AM IST · No card needed for trial</Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -382,6 +459,35 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   headerName: { color: '#F2EEFF', fontSize: 16, fontWeight: '800' },
+  quotaChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(124,92,255,0.1)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: 'rgba(124,92,255,0.25)',
+    marginBottom: spacing.sm,
+  },
+  quotaChipWarn: {
+    backgroundColor: 'rgba(250,204,21,0.12)',
+    borderColor: 'rgba(250,204,21,0.4)',
+  },
+  quotaChipText: { color: '#A992FF', fontSize: 11, fontWeight: '700', flex: 1 },
+  paywallBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.75)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  paywallCard: { width: '100%', maxWidth: 360, backgroundColor: '#1A0F3D', borderRadius: radius.xxl, padding: spacing.xl, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  paywallIconWrap: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md, shadowColor: '#FF6B9D', shadowOpacity: 0.6, shadowRadius: 16 },
+  paywallTitle: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', marginBottom: spacing.sm, textAlign: 'center' },
+  paywallBody: { color: 'rgba(242,238,255,0.75)', fontSize: 13, lineHeight: 19, textAlign: 'center', marginBottom: spacing.lg },
+  paywallActions: { flexDirection: 'row', gap: spacing.sm, width: '100%' },
+  paywallSecondary: { flex: 1, padding: spacing.md, alignItems: 'center', borderRadius: radius.pill, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' },
+  paywallSecondaryText: { color: 'rgba(242,238,255,0.7)', fontSize: 13, fontWeight: '700' },
+  paywallPrimary: { paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.pill, alignItems: 'center' },
+  paywallPrimaryText: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  paywallNote: { color: 'rgba(242,238,255,0.45)', fontSize: 10, fontStyle: 'italic', marginTop: spacing.md, textAlign: 'center' },
   headerSub: { color: 'rgba(242,238,255,0.6)', fontSize: 11 },
   dot: { width: 6, height: 6, borderRadius: 3 },
   iconCircle: {

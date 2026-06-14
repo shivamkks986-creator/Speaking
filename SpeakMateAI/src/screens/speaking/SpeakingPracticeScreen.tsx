@@ -22,7 +22,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { RootStackParamList } from '@/navigation/types';
 import { speechService } from '@/services/speechService';
-import { aiService } from '@/services/aiService';
+import { aiService, QuotaExceededError } from '@/services/aiService';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -207,7 +207,11 @@ export default function SpeakingPracticeScreen() {
         streak: stats.streak,
       }).catch(() => {});
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Failed to process recording');
+      if (e instanceof QuotaExceededError) {
+        setError(`Daily free limit reached (${e.used}/${e.limit}). Upgrade to Premium for unlimited speaking practice.`);
+      } else {
+        setError(e instanceof Error ? e.message : 'Failed to process recording');
+      }
       setPhase('idle');
     }
   }, [transcript, challenge, recordActivity, recordSpeakingScore, awardAction, checkBadges, stats]);
