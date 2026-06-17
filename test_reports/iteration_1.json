@@ -1,0 +1,35 @@
+{
+  "summary": "Phase-1 backend testing complete. All 6 pytest tests passed (6/6 = 100%) covering both new endpoints (TMAY evaluate, 30-day roadmap), the upgraded speaking-score 5-axis schema, the per-user quota guard (429 with detail.code='user_quota_exceeded'), and regressions for /api/system/config and /api/ai/tutor/chat.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_phase1_endpoints.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "ai_routes.py is now 957 lines — recommend splitting into modules (tutor.py, speaking.py, tmay.py, roadmap.py, interview.py, vocab.py, media.py) for maintainability.",
+    "TMAY transcript Pydantic schema enforces min_length=3 but the request brief implies ~50-word intros. Consider adding a min_words guard or a soft hint in the system prompt for very short transcripts so scores still vary realistically.",
+    "Roadmap backfill silently pads to 30 days with a generic placeholder if the LLM under-returns — this can mask provider quality regressions. Recommend logging a warning when backfill triggers, or retrying once with a stricter prompt before padding.",
+    "Speaking score model is hardcoded to 'claude-sonnet-4-6' without fallback chain (unlike tutor_chat which uses _send_with_fallback). A single provider outage will 500 the endpoint. Suggest wrapping speaking_score / tmay_evaluate / roadmap_generate in _send_with_fallback as well.",
+    "_record() swallows all exceptions silently — quota counters could drift if mongo is briefly down. Consider logging the exception at WARNING level.",
+    "TMAY response model defaults all score fields and feedback to defaults if AI returns junk — fine for resilience, but consider a 502 if overall=0 AND polished_version='' (signals model truly failed)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_phase1_endpoints.py (new)"
+  ],
+  "success_rate": {"backend": "100%", "frontend": "skipped (per request)"},
+  "test_credentials": "None required — EMERGENT_LLM_KEY is in backend/.env. Tests use synthetic X-User-Id values like qa-tmay-shape-<rand>.",
+  "seed_data_creation": "Quota test seeds one doc in MongoDB collection `user_usage` for a unique uid='qa-tmay-quota-<rand>' with calls=limit, then deletes it in teardown. No persistent test data left in DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Pytest file at /app/backend/tests/test_phase1_endpoints.py is reusable. Note: TMAY quota test seeds mongo directly (collection user_usage) instead of firing 31 real LLM calls to avoid ~5+ minute runtime; this still exercises the _guard → check_user_quota path. If you want a true end-to-end 31-call test, run it manually but expect ~3-5 min. Full run took 87s. BASE_URL is localhost:8001 since this is FastAPI-only preview (mobile app is Expo / separate). All 6 LLM-dependent endpoints (Claude Sonnet 4.6, GPT-5.2) responded correctly in this run.",
+  "rca of the issue": "No issues found."
+}

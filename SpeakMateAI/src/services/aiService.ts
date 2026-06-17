@@ -7,7 +7,10 @@ import {
   InterviewQuestion,
   InterviewResult,
   InterviewTrack,
+  JobRoadmap,
+  RoadmapDay,
   SpeakingScore,
+  TmayEvaluation,
 } from '@/types';
 import { delay, randomId } from '@/utils/helpers';
 
@@ -258,5 +261,51 @@ export const aiService = {
     const bestWeight = (stats.bestInterviewScore / 100) * 20;
     const streakWeight = Math.min(10, stats.streak);
     return Math.min(100, Math.round(interviewWeight + speakingWeight + bestWeight + streakWeight));
+  },
+
+  // -------- TMAY (Tell Me About Yourself) trainer --------
+  async evaluateTmay(
+    transcript: string,
+    durationSec: number,
+    roleTarget?: string,
+    experienceLevel: 'fresher' | 'experienced' = 'fresher'
+  ): Promise<TmayEvaluation> {
+    const data = await postJson<TmayEvaluation>('/tmay/evaluate', {
+      transcript,
+      duration_sec: durationSec,
+      role_target: roleTarget,
+      experience_level: experienceLevel,
+    });
+    return data;
+  },
+
+  // -------- 30-Day Job-Ready Roadmap --------
+  async generateRoadmap(opts: {
+    userName?: string;
+    roleTarget?: string;
+    currentLevel?: 'beginner' | 'intermediate' | 'advanced';
+    weakAreas?: string[];
+    dailyMinutes?: number;
+  }): Promise<JobRoadmap> {
+    const data = await postJson<{ summary: string; goal_title: string; days: RoadmapDay[] }>(
+      '/roadmap/generate',
+      {
+        user_name: opts.userName,
+        role_target: opts.roleTarget,
+        current_level: opts.currentLevel || 'beginner',
+        weak_areas: opts.weakAreas || [],
+        daily_minutes: opts.dailyMinutes ?? 15,
+      },
+      60000 // roadmap generation can be slow
+    );
+    return {
+      summary: data.summary,
+      goal_title: data.goal_title,
+      days: data.days,
+      createdAt: Date.now(),
+      roleTarget: opts.roleTarget,
+      currentLevel: opts.currentLevel,
+      completedDays: [],
+    };
   },
 };

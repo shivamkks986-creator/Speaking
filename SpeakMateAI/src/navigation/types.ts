@@ -45,4 +45,6 @@ export type RootStackParamList = {
   Leaderboard: undefined;
   InviteFriends: undefined;
   AdminConfig: undefined;
+  TmayTrainer: undefined;
+  Roadmap: undefined;
 };

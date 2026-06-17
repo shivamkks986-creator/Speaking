@@ -223,14 +223,36 @@ export default function HomeScreen() {
                 testID="home-action-interview"
               />
               <QuickAction
-                icon="book"
-                title="Flashcards"
-                sub="Vocab + AI lookup"
-                colors={['#34D399', '#22D3EE']}
-                onPress={() => navigation.navigate('Flashcards')}
-                testID="home-action-vocab"
+                icon="person"
+                title="TMAY"
+                sub="Tell-me-about-you"
+                colors={['#FACC15', '#FF6B9D']}
+                onPress={() => navigation.navigate('TmayTrainer')}
+                testID="home-action-tmay"
               />
             </View>
+          </FadeInView>
+
+          {/* 30-Day Job Ready Roadmap banner */}
+          <FadeInView delay={170} duration={500}>
+            <Pressable onPress={() => navigation.navigate('Roadmap')} testID="home-roadmap-banner">
+              <LinearGradient
+                colors={['#7C5CFF', '#22D3EE']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.roadmapBanner}
+              >
+                <View style={styles.roadmapIconWrap}>
+                  <Ionicons name="rocket" size={26} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.roadmapLabel}>NEW · CAREER LAUNCHPAD</Text>
+                  <Text style={styles.roadmapTitle}>30-Day Job Ready Roadmap</Text>
+                  <Text style={styles.roadmapSub}>AI-personalised daily plan · TMAY · interview · communication</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+              </LinearGradient>
+            </Pressable>
           </FadeInView>
 
           {/* Companions strip */}
@@ -571,4 +593,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 4,
   },
+  roadmapBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.lg,
+    borderRadius: radius.xl,
+    marginTop: spacing.lg,
+    shadowColor: '#7C5CFF',
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  roadmapIconWrap: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' },
+  roadmapLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', letterSpacing: 1 },
+  roadmapTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 2 },
+  roadmapSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 2, lineHeight: 15 },
 });

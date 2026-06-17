@@ -31,6 +31,8 @@ import InterviewDashboardScreen from '@/screens/interview/InterviewDashboardScre
 import LeaderboardScreen from '@/screens/gamification/LeaderboardScreen';
 import InviteFriendsScreen from '@/screens/gamification/InviteFriendsScreen';
 import AdminConfigScreen from '@/screens/admin/AdminConfigScreen';
+import TmayTrainerScreen from '@/screens/tmay/TmayTrainerScreen';
+import RoadmapScreen from '@/screens/roadmap/RoadmapScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -165,6 +167,16 @@ export default function RootNavigator() {
           <Stack.Screen
             name="AdminConfig"
             component={AdminConfigScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="TmayTrainer"
+            component={TmayTrainerScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="Roadmap"
+            component={RoadmapScreen}
             options={{ headerShown: false }}
           />
         </>

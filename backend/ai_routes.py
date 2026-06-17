@@ -380,6 +380,199 @@ async def speaking_score(
     )
 
 
+# ==================== TMAY TRAINER (Tell Me About Yourself — Claude Sonnet 4.6) ====================
+
+TMAY_SYSTEM = (
+    "You are an elite communication & interview coach grading a candidate's "
+    "\"Tell Me About Yourself\" (TMAY) self-introduction. The candidate is an Indian "
+    "job-seeker/student. Evaluate using the **PPF framework** (Past → Present → Future) "
+    "and the STAR principle where applicable. Score honestly — vary scores realistically; "
+    "penalise vague intros, missing structure, no hook, and weak closing. "
+    "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"overall": int(0-100), "structure": int(0-100), "clarity": int(0-100), '
+    '"confidence": int(0-100), "relevance": int(0-100), "impact": int(0-100), '
+    '"has_hook": bool, "has_past": bool, "has_present": bool, "has_future": bool, '
+    '"filler_words": ["um", "uh", "like"], '
+    '"strengths": ["specific strength 1", "specific strength 2"], '
+    '"weaknesses": ["specific weakness 1", "specific weakness 2"], '
+    '"missing_elements": ["e.g. no clear career goal", "no signature achievement"], '
+    '"polished_version": "a 60-second rewritten TMAY in natural, confident English (3-5 sentences, PPF structure)", '
+    '"next_goal": "one focused practice target for the next attempt", '
+    '"feedback": "2-3 sentence coaching summary"}'
+)
+
+
+class TmayEvaluateRequest(BaseModel):
+    transcript: str = Field(min_length=3)
+    duration_sec: float = Field(default=0, ge=0)
+    role_target: Optional[str] = None    # e.g. "software engineer fresher", "sales executive"
+    experience_level: Optional[str] = "fresher"  # "fresher" | "experienced"
+
+
+class TmayEvaluateResponse(BaseModel):
+    overall: int
+    structure: int
+    clarity: int
+    confidence: int
+    relevance: int
+    impact: int
+    has_hook: bool = False
+    has_past: bool = False
+    has_present: bool = False
+    has_future: bool = False
+    filler_words: List[str] = Field(default_factory=list)
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+    missing_elements: List[str] = Field(default_factory=list)
+    polished_version: str = ""
+    next_goal: str = ""
+    feedback: str = ""
+
+
+@router.post("/tmay/evaluate", response_model=TmayEvaluateResponse)
+async def tmay_evaluate(
+    req: TmayEvaluateRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> TmayEvaluateResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("tmay_evaluate", uid=x_user_id, is_premium=is_premium)
+    chat = _new_chat(str(uuid.uuid4()), TMAY_SYSTEM, "anthropic", "claude-sonnet-4-6")
+    prompt = (
+        f"Target role: {req.role_target or 'general entry-level role in India'}\n"
+        f"Experience level: {req.experience_level or 'fresher'}\n"
+        f"Duration: {req.duration_sec:.1f} seconds · "
+        f"Word count: {len(req.transcript.split())}\n"
+        f"Candidate's TMAY transcript:\n\"\"\"\n{req.transcript}\n\"\"\"\n\n"
+        "Now return the JSON evaluation."
+    )
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("tmay_evaluate", uid=x_user_id)
+    data = _extract_json(raw)
+
+    def _list(key: str, limit: int = 5) -> List[str]:
+        v = data.get(key) or []
+        if not isinstance(v, list):
+            return []
+        return [str(x) for x in v][:limit]
+
+    return TmayEvaluateResponse(
+        overall=int(data.get("overall", 0)),
+        structure=int(data.get("structure", 0)),
+        clarity=int(data.get("clarity", 0)),
+        confidence=int(data.get("confidence", 0)),
+        relevance=int(data.get("relevance", 0)),
+        impact=int(data.get("impact", 0)),
+        has_hook=bool(data.get("has_hook", False)),
+        has_past=bool(data.get("has_past", False)),
+        has_present=bool(data.get("has_present", False)),
+        has_future=bool(data.get("has_future", False)),
+        filler_words=_list("filler_words", 8),
+        strengths=_list("strengths", 4),
+        weaknesses=_list("weaknesses", 4),
+        missing_elements=_list("missing_elements", 4),
+        polished_version=str(data.get("polished_version", "")),
+        next_goal=str(data.get("next_goal", "")),
+        feedback=str(data.get("feedback", "Keep practising — structure your intro as Past → Present → Future.")),
+    )
+
+
+# ==================== 30-DAY JOB-READY ROADMAP (GPT-5.2) ====================
+
+ROADMAP_SYSTEM = (
+    "You are a senior career coach designing a **30-day job-readiness roadmap** for an "
+    "Indian English learner. The plan must blend: communication skills, interview prep, "
+    "vocabulary, confidence-building, TMAY, mock interviews, soft skills, resume/LinkedIn polish. "
+    "Each day must have ONE focus theme + 3 short actionable tasks (≤15 min total) + a daily quote/tip. "
+    "Vary themes day-to-day (no two consecutive days same focus). Days 1-10 = fundamentals, "
+    "11-20 = applied practice, 21-30 = mock & polish. "
+    "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"summary": "2-3 sentence overview of the plan", '
+    '"goal_title": "personalised goal headline", '
+    '"days": [ '
+    '  {"day": 1, "title": "Day title", "focus": "speaking|vocabulary|tmay|interview|resume|grammar|confidence|listening", '
+    '   "tasks": ["task1 (5 min)", "task2 (5 min)", "task3 (5 min)"], '
+    '   "tip": "motivational tip or quote"}, '
+    '  ... 30 entries total ... '
+    ']}'
+)
+
+
+class RoadmapGenerateRequest(BaseModel):
+    user_name: Optional[str] = None
+    role_target: Optional[str] = None          # e.g. "software engineer fresher"
+    current_level: Optional[str] = "beginner"  # "beginner" | "intermediate" | "advanced"
+    weak_areas: List[str] = Field(default_factory=list)  # ["grammar", "confidence", ...]
+    daily_minutes: int = Field(default=15, ge=5, le=120)
+
+
+class RoadmapDay(BaseModel):
+    day: int
+    title: str
+    focus: str
+    tasks: List[str]
+    tip: str = ""
+
+
+class RoadmapGenerateResponse(BaseModel):
+    summary: str
+    goal_title: str
+    days: List[RoadmapDay]
+
+
+@router.post("/roadmap/generate", response_model=RoadmapGenerateResponse)
+async def roadmap_generate(
+    req: RoadmapGenerateRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> RoadmapGenerateResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("roadmap_generate", uid=x_user_id, is_premium=is_premium)
+    chat = _new_chat(str(uuid.uuid4()), ROADMAP_SYSTEM, "openai", "gpt-5.2")
+    weak_str = ", ".join(req.weak_areas) if req.weak_areas else "none specified"
+    prompt = (
+        f"Learner name: {req.user_name or 'Learner'}\n"
+        f"Target role: {req.role_target or 'general fresher job in India'}\n"
+        f"Current level: {req.current_level or 'beginner'}\n"
+        f"Daily commitment: {req.daily_minutes} minutes\n"
+        f"Self-reported weak areas: {weak_str}\n\n"
+        "Generate a personalised 30-day roadmap. Return JSON with exactly 30 day entries."
+    )
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("roadmap_generate", uid=x_user_id)
+    data = _extract_json(raw)
+    raw_days = data.get("days") or []
+    days: List[RoadmapDay] = []
+    for i, d in enumerate(raw_days[:30]):
+        if not isinstance(d, dict):
+            continue
+        tasks_raw = d.get("tasks") or []
+        if not isinstance(tasks_raw, list):
+            tasks_raw = []
+        days.append(RoadmapDay(
+            day=int(d.get("day", i + 1)),
+            title=str(d.get("title", f"Day {i + 1}"))[:80],
+            focus=str(d.get("focus", "speaking")).lower(),
+            tasks=[str(t) for t in tasks_raw][:5],
+            tip=str(d.get("tip", "")),
+        ))
+    # Backfill if AI returned fewer than 30 days
+    while len(days) < 30:
+        idx = len(days) + 1
+        days.append(RoadmapDay(
+            day=idx,
+            title=f"Day {idx}: Keep building momentum",
+            focus="speaking",
+            tasks=["Practise speaking for 5 minutes", "Learn 3 new words", "Reflect on today's win"],
+            tip="Small wins compound — show up daily.",
+        ))
+    return RoadmapGenerateResponse(
+        summary=str(data.get("summary", "Your 30-day job-ready roadmap.")),
+        goal_title=str(data.get("goal_title", "30-Day Job Ready Plan")),
+        days=days,
+    )
+
+
 # ==================== INTERVIEW (GPT-5.2) ====================
 
 INTERVIEW_EVAL_SYSTEM = (

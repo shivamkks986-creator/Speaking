@@ -401,8 +401,47 @@ export default function SpeakingPracticeScreen() {
                   <ScoreBar label="Pronunciation" value={score.pronunciation} color="#FACC15" icon="megaphone" />
                   <ScoreBar label="Fluency"       value={score.fluency}       color="#7C5CFF" icon="pulse" />
                   <ScoreBar label="Vocabulary"    value={score.vocabulary ?? Math.max(50, score.overall - 5)} color="#22D3EE" icon="book" />
+                  {typeof score.confidence === 'number' && score.confidence > 0 ? (
+                    <ScoreBar label="Confidence" value={score.confidence} color="#FF6B9D" icon="flash" />
+                  ) : null}
                 </View>
               </View>
+
+              {/* Strengths */}
+              {score.strengths && score.strengths.length > 0 ? (
+                <View style={[styles.feedbackCard, { borderColor: 'rgba(52,211,153,0.3)', backgroundColor: 'rgba(52,211,153,0.08)' }]}>
+                  <View style={styles.feedbackCardHead}>
+                    <Ionicons name="checkmark-circle" size={16} color="#34D399" />
+                    <Text style={[styles.feedbackCardTitle, { color: '#34D399' }]}>
+                      Strengths ({score.strengths.length})
+                    </Text>
+                  </View>
+                  {score.strengths.map((s, i) => (
+                    <View key={i} style={{ flexDirection: 'row', marginTop: 4 }}>
+                      <Text style={{ color: '#34D399', marginRight: 6 }}>•</Text>
+                      <Text style={styles.feedbackBody}>{s}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
+              {/* Weaknesses */}
+              {score.weaknesses && score.weaknesses.length > 0 ? (
+                <View style={[styles.feedbackCard, { borderColor: 'rgba(252,165,165,0.3)', backgroundColor: 'rgba(252,165,165,0.08)' }]}>
+                  <View style={styles.feedbackCardHead}>
+                    <Ionicons name="alert-circle" size={16} color="#FCA5A5" />
+                    <Text style={[styles.feedbackCardTitle, { color: '#FCA5A5' }]}>
+                      Areas to improve ({score.weaknesses.length})
+                    </Text>
+                  </View>
+                  {score.weaknesses.map((w, i) => (
+                    <View key={i} style={{ flexDirection: 'row', marginTop: 4 }}>
+                      <Text style={{ color: '#FCA5A5', marginRight: 6 }}>•</Text>
+                      <Text style={styles.feedbackBody}>{w}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
 
               {/* Mistake analysis */}
               {score.mistakes && score.mistakes.length > 0 ? (
@@ -450,6 +489,33 @@ export default function SpeakingPracticeScreen() {
                 </View>
               ) : null}
 
+              {/* Next goal */}
+              {score.next_goal ? (
+                <View style={[styles.feedbackCard, { borderColor: 'rgba(250,204,21,0.4)', backgroundColor: 'rgba(250,204,21,0.1)' }]}>
+                  <View style={styles.feedbackCardHead}>
+                    <Ionicons name="rocket" size={16} color="#FACC15" />
+                    <Text style={[styles.feedbackCardTitle, { color: '#FACC15' }]}>Your next focus</Text>
+                  </View>
+                  <Text style={styles.feedbackBody}>{score.next_goal}</Text>
+                </View>
+              ) : null}
+
+              {/* Action plan */}
+              {score.action_plan && score.action_plan.length > 0 ? (
+                <View style={[styles.feedbackCard, { borderColor: 'rgba(34,211,238,0.3)', backgroundColor: 'rgba(34,211,238,0.08)' }]}>
+                  <View style={styles.feedbackCardHead}>
+                    <Ionicons name="list" size={16} color="#22D3EE" />
+                    <Text style={[styles.feedbackCardTitle, { color: '#22D3EE' }]}>Action plan</Text>
+                  </View>
+                  {score.action_plan.map((a, i) => (
+                    <View key={i} style={{ flexDirection: 'row', marginTop: 4 }}>
+                      <Text style={{ color: '#22D3EE', marginRight: 6, fontWeight: '700' }}>{i + 1}.</Text>
+                      <Text style={styles.feedbackBody}>{a}</Text>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+
               {/* Vocabulary builder */}
               {vocab.length > 0 && (
                 <>
@@ -476,10 +542,10 @@ export default function SpeakingPracticeScreen() {
               <View style={styles.actionGrid}>
                 <ActionTile icon="refresh" label="Practice Again" gradient={['#7C5CFF', '#A992FF']} onPress={resetAll} testID="action-practice-again" />
                 <ActionTile icon="shuffle" label="New Challenge"  gradient={['#FACC15', '#FF6B9D']} onPress={newChallenge} testID="action-new-challenge" />
-                <ActionTile icon="flash"   label="Daily Challenge" gradient={['#FF7A6B', '#FFA396']} onPress={() => navigation.navigate('DailyChallenge')} testID="action-daily-challenge" />
+                <ActionTile icon="person" label="TMAY Trainer"    gradient={['#FACC15', '#22D3EE']} onPress={() => navigation.navigate('TmayTrainer')} testID="action-tmay" />
+                <ActionTile icon="rocket" label="30-Day Plan"     gradient={['#7C5CFF', '#22D3EE']} onPress={() => navigation.navigate('Roadmap')} testID="action-roadmap" />
                 <ActionTile icon="briefcase" label="Interview"    gradient={['#22D3EE', '#7C5CFF']} onPress={() => navigation.navigate('Main', { screen: 'Interview' } as never)} testID="action-interview" />
                 <ActionTile icon="megaphone" label="Pronunciation" gradient={['#34D399', '#22D3EE']} onPress={() => navigation.navigate('PronunciationPractice')} testID="action-pronunciation" />
-                <ActionTile icon="library" label="Flashcards"      gradient={['#A992FF', '#7C5CFF']} onPress={() => navigation.navigate('Flashcards')} testID="action-flashcards" />
               </View>
 
               {/* Premium upsell — only for free users */}

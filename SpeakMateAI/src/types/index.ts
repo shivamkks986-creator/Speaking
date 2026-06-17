@@ -99,10 +99,59 @@ export interface SpeakingScore {
   fluency: number;
   grammar: number;
   vocabulary?: number;
+  confidence?: number;
   mistakes?: string[];
   corrected?: string;
   suggested?: string;
+  strengths?: string[];
+  weaknesses?: string[];
+  next_goal?: string;
+  action_plan?: string[];
   feedback: string;
+}
+
+// "Tell Me About Yourself" trainer ----------------------------------------
+export interface TmayEvaluation {
+  overall: number;
+  structure: number;
+  clarity: number;
+  confidence: number;
+  relevance: number;
+  impact: number;
+  has_hook: boolean;
+  has_past: boolean;
+  has_present: boolean;
+  has_future: boolean;
+  filler_words: string[];
+  strengths: string[];
+  weaknesses: string[];
+  missing_elements: string[];
+  polished_version: string;
+  next_goal: string;
+  feedback: string;
+}
+
+// 30-Day Job Ready Roadmap ------------------------------------------------
+export type RoadmapFocus =
+  | 'speaking' | 'vocabulary' | 'tmay' | 'interview'
+  | 'resume' | 'grammar' | 'confidence' | 'listening';
+
+export interface RoadmapDay {
+  day: number;
+  title: string;
+  focus: RoadmapFocus | string;
+  tasks: string[];
+  tip: string;
+}
+
+export interface JobRoadmap {
+  summary: string;
+  goal_title: string;
+  days: RoadmapDay[];
+  createdAt: number;
+  roleTarget?: string;
+  currentLevel?: string;
+  completedDays: number[]; // array of day numbers user has marked done
 }
 
 export interface ProgressStats {
