@@ -297,16 +297,20 @@ async def tutor_chat(
 # ==================== SPEAKING SCORE (Claude Sonnet 4.6) ====================
 
 SPEAKING_SYSTEM = (
-    "You are an expert English speaking coach evaluating a learner's spoken response. "
-    "Given a transcript and duration, score the speech on FOUR axes and give actionable, specific feedback. "
-    "Be honest — vary scores realistically (don't always give 70-80). Penalise short or off-topic answers. "
+    "You are an expert English speaking + communication coach evaluating a learner's spoken response. "
+    "Given a transcript and duration, score the speech on FIVE axes and give actionable, specific feedback. "
+    "Be honest — vary scores realistically. Penalise short or off-topic answers. "
     "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
     '{"overall": int(0-100), "pronunciation": int(0-100), "fluency": int(0-100), '
-    '"grammar": int(0-100), "vocabulary": int(0-100), '
+    '"grammar": int(0-100), "vocabulary": int(0-100), "confidence": int(0-100), '
     '"mistakes": ["specific mistake 1", "specific mistake 2"], '
     '"corrected": "the user transcript rewritten with all errors fixed", '
     '"suggested": "a native-speaker-quality answer (2-3 sentences) to the same prompt", '
-    '"feedback": "1-2 sentence coaching focus area"}'
+    '"strengths": ["specific strength 1", "specific strength 2"], '
+    '"weaknesses": ["specific weakness 1", "specific weakness 2"], '
+    '"next_goal": "one focused practice target for tomorrow", '
+    '"action_plan": ["step 1", "step 2", "step 3"], '
+    '"feedback": "1-2 sentence coaching summary"}'
 )
 
 
@@ -322,9 +326,14 @@ class SpeakingScoreResponse(BaseModel):
     fluency: int
     grammar: int
     vocabulary: int
+    confidence: int = 0
     mistakes: List[str] = Field(default_factory=list)
     corrected: str = ""
     suggested: str = ""
+    strengths: List[str] = Field(default_factory=list)
+    weaknesses: List[str] = Field(default_factory=list)
+    next_goal: str = ""
+    action_plan: List[str] = Field(default_factory=list)
     feedback: str
 
 
@@ -350,15 +359,23 @@ async def speaking_score(
     mistakes_raw = data.get("mistakes") or []
     if not isinstance(mistakes_raw, list):
         mistakes_raw = []
+    strengths_raw = data.get("strengths") or []
+    weaknesses_raw = data.get("weaknesses") or []
+    action_raw = data.get("action_plan") or []
     return SpeakingScoreResponse(
         overall=int(data.get("overall", 0)),
         pronunciation=int(data.get("pronunciation", 0)),
         fluency=int(data.get("fluency", 0)),
         grammar=int(data.get("grammar", 0)),
         vocabulary=int(data.get("vocabulary", 0)),
+        confidence=int(data.get("confidence", 0)),
         mistakes=[str(m) for m in mistakes_raw][:5],
         corrected=str(data.get("corrected", "")),
         suggested=str(data.get("suggested", "")),
+        strengths=[str(s) for s in strengths_raw][:4] if isinstance(strengths_raw, list) else [],
+        weaknesses=[str(w) for w in weaknesses_raw][:4] if isinstance(weaknesses_raw, list) else [],
+        next_goal=str(data.get("next_goal", "")),
+        action_plan=[str(a) for a in action_raw][:5] if isinstance(action_raw, list) else [],
         feedback=str(data.get("feedback", "Keep practising!")),
     )
 
