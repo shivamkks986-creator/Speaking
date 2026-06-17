@@ -33,6 +33,9 @@ import InviteFriendsScreen from '@/screens/gamification/InviteFriendsScreen';
 import AdminConfigScreen from '@/screens/admin/AdminConfigScreen';
 import TmayTrainerScreen from '@/screens/tmay/TmayTrainerScreen';
 import RoadmapScreen from '@/screens/roadmap/RoadmapScreen';
+import SalesTrainerScreen from '@/screens/sales/SalesTrainerScreen';
+import ResumeUploadScreen from '@/screens/resume/ResumeUploadScreen';
+import ResumeInterviewScreen from '@/screens/resume/ResumeInterviewScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -178,6 +181,21 @@ export default function RootNavigator() {
             name="Roadmap"
             component={RoadmapScreen}
             options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="SalesTrainer"
+            component={SalesTrainerScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ResumeUpload"
+            component={ResumeUploadScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="ResumeInterview"
+            component={ResumeInterviewScreen}
+            options={{ headerShown: false, presentation: 'fullScreenModal', gestureEnabled: false }}
           />
         </>
       )}

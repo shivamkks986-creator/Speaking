@@ -8,7 +8,12 @@ import {
   InterviewResult,
   InterviewTrack,
   JobRoadmap,
+  ParsedResume,
+  ResumeInterviewQuestionSet,
   RoadmapDay,
+  SalesScenario,
+  SalesScores,
+  SalesSessionReport,
   SpeakingScore,
   TmayEvaluation,
 } from '@/types';
@@ -307,5 +312,82 @@ export const aiService = {
       currentLevel: opts.currentLevel,
       completedDays: [],
     };
+  },
+
+  // -------- Sales / Counselling Trainer --------
+  async listSalesScenarios(): Promise<SalesScenario[]> {
+    if (!AI) throw new Error('EXPO_PUBLIC_BACKEND_URL not set');
+    const res = await fetch(`${AI}/sales/scenarios`, { headers: authHeaders() });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = (await res.json()) as { scenarios: SalesScenario[] };
+    return data.scenarios || [];
+  },
+
+  async salesTurn(
+    scenarioId: string,
+    history: { role: 'user' | 'customer'; text: string }[],
+    userMessage: string | null,
+    targetTurns = 6
+  ): Promise<{
+    customer_reply: string;
+    scores: SalesScores | null;
+    feedback: string | null;
+    objection_raised: string | null;
+    should_end: boolean;
+    converted: boolean;
+    turn_number: number;
+  }> {
+    return postJson('/sales/turn', {
+      scenario_id: scenarioId,
+      history,
+      user_message: userMessage,
+      target_turns: targetTurns,
+    });
+  },
+
+  async salesScoreSession(
+    scenarioId: string,
+    history: { role: 'user' | 'customer'; text: string }[],
+    converted: boolean
+  ): Promise<SalesSessionReport> {
+    return postJson('/sales/score-session', {
+      scenario_id: scenarioId,
+      history,
+      converted,
+    }, 45000);
+  },
+
+  // -------- Resume parse + personalised interview Qs --------
+  async parseResume(file: { uri: string; name: string; mimeType?: string }): Promise<ParsedResume> {
+    if (!AI) throw new Error('EXPO_PUBLIC_BACKEND_URL not set');
+    const form = new FormData();
+    form.append('file', { uri: file.uri, name: file.name, type: file.mimeType || 'application/pdf' } as unknown as Blob);
+    const headers: Record<string, string> = {};
+    if (currentUserId) headers['X-User-Id'] = currentUserId;
+    headers['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';
+    const res = await fetch(`${AI}/resume/parse`, { method: 'POST', body: form, headers });
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({}));
+      const reason = String(data?.detail?.reason || '');
+      const m = reason.match(/(\d+)\/(\d+)/);
+      throw new QuotaExceededError(m ? parseInt(m[1], 10) : 0, m ? parseInt(m[2], 10) : 30);
+    }
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Resume parse HTTP ${res.status}: ${text}`);
+    }
+    return (await res.json()) as ParsedResume;
+  },
+
+  async resumeInterviewQuestions(
+    resume: ParsedResume,
+    roleTarget?: string,
+    difficulty: 'beginner' | 'intermediate' | 'advanced' = 'intermediate'
+  ): Promise<ResumeInterviewQuestionSet> {
+    return postJson('/resume/interview-questions', {
+      resume,
+      role_target: roleTarget,
+      difficulty,
+    }, 45000);
   },
 };

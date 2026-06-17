@@ -255,6 +255,48 @@ export default function HomeScreen() {
             </Pressable>
           </FadeInView>
 
+          {/* Career Tools row — Sales Trainer + Resume Upload */}
+          <FadeInView delay={200} duration={500}>
+            <View style={styles.careerRow}>
+              <Pressable
+                onPress={() => navigation.navigate('SalesTrainer')}
+                style={{ flex: 1 }}
+                testID="home-sales-trainer-btn"
+              >
+                <LinearGradient
+                  colors={['#FACC15', '#FF6B9D']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.careerTile}
+                >
+                  <Ionicons name="megaphone" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.careerTitle}>Sales Trainer</Text>
+                    <Text style={styles.careerSub}>Indian roleplay · 6 scenarios</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+              <Pressable
+                onPress={() => navigation.navigate('ResumeUpload')}
+                style={{ flex: 1 }}
+                testID="home-resume-upload-btn"
+              >
+                <LinearGradient
+                  colors={['#34D399', '#7C5CFF']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.careerTile}
+                >
+                  <Ionicons name="document-text" size={22} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.careerTitle}>Resume Mock</Text>
+                    <Text style={styles.careerSub}>Upload PDF · AI Qs</Text>
+                  </View>
+                </LinearGradient>
+              </Pressable>
+            </View>
+          </FadeInView>
+
           {/* Companions strip */}
           <FadeInView delay={220} duration={500}>
             <View style={styles.sectionRow}>
@@ -610,4 +652,8 @@ const styles = StyleSheet.create({
   roadmapLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: '800', letterSpacing: 1 },
   roadmapTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 2 },
   roadmapSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 2, lineHeight: 15 },
+  careerRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  careerTile: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderRadius: radius.lg },
+  careerTitle: { color: '#FFFFFF', fontSize: 13, fontWeight: '800' },
+  careerSub: { color: 'rgba(255,255,255,0.85)', fontSize: 10, marginTop: 1 },
 });

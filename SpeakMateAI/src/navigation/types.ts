@@ -1,5 +1,5 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { InterviewResult, InterviewTrack, SpeakingScore } from '@/types';
+import { InterviewResult, InterviewTrack, ResumeInterviewQuestion, SpeakingScore } from '@/types';
 
 export type AuthStackParamList = {
   Onboarding: undefined;
@@ -47,4 +47,11 @@ export type RootStackParamList = {
   AdminConfig: undefined;
   TmayTrainer: undefined;
   Roadmap: undefined;
+  SalesTrainer: undefined;
+  ResumeUpload: undefined;
+  ResumeInterview: {
+    questions: ResumeInterviewQuestion[];
+    targetRole: string;
+    focusAreas: string[];
+  };
 };

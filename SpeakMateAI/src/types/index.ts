@@ -154,6 +154,93 @@ export interface JobRoadmap {
   completedDays: number[]; // array of day numbers user has marked done
 }
 
+// Sales / Counselling Trainer --------------------------------------------
+export interface SalesScenario {
+  id: string;
+  industry: string;
+  title: string;
+  customer: string;
+  goal: string;
+}
+
+export interface SalesScores {
+  empathy: number;
+  persuasion: number;
+  objection_handling: number;
+  product_knowledge: number;
+  closing: number;
+}
+
+export interface SalesTurnMessage {
+  role: 'user' | 'customer';
+  text: string;
+  scores?: SalesScores;
+  feedback?: string;
+  objection_raised?: string;
+}
+
+export interface SalesSessionReport {
+  overallScore: number;
+  empathyScore: number;
+  persuasionScore: number;
+  objectionScore: number;
+  productScore: number;
+  closingScore: number;
+  converted: boolean;
+  outcome_summary: string;
+  strengths: string[];
+  improvements: string[];
+  key_objections_handled: string[];
+  missed_opportunities: string[];
+  sample_winning_pitch: string;
+}
+
+// Resume parsing ---------------------------------------------------------
+export interface ResumeExperience {
+  company: string;
+  title: string;
+  duration: string;
+  highlights: string[];
+}
+
+export interface ResumeEducation {
+  institution: string;
+  degree: string;
+  year: string;
+}
+
+export interface ResumeProject {
+  name: string;
+  description: string;
+  tech: string[];
+}
+
+export interface ParsedResume {
+  name: string;
+  role_target: string;
+  summary: string;
+  skills: string[];
+  experience: ResumeExperience[];
+  education: ResumeEducation[];
+  projects: ResumeProject[];
+  certifications: string[];
+  years_of_experience: number;
+  raw_text_excerpt?: string;
+}
+
+export interface ResumeInterviewQuestion {
+  question: string;
+  category: string;        // project | technical | hr | situational | gap | general
+  difficulty: string;      // easy | medium | hard
+  rationale?: string;
+}
+
+export interface ResumeInterviewQuestionSet {
+  questions: ResumeInterviewQuestion[];
+  focus_areas: string[];
+  target_role: string;
+}
+
 export interface ProgressStats {
   streak: number;
   longestStreak: number;

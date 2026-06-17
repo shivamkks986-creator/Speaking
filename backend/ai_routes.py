@@ -954,3 +954,469 @@ async def interview_live(
         should_end=bool(data.get("should_end", False)) or asked_count >= req.target_questions,
         question_number=asked_count + 1,
     )
+
+
+# ==================== SALES / COUNSELLING TRAINER (GPT-5.2) ====================
+# Roleplay where the AI plays a tough Indian customer/parent/prospect and the
+# user practises pitching/closing. Uses sales-specific scoring rubric.
+
+SALES_SCENARIOS = [
+    {"id": "edtech_parent",   "industry": "EdTech",                "title": "Selling an online coding bootcamp to a hesitant parent",                  "customer": "A working-class parent in a Tier-2 city worried about ₹40k fee and 'will my kid get a job?'",     "goal": "Convince the parent to enrol their child for the next batch"},
+    {"id": "edtech_student",  "industry": "EdTech",                "title": "Counselling a final-year student on a data science course",                 "customer": "A confused B.Com final year student exploring career switches, mostly silent and indecisive",     "goal": "Help them commit to a 6-month data science track"},
+    {"id": "insurance_term",  "industry": "Insurance",             "title": "Pitching a term life policy to a 26-year-old IT fresher",                   "customer": "A 26-yr-old fresher who 'doesn't have dependents, why do I need this?' attitude",                  "goal": "Close a ₹500/month term plan"},
+    {"id": "realestate_flat", "industry": "Real Estate",           "title": "Selling a 2BHK flat in suburban Pune",                                       "customer": "A couple comparing 4 builders; price-sensitive, asking about RERA + loan approvals",              "goal": "Get them to book a site visit this weekend"},
+    {"id": "saas_demo",       "industry": "B2B SaaS",              "title": "Cold call to book a product demo with a startup CTO",                       "customer": "A busy CTO who picks up by mistake and says 'I have 60 seconds'",                                  "goal": "Book a 30-min demo for next week"},
+    {"id": "college_counsel", "industry": "College Admission",     "title": "Counselling a student + parent for engineering admission",                  "customer": "A parent + student duo; parent wants 'placement guarantee', student wants AI/ML branch",          "goal": "Get them to pay the ₹25k seat-blocking fee today"},
+]
+
+
+class SalesScenario(BaseModel):
+    id: str
+    industry: str
+    title: str
+    customer: str
+    goal: str
+
+
+class SalesScenarioListResponse(BaseModel):
+    scenarios: List[SalesScenario]
+
+
+@router.get("/sales/scenarios", response_model=SalesScenarioListResponse)
+async def sales_scenarios() -> SalesScenarioListResponse:
+    return SalesScenarioListResponse(scenarios=[SalesScenario(**s) for s in SALES_SCENARIOS])
+
+
+SALES_ROLEPLAY_SYSTEM = (
+    "You are an extremely realistic Indian {industry} customer/prospect in a SALES ROLEPLAY. "
+    "Scenario: {title}. Customer profile: {customer}. The user (salesperson) is trying to: {goal}. "
+    "Speak like a real Indian customer would — mix English with Hindi/Hinglish (1-2 Hindi words per turn is realistic). "
+    "Raise common Indian objections like price ('mehnga hai', 'discount do'), trust ('aap company ka kya proof?'), "
+    "family/decision ('ghar mein discuss karna padega'), comparison ('competitor sasta de raha hai'), urgency ('abhi nahi, baad mein dekh lenge'). "
+    "Do NOT make it too easy. Push back, stay sceptical, ask sharp questions. "
+    "After {target_turns} turns of conversation, you can choose to convert (`should_end=true, converted=true`) "
+    "or politely refuse (`should_end=true, converted=false`) based on how persuasive the salesperson was. "
+    "Always respond with ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"customer_reply": "your in-character reply in Hinglish (1-3 sentences)", '
+    '"scores": {"empathy": int(0-100), "persuasion": int(0-100), "objection_handling": int(0-100), "product_knowledge": int(0-100), "closing": int(0-100)}, '
+    '"feedback": "1 short coaching note for the salesperson on their LAST message (or empty for opening turn)", '
+    '"objection_raised": "name of objection if any (price/trust/family/comparison/urgency/timing) else null", '
+    '"should_end": boolean, '
+    '"converted": boolean}'
+)
+
+
+class SalesTurnHistoryItem(BaseModel):
+    role: str   # "user" (salesperson) | "customer"
+    text: str
+
+
+class SalesTurnRequest(BaseModel):
+    scenario_id: str
+    history: List[SalesTurnHistoryItem] = Field(default_factory=list)
+    user_message: Optional[str] = None   # if None and history empty → opening line from customer
+    target_turns: int = Field(default=6, ge=3, le=12)
+
+
+class SalesScores(BaseModel):
+    empathy: int
+    persuasion: int
+    objection_handling: int
+    product_knowledge: int
+    closing: int
+
+
+class SalesTurnResponse(BaseModel):
+    customer_reply: str
+    scores: Optional[SalesScores] = None
+    feedback: Optional[str] = None
+    objection_raised: Optional[str] = None
+    should_end: bool = False
+    converted: bool = False
+    turn_number: int
+
+
+def _find_scenario(scenario_id: str) -> dict:
+    for s in SALES_SCENARIOS:
+        if s["id"] == scenario_id:
+            return s
+    raise HTTPException(status_code=404, detail="Unknown scenario_id")
+
+
+@router.post("/sales/turn", response_model=SalesTurnResponse)
+async def sales_turn(
+    req: SalesTurnRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> SalesTurnResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("sales_turn", uid=x_user_id, is_premium=is_premium)
+    s = _find_scenario(req.scenario_id)
+    sys_msg = (
+        SALES_ROLEPLAY_SYSTEM
+        .replace("{industry}", s["industry"])
+        .replace("{title}", s["title"])
+        .replace("{customer}", s["customer"])
+        .replace("{goal}", s["goal"])
+        .replace("{target_turns}", str(req.target_turns))
+    )
+    chat = _new_chat(str(uuid.uuid4()), sys_msg, "openai", "gpt-5.2")
+
+    convo = "\n".join(
+        f"{'Salesperson' if h.role == 'user' else 'Customer'}: {h.text}" for h in req.history
+    )
+    user_turns = sum(1 for h in req.history if h.role == "user") + (1 if req.user_message else 0)
+    should_end_hint = "true" if user_turns >= req.target_turns else "false"
+
+    if req.user_message:
+        prompt = (
+            f"Conversation so far:\n{convo}\n\n"
+            f"Salesperson's latest message: {req.user_message}\n\n"
+            f"Target turns: {req.target_turns} · Salesperson has spoken {user_turns} time(s). "
+            f"If salesperson_turns >= target_turns then should_end=true and decide converted based on overall persuasion. "
+            f"Else should_end={should_end_hint}. Now respond as the customer in JSON."
+        )
+    else:
+        prompt = (
+            "This is the OPENING turn. You (customer) speak first — set the scene with a tough, realistic opener. "
+            "scores must all be 0 (no salesperson message yet), feedback can be empty, objection_raised can be null. "
+            "Now respond in JSON."
+        )
+
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("sales_turn", uid=x_user_id)
+    data = _extract_json(raw)
+    raw_scores = data.get("scores") or {}
+    scores_model: Optional[SalesScores] = None
+    if req.user_message:
+        scores_model = SalesScores(
+            empathy=int(raw_scores.get("empathy", 0)),
+            persuasion=int(raw_scores.get("persuasion", 0)),
+            objection_handling=int(raw_scores.get("objection_handling", 0)),
+            product_knowledge=int(raw_scores.get("product_knowledge", 0)),
+            closing=int(raw_scores.get("closing", 0)),
+        )
+    return SalesTurnResponse(
+        customer_reply=str(data.get("customer_reply") or "Hmm, batao kya offer hai?").strip(),
+        scores=scores_model,
+        feedback=str(data.get("feedback") or "").strip() or None,
+        objection_raised=(str(data.get("objection_raised") or "").strip() or None),
+        should_end=bool(data.get("should_end", False)) or user_turns >= req.target_turns,
+        converted=bool(data.get("converted", False)),
+        turn_number=user_turns + (0 if req.user_message else 1),
+    )
+
+
+SALES_SESSION_SYSTEM = (
+    "You are a senior sales-training coach reviewing a completed sales roleplay session. "
+    "Given the scenario goal and the full conversation, produce a coaching report. "
+    "Return ONLY a JSON object — no prose, no code fences — in this shape: "
+    '{"overallScore": int(0-100), "empathyScore": int, "persuasionScore": int, "objectionScore": int, "productScore": int, "closingScore": int, '
+    '"converted": bool, "outcome_summary": "1-2 sentence outcome", '
+    '"strengths": [string list, max 4], "improvements": [string list, max 4], '
+    '"key_objections_handled": [string list of objections salesperson addressed well], '
+    '"missed_opportunities": [string list of moments salesperson should have pushed harder or empathised more], '
+    '"sample_winning_pitch": "a 2-3 sentence example of how an expert would have closed"}'
+)
+
+
+class SalesSessionTurn(BaseModel):
+    role: str
+    text: str
+
+
+class SalesSessionScoreRequest(BaseModel):
+    scenario_id: str
+    history: List[SalesSessionTurn]
+    converted: bool = False
+
+
+class SalesSessionScoreResponse(BaseModel):
+    overallScore: int
+    empathyScore: int
+    persuasionScore: int
+    objectionScore: int
+    productScore: int
+    closingScore: int
+    converted: bool
+    outcome_summary: str
+    strengths: List[str]
+    improvements: List[str]
+    key_objections_handled: List[str]
+    missed_opportunities: List[str]
+    sample_winning_pitch: str
+
+
+@router.post("/sales/score-session", response_model=SalesSessionScoreResponse)
+async def sales_score_session(
+    req: SalesSessionScoreRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> SalesSessionScoreResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("sales_score_session", uid=x_user_id, is_premium=is_premium)
+    s = _find_scenario(req.scenario_id)
+    chat = _new_chat(str(uuid.uuid4()), SALES_SESSION_SYSTEM, "openai", "gpt-5.2")
+    convo = "\n".join(f"{'Salesperson' if h.role == 'user' else 'Customer'}: {h.text}" for h in req.history)
+    prompt = (
+        f"Scenario: {s['title']} · Industry: {s['industry']}\n"
+        f"Sales goal: {s['goal']}\n"
+        f"Outcome flag: {'converted' if req.converted else 'not converted'}\n\n"
+        f"Full conversation:\n{convo}\n\nReturn the JSON report now."
+    )
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("sales_score_session", uid=x_user_id)
+    data = _extract_json(raw)
+
+    def _list(key: str, limit: int = 4) -> List[str]:
+        v = data.get(key) or []
+        if not isinstance(v, list):
+            return []
+        return [str(x) for x in v][:limit]
+
+    return SalesSessionScoreResponse(
+        overallScore=int(data.get("overallScore", 0)),
+        empathyScore=int(data.get("empathyScore", 0)),
+        persuasionScore=int(data.get("persuasionScore", 0)),
+        objectionScore=int(data.get("objectionScore", 0)),
+        productScore=int(data.get("productScore", 0)),
+        closingScore=int(data.get("closingScore", 0)),
+        converted=bool(data.get("converted", req.converted)),
+        outcome_summary=str(data.get("outcome_summary", "")),
+        strengths=_list("strengths", 4) or ["You completed the session — that's already practice."],
+        improvements=_list("improvements", 4) or ["Listen 70%, talk 30% — uncover the real objection."],
+        key_objections_handled=_list("key_objections_handled", 5),
+        missed_opportunities=_list("missed_opportunities", 5),
+        sample_winning_pitch=str(data.get("sample_winning_pitch", "")),
+    )
+
+
+# ==================== RESUME PARSE + INTERVIEW Q GENERATION (Claude Sonnet 4.6) ====================
+
+from pypdf import PdfReader  # noqa: E402
+
+RESUME_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
+
+RESUME_PARSE_SYSTEM = (
+    "You are an expert resume parser for Indian candidates. Given the RAW EXTRACTED TEXT of a resume "
+    "(may contain layout noise, page numbers, header/footer junk), produce a clean structured JSON. "
+    "Extract: name, headline/target role, professional summary (2-3 sentences), skills (technical + soft), "
+    "experience (list), education (list), projects (list), certifications (list). "
+    "If a section is missing, return an empty array or empty string. Do not invent facts. "
+    "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"name": "...", "role_target": "...", "summary": "...", '
+    '"skills": ["Python", "SQL", "Communication", ...], '
+    '"experience": [{"company": "...", "title": "...", "duration": "...", "highlights": ["...", "..."]}], '
+    '"education": [{"institution": "...", "degree": "...", "year": "..."}], '
+    '"projects": [{"name": "...", "description": "...", "tech": ["...", "..."]}], '
+    '"certifications": ["..."], '
+    '"years_of_experience": int }'
+)
+
+
+class ResumeExperience(BaseModel):
+    company: str = ""
+    title: str = ""
+    duration: str = ""
+    highlights: List[str] = Field(default_factory=list)
+
+
+class ResumeEducation(BaseModel):
+    institution: str = ""
+    degree: str = ""
+    year: str = ""
+
+
+class ResumeProject(BaseModel):
+    name: str = ""
+    description: str = ""
+    tech: List[str] = Field(default_factory=list)
+
+
+class ResumeParseResponse(BaseModel):
+    name: str = ""
+    role_target: str = ""
+    summary: str = ""
+    skills: List[str] = Field(default_factory=list)
+    experience: List[ResumeExperience] = Field(default_factory=list)
+    education: List[ResumeEducation] = Field(default_factory=list)
+    projects: List[ResumeProject] = Field(default_factory=list)
+    certifications: List[str] = Field(default_factory=list)
+    years_of_experience: int = 0
+    raw_text_excerpt: str = ""   # first 500 chars for transparency
+
+
+def _extract_pdf_text(file_bytes: bytes) -> str:
+    """Extract text from a PDF using pypdf. Returns empty string on failure."""
+    import io
+    try:
+        reader = PdfReader(io.BytesIO(file_bytes))
+        pages: List[str] = []
+        for page in reader.pages:
+            try:
+                pages.append(page.extract_text() or "")
+            except Exception:  # noqa: BLE001
+                continue
+        return "\n".join(pages).strip()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=400, detail=f"Could not read PDF: {exc}") from exc
+
+
+@router.post("/resume/parse", response_model=ResumeParseResponse)
+async def resume_parse(
+    file: UploadFile = File(...),
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> ResumeParseResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("resume_parse", uid=x_user_id, is_premium=is_premium)
+    if not file.filename or not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="Only .pdf files are supported")
+    contents = await file.read()
+    if len(contents) > RESUME_MAX_BYTES:
+        raise HTTPException(status_code=413, detail=f"Resume exceeds {RESUME_MAX_BYTES // (1024*1024)} MB limit")
+    raw_text = _extract_pdf_text(contents)
+    if len(raw_text) < 40:
+        raise HTTPException(status_code=422, detail="Could not extract enough text from this PDF. Try a text-based (not scanned) resume.")
+
+    # Truncate for LLM — most resumes fit easily under 12k chars
+    snippet = raw_text[:12000]
+    chat = _new_chat(str(uuid.uuid4()), RESUME_PARSE_SYSTEM, "anthropic", "claude-sonnet-4-6")
+    prompt = f"Raw resume text:\n\"\"\"\n{snippet}\n\"\"\"\n\nNow return the structured JSON."
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("resume_parse", uid=x_user_id)
+    data = _extract_json(raw)
+
+    def _exps(key: str) -> List[ResumeExperience]:
+        out: List[ResumeExperience] = []
+        for e in (data.get(key) or [])[:8]:
+            if not isinstance(e, dict):
+                continue
+            hl = e.get("highlights") or []
+            if not isinstance(hl, list):
+                hl = []
+            out.append(ResumeExperience(
+                company=str(e.get("company", "")), title=str(e.get("title", "")),
+                duration=str(e.get("duration", "")),
+                highlights=[str(h) for h in hl][:5],
+            ))
+        return out
+
+    def _edus() -> List[ResumeEducation]:
+        out: List[ResumeEducation] = []
+        for e in (data.get("education") or [])[:6]:
+            if not isinstance(e, dict):
+                continue
+            out.append(ResumeEducation(
+                institution=str(e.get("institution", "")),
+                degree=str(e.get("degree", "")),
+                year=str(e.get("year", "")),
+            ))
+        return out
+
+    def _projs() -> List[ResumeProject]:
+        out: List[ResumeProject] = []
+        for e in (data.get("projects") or [])[:6]:
+            if not isinstance(e, dict):
+                continue
+            tech = e.get("tech") or []
+            if not isinstance(tech, list):
+                tech = []
+            out.append(ResumeProject(
+                name=str(e.get("name", "")),
+                description=str(e.get("description", "")),
+                tech=[str(t) for t in tech][:8],
+            ))
+        return out
+
+    skills_raw = data.get("skills") or []
+    if not isinstance(skills_raw, list):
+        skills_raw = []
+    certs_raw = data.get("certifications") or []
+    if not isinstance(certs_raw, list):
+        certs_raw = []
+
+    return ResumeParseResponse(
+        name=str(data.get("name", "")),
+        role_target=str(data.get("role_target", "")),
+        summary=str(data.get("summary", "")),
+        skills=[str(s) for s in skills_raw][:30],
+        experience=_exps("experience"),
+        education=_edus(),
+        projects=_projs(),
+        certifications=[str(c) for c in certs_raw][:10],
+        years_of_experience=int(data.get("years_of_experience", 0) or 0),
+        raw_text_excerpt=raw_text[:500],
+    )
+
+
+RESUME_QUESTIONS_SYSTEM = (
+    "You are a senior interviewer building a custom interview question set for a candidate. "
+    "Use the parsed resume + target role to generate 8-10 PERSONALISED interview questions. "
+    "Mix categories: 2-3 about specific projects/experience on the resume, 2-3 role-relevant technical/situational, "
+    "1-2 HR/behavioural (motivation, weakness, teamwork), 1 about a skill gap or 'why this role'. "
+    "Each question must be directly tied to something in the resume — never generic. "
+    "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
+    '{"questions": [{"question": "...", "category": "project|technical|hr|situational|gap", '
+    '"difficulty": "easy|medium|hard", "rationale": "1-line why this question for this resume"}], '
+    '"focus_areas": [list of 2-4 areas the candidate should brush up before the interview]}'
+)
+
+
+class ResumeQuestionsRequest(BaseModel):
+    resume: ResumeParseResponse
+    role_target: Optional[str] = None
+    difficulty: Optional[str] = "intermediate"
+
+
+class ResumeQuestion(BaseModel):
+    question: str
+    category: str = "general"
+    difficulty: str = "medium"
+    rationale: str = ""
+
+
+class ResumeQuestionsResponse(BaseModel):
+    questions: List[ResumeQuestion]
+    focus_areas: List[str]
+    target_role: str
+
+
+@router.post("/resume/interview-questions", response_model=ResumeQuestionsResponse)
+async def resume_interview_questions(
+    req: ResumeQuestionsRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+) -> ResumeQuestionsResponse:
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard("resume_interview_questions", uid=x_user_id, is_premium=is_premium)
+    target = req.role_target or req.resume.role_target or "general fresher role"
+    chat = _new_chat(str(uuid.uuid4()), RESUME_QUESTIONS_SYSTEM, "anthropic", "claude-sonnet-4-6")
+    resume_json = req.resume.model_dump_json(exclude={"raw_text_excerpt"})
+    prompt = (
+        f"Target role: {target}\nDifficulty: {req.difficulty or 'intermediate'}\n\n"
+        f"Parsed resume:\n{resume_json}\n\n"
+        "Now return the JSON with personalised questions."
+    )
+    raw = await chat.send_message(UserMessage(text=prompt))
+    await _record("resume_interview_questions", uid=x_user_id)
+    data = _extract_json(raw)
+    qs_raw = data.get("questions") or []
+    qs: List[ResumeQuestion] = []
+    for q in qs_raw[:10]:
+        if not isinstance(q, dict) or not q.get("question"):
+            continue
+        qs.append(ResumeQuestion(
+            question=str(q["question"]).strip(),
+            category=str(q.get("category", "general")).lower(),
+            difficulty=str(q.get("difficulty", "medium")).lower(),
+            rationale=str(q.get("rationale", "")),
+        ))
+    focus_raw = data.get("focus_areas") or []
+    if not isinstance(focus_raw, list):
+        focus_raw = []
+    return ResumeQuestionsResponse(
+        questions=qs,
+        focus_areas=[str(f) for f in focus_raw][:6],
+        target_role=target,
+    )
