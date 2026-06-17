@@ -100,14 +100,49 @@ Due to persistent Windows local-build C++ compilation failures with `react-nativ
 - Real Google Play Billing integration (`react-native-iap` + Play Console products)
 - Firebase Analytics events tracking
 - Streak Freeze logic (spend coins to protect streak)
-- Resume-based interviews + PDF export of interview reports
-- Notification scheduling for daily missions
+- Resume-based interviews + PDF upload + AI parsing
+- Sales / Counselling trainer modules (Indian market)
+- Firebase Admin SDK backend token verification (security against mod APKs)
+- Notification scheduling for daily missions + 30-day roadmap reminders
+
+## Phase 1: Career Launchpad (NEW — Feb 2026)
+**Goal:** Pivot from pure English-learning to full Communication-Skills + Job-Readiness platform (Duolingo + Unstop + Naukri).
+
+### ✅ Implemented (Phase 1)
+- **TMAY Trainer** (`/api/ai/tmay/evaluate`, `src/screens/tmay/TmayTrainerScreen.tsx`)
+  - Voice-first 60-second self-introduction practice (Whisper STT → Claude evaluation)
+  - 6-axis scoring: Overall · Structure · Clarity · Confidence · Relevance · Impact
+  - PPF (Past → Present → Future) coverage chips + hook detection
+  - Filler-word detection, strengths/weaknesses/missing-elements lists
+  - Polished native-style version with TTS listen button
+  - Next-goal coaching line
+- **30-Day Job Ready Roadmap** (`/api/ai/roadmap/generate`, `src/screens/roadmap/RoadmapScreen.tsx`)
+  - GPT-5.2 generates a personalised 30-day plan based on role target, level, weak areas and daily minutes
+  - Hybrid structure: Days 1-10 fundamentals, 11-20 applied practice, 21-30 mock & polish
+  - Per-day: focus tag (speaking/vocabulary/tmay/interview/resume/grammar/confidence/listening), 3 actionable tasks (≤15 min), motivational tip
+  - Progress tracking with AsyncStorage persistence + per-day mark-done toggle + overall progress bar
+- **Unified 5-Axis Speaking Feedback** (`/api/ai/speaking/score`, `src/screens/speaking/SpeakingPracticeScreen.tsx`)
+  - Added: confidence (5th score axis), strengths[], weaknesses[], next_goal, action_plan[] alongside existing mistakes/corrected/suggested
+  - UI shows new sections with colour-coded cards
+- **Home banner + nav shortcuts**: Prominent "30-Day Job Ready Roadmap" banner + TMAY tile in Quick Start grid + tiles inside SpeakingPracticeScreen action grid
+
+### 🧪 Testing (iteration_1.json)
+- All 6 backend tests passed (100%) — TMAY shape, Roadmap structure (30 days, focus rotation), 5-axis Speaking, per-user 429 quota guard, /api/system/config + /api/ai/tutor/chat regressions
+- Pytest file: `/app/backend/tests/test_phase1_endpoints.py`
+
+### 🔜 Future Phase 1 polish (from testing agent review)
+- Split `ai_routes.py` (957 lines) into modules: tutor.py / speaking.py / tmay.py / roadmap.py / interview.py / vocab.py / media.py
+- Wrap speaking_score / tmay_evaluate / roadmap_generate in `_send_with_fallback` for multi-provider resilience
+- Log a warning when roadmap backfill triggers
+- Return 502 if TMAY response is clearly empty (overall=0 AND polished_version=='')
 
 ## Roadmap (P2)
 - Group challenges + friend leaderboards
 - Pronunciation phoneme-level analysis
 - Live group interview rooms (multi-user)
 - Apple App Store deployment
+- Dedicated Communication Skills tab + dashboard
+- Spaced Repetition Flashcards
 
 ## Pricing Strategy
 | Tier      | Price | Notes |
