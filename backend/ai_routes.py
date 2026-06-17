@@ -23,6 +23,7 @@ from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAITextToSpeech, OpenAISpeechToText
 from fastapi import APIRouter, File, HTTPException, UploadFile, Form, Header
 from pydantic import BaseModel, Field
+from pypdf import PdfReader
 
 import usage_tracker as ut
 
@@ -1192,8 +1193,6 @@ async def sales_score_session(
 
 
 # ==================== RESUME PARSE + INTERVIEW Q GENERATION (Claude Sonnet 4.6) ====================
-
-from pypdf import PdfReader  # noqa: E402
 
 RESUME_MAX_BYTES = 5 * 1024 * 1024  # 5 MB
 

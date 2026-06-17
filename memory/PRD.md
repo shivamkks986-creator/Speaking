@@ -131,10 +131,32 @@ Due to persistent Windows local-build C++ compilation failures with `react-nativ
 - Pytest file: `/app/backend/tests/test_phase1_endpoints.py`
 
 ### 🔜 Future Phase 1 polish (from testing agent review)
-- Split `ai_routes.py` (957 lines) into modules: tutor.py / speaking.py / tmay.py / roadmap.py / interview.py / vocab.py / media.py
-- Wrap speaking_score / tmay_evaluate / roadmap_generate in `_send_with_fallback` for multi-provider resilience
-- Log a warning when roadmap backfill triggers
+- Split `ai_routes.py` (now 1423+ lines) into modules: tutor.py / speaking.py / tmay.py / roadmap.py / sales.py / resume.py / interview.py / vocab.py / media.py
+- Wrap speaking_score / tmay_evaluate / roadmap_generate / sales_turn / resume_parse / resume_interview_questions in `_send_with_fallback` for multi-provider resilience
+- Log a warning when roadmap backfill triggers; add pad-or-retry for resume Q under-return
+- Tighten resume "empty PDF" guard (currently <40 chars → consider <80 + unique-char check)
+- Stream-validate uploaded PDF size before reading the full body
+- Move sales scenarios from in-memory constant to a config/mongo collection (enables A/B testing)
 - Return 502 if TMAY response is clearly empty (overall=0 AND polished_version=='')
+
+## Phase 1.5: Sales Trainer + Resume Pipeline (NEW — Feb 2026)
+### ✅ Implemented
+- **Sales / Counselling Trainer** (`GET /api/ai/sales/scenarios`, `POST /api/ai/sales/turn`, `POST /api/ai/sales/score-session`, `src/screens/sales/SalesTrainerScreen.tsx`)
+  - 6 Indian-market roleplay scenarios: EdTech (parent + student), Insurance, Real Estate, B2B SaaS, College Admission
+  - Multi-turn chat — AI plays a tough Hinglish customer with realistic objections (price, trust, family, comparison, urgency)
+  - Per-turn 5-axis scoring + objection-detection + inline coach notes
+  - Auto-end after 6 turns + AI decides converted/not
+  - Final report: Empathy / Persuasion / Objection Handling / Product Knowledge / Closing + strengths/improvements + missed opportunities + expert winning pitch
+- **Resume PDF Upload + AI Parsing + Personalised Interview Qs** (`POST /api/ai/resume/parse`, `POST /api/ai/resume/interview-questions`, `src/screens/resume/ResumeUploadScreen.tsx`, `src/screens/resume/ResumeInterviewScreen.tsx`)
+  - PDF picker via `expo-document-picker` (5 MB limit)
+  - Server extracts text with `pypdf` → Claude Sonnet 4.6 returns structured JSON (name, role_target, summary, skills, experience, education, projects, certifications, years_of_experience)
+  - "Generate Questions" produces 8-10 resume-grounded interview Qs (project / technical / hr / situational / gap) with rationale + focus areas
+  - "Start Voice Mock Interview" auto-launches the in-app interview screen pre-loaded with these Qs — voice (Whisper STT) or typed answers, per-question scoring via existing `/interview/evaluate`, final aggregate report
+- **Home shortcuts**: 2-tile "Career Tools" row (Sales Trainer + Resume Mock) right after the 30-Day Roadmap banner
+
+### 🧪 Testing (iteration_2.json)
+- All 17 backend tests passed (100%) — sales list / turn / auto-end / 404, sales/score-session, resume/parse happy + 400/413/422 errors, resume Qs with resume-grounded outputs, regression smokes, 429 quota guard across all 4 new endpoints
+- Pytest file: `/app/backend/tests/test_phase2_endpoints.py`
 
 ## Roadmap (P2)
 - Group challenges + friend leaderboards
