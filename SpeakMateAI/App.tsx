@@ -1,3 +1,7 @@
+// CRITICAL: must be the FIRST import — provides crypto.getRandomValues() polyfill
+// that Firebase Auth needs on React Native (Hermes engine). Without this,
+// Firebase signup/login fails with "auth/network-request-failed".
+import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 import React from 'react';
 import { StatusBar } from 'expo-status-bar';
