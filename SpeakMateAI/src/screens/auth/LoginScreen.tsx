@@ -19,13 +19,15 @@ import FadeInView from '@/components/common/FadeInView';
 
 import { AuthStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { validateEmail, validatePassword } from '@/utils/validators';
 import { radius, spacing } from '@/config/theme';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn, signInWithGoogle } = useAuth();
+  const { signIn } = useAuth();
+  const google = useGoogleAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
@@ -52,7 +54,10 @@ export default function LoginScreen({ navigation }: Props) {
 
   const onGoogle = async () => {
     try {
-      await signInWithGoogle();
+      await google.signIn();
+      if (google.error) {
+        Alert.alert('Google Sign-In', google.error);
+      }
     } catch (err: unknown) {
       Alert.alert('Google Sign-In', err instanceof Error ? err.message : 'Failed');
     }

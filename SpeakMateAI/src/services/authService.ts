@@ -7,6 +7,8 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged as fbOnAuthStateChanged,
   updateProfile as fbUpdateProfile,
+  signInWithCredential,
+  GoogleAuthProvider,
   User,
 } from 'firebase/auth';
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -79,11 +81,20 @@ export const authService = {
     await sendPasswordResetEmail(auth, email.trim());
   },
 
-  // Google Sign-In — placeholder. Wire up via @react-native-google-signin/google-signin
-  // and pass the idToken to signInWithCredential(GoogleAuthProvider.credential(idToken)).
+  // Google Sign-In — completes the Firebase auth using an ID token obtained
+  // from Google's OAuth flow (see useGoogleAuth hook in src/hooks/useGoogleAuth.ts).
+  async signInWithGoogleIdToken(idToken: string) {
+    const credential = GoogleAuthProvider.credential(idToken);
+    const cred = await signInWithCredential(auth, credential);
+    await ensureUserDoc(cred.user);
+  },
+
+  // Legacy stub kept for backwards compatibility — actual sign-in happens via
+  // the useGoogleAuth hook + signInWithGoogleIdToken above.
   async signInWithGoogle() {
     throw new Error(
-      'Google Sign-In requires native config. Set up @react-native-google-signin/google-signin with your webClientId and replace this stub.'
+      'Google Sign-In: please use the useGoogleAuth() hook to launch the OAuth flow ' +
+        'and call authService.signInWithGoogleIdToken(idToken) on success.'
     );
   },
 

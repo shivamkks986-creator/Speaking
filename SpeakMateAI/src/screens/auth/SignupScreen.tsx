@@ -19,6 +19,7 @@ import FadeInView from '@/components/common/FadeInView';
 
 import { AuthStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
+import { useGoogleAuth } from '@/hooks/useGoogleAuth';
 import { validateEmail, validateName, validatePassword } from '@/utils/validators';
 import { radius, spacing } from '@/config/theme';
 
@@ -32,7 +33,8 @@ const BENEFITS = [
 ];
 
 export default function SignupScreen({ navigation }: Props) {
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp } = useAuth();
+  const google = useGoogleAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +63,10 @@ export default function SignupScreen({ navigation }: Props) {
 
   const onGoogle = async () => {
     try {
-      await signInWithGoogle();
+      await google.signIn();
+      if (google.error) {
+        Alert.alert('Google Sign-In', google.error);
+      }
     } catch (err: unknown) {
       Alert.alert('Google Sign-In', err instanceof Error ? err.message : 'Failed');
     }
