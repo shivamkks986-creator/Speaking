@@ -39,14 +39,20 @@ export type GoogleAuthState = {
 
 export function useGoogleAuth(): GoogleAuthState {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
-  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const configured = !!webClientId; // web client ID is mandatory (used as audience for ID token)
 
+  // IMPORTANT: We intentionally pass ONLY `clientId` (the WEB OAuth Client ID).
+  // Android OAuth Client IDs (type 1) do NOT support the implicit `response_type=id_token`
+  // flow used by `useIdTokenAuthRequest` and Google rejects them with `Error 400: invalid_request`.
+  // The Web Client (type 3) supports the implicit ID token flow on all platforms via
+  // a browser/Chrome Custom Tab redirect. The token Firebase receives is still verified
+  // against Google's public keys, so security is unaffected.
+  //
+  // The Android OAuth Client (registered in google-services.json) is still useful — it lets
+  // the native Google Play Services pre-fill the account picker — but we should not pass it
+  // here.
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: webClientId,
-    androidClientId,
-    iosClientId,
     scopes: ['profile', 'email'],
   });
 
