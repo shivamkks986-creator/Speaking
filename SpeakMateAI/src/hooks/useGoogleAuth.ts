@@ -1,29 +1,34 @@
-// Google Sign-In hook — wraps expo-auth-session's Google provider.
-// On successful OAuth, calls authService.signInWithGoogleIdToken() to finalize
-// the Firebase Auth session. No additional native modules required (works with
-// the existing Expo prebuild flow).
+// Google Sign-In hook — uses expo-auth-session's Google provider with the
+// PKCE OAuth code flow against the ANDROID OAuth client (so custom-scheme
+// redirects like com.speakmate.ai://... are accepted). Expo internally
+// exchanges the code for tokens — both `accessToken` and `idToken` come back.
+// We pass `idToken` to Firebase via signInWithCredential.
 //
-// SETUP:
-// 1. In Firebase Console → Authentication → Sign-in method → enable Google.
-// 2. In Google Cloud Console (auto-linked to your Firebase project):
-//    https://console.cloud.google.com/apis/credentials?project=speakmateai-83a32
-//    a) Find/create "Web client (auto created by Google Service)" — copy its Client ID
-//       and put it in .env as EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID
-//    b) Create OAuth 2.0 client ID → Type: Android
-//       - Package name: com.speakmate.ai   (or whatever your app.json android.package is)
-//       - SHA-1: get with `cd android && ./gradlew signingReport` (use the release SHA-1)
-//       - Copy its Client ID → EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID in .env
+// IMPORTANT — Why this setup (and the two failure modes we've already hit):
+//   1. `useIdTokenAuthRequest` with a WEB client → fails because the request
+//      tries a custom-scheme redirect URI which Web client IDs reject:
+//      "Custom scheme URIs are not allowed for 'WEB' client type."
+//   2. `useIdTokenAuthRequest` with an ANDROID client → fails because Android
+//      OAuth client IDs do not support the implicit `response_type=id_token`
+//      flow: "Error 400: invalid_request".
+//   ✅ `useAuthRequest` (code flow) with an ANDROID client → works. The code
+//      is exchanged server-side at Google's /token endpoint and both id_token
+//      + access_token are returned to the app.
 //
-// .env additions:
-//   EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=688960403070-xxxxxx.apps.googleusercontent.com
-//   EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=688960403070-yyyyyy.apps.googleusercontent.com
+// SETUP CHECKLIST:
+//   • Firebase Console → Authentication → Sign-in method → Google enabled.
+//   • Firebase Console → Project Settings → Android app registered with the
+//     release-keystore SHA-1 and the package name (com.speakmate.ai).
+//   • google-services.json placed at project root (referenced from app.json).
+//   • .env contains EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID (type 1, from GCP).
+//   • Rebuild the APK after editing .env — env vars are baked at build time.
 import { useEffect, useState, useCallback } from 'react';
 import * as Google from 'expo-auth-session/providers/google';
 import * as WebBrowser from 'expo-web-browser';
 
 import { authService } from '@/services/authService';
 
-// Ensures the OAuth popup browser tab closes after redirect (Android requirement).
+// Ensures the OAuth browser tab dismisses itself after the redirect (Android).
 WebBrowser.maybeCompleteAuthSession();
 
 export type GoogleAuthState = {
@@ -31,41 +36,36 @@ export type GoogleAuthState = {
   signIn: () => Promise<void>;
   /** True while OAuth is in progress (browser open or token exchange in flight) */
   loading: boolean;
-  /** Last error from the flow (user cancellation, missing env, etc.) */
+  /** Last error from the flow */
   error: string | null;
-  /** True if the env vars required for Google Sign-In are missing → button should be hidden/disabled */
+  /** True iff env vars required for Google Sign-In are present */
   configured: boolean;
 };
 
 export function useGoogleAuth(): GoogleAuthState {
+  const androidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
+  const iosClientId = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  const configured = !!webClientId; // web client ID is mandatory (used as audience for ID token)
+  // We need at least the platform-specific client; web is optional fallback.
+  const configured = !!androidClientId || !!webClientId;
 
-  // IMPORTANT: We intentionally pass ONLY `clientId` (the WEB OAuth Client ID).
-  // Android OAuth Client IDs (type 1) do NOT support the implicit `response_type=id_token`
-  // flow used by `useIdTokenAuthRequest` and Google rejects them with `Error 400: invalid_request`.
-  // The Web Client (type 3) supports the implicit ID token flow on all platforms via
-  // a browser/Chrome Custom Tab redirect. The token Firebase receives is still verified
-  // against Google's public keys, so security is unaffected.
-  //
-  // The Android OAuth Client (registered in google-services.json) is still useful — it lets
-  // the native Google Play Services pre-fill the account picker — but we should not pass it
-  // here.
-  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
-    clientId: webClientId,
-    scopes: ['profile', 'email'],
+  // PKCE code flow — works with Android client IDs and custom URI schemes.
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId,
+    iosClientId,
+    webClientId,
+    scopes: ['profile', 'email', 'openid'],
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // When the OAuth flow returns with an id_token, exchange it with Firebase
   useEffect(() => {
     if (!response) return;
     if (response.type === 'success') {
-      const idToken = response.params?.id_token;
+      const idToken = response.authentication?.idToken;
       if (!idToken) {
-        setError('Google did not return an ID token. Check your client ID.');
+        setError('Google did not return an ID token. Ensure your OAuth client is correctly configured.');
         setLoading(false);
         return;
       }
@@ -90,7 +90,7 @@ export function useGoogleAuth(): GoogleAuthState {
   const signIn = useCallback(async () => {
     if (!configured) {
       setError(
-        'Google Sign-In not configured. Add EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID to your .env file.'
+        'Google Sign-In not configured. Add EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID to your .env file.'
       );
       return;
     }
