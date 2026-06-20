@@ -32,17 +32,6 @@
       "versionCode": 1,
       "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "category": ["DEFAULT", "BROWSABLE"],
-          "data": [
-            {
-              "scheme": "com.googleusercontent.apps.688960403070-hq76uo7d2u58v336ajiustf60fpjtmu8"
-            }
-          ]
-        }
-      ],
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
@@ -53,6 +42,7 @@
       ]
     },
     "plugins": [
+      "@react-native-google-signin/google-signin",
       [
         "expo-av",
         {
@@ -84,7 +74,8 @@
           }
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "@react-native-google-signin/google-signin"
     ],
     "extra": {
       "router": {},
