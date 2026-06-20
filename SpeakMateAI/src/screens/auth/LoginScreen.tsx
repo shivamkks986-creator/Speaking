@@ -96,22 +96,26 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
             </FadeInView>
 
-            {/* Google CTA */}
-            <FadeInView delay={150} duration={500} direction="up">
-              <Pressable onPress={onGoogle} style={styles.googleBtn} testID="login-google-btn">
-                <View style={styles.googleIcon}>
-                  <Ionicons name="logo-google" size={18} color="#0B0618" />
-                </View>
-                <Text style={styles.googleText}>Continue with Google</Text>
-              </Pressable>
-            </FadeInView>
+            {/* Google CTA — hidden by default; enable via EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=true */}
+            {google.configured ? (
+              <FadeInView delay={150} duration={500} direction="up">
+                <Pressable onPress={onGoogle} style={styles.googleBtn} testID="login-google-btn">
+                  <View style={styles.googleIcon}>
+                    <Ionicons name="logo-google" size={18} color="#0B0618" />
+                  </View>
+                  <Text style={styles.googleText}>Continue with Google</Text>
+                </Pressable>
+              </FadeInView>
+            ) : null}
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {/* Divider — only render when Google CTA above is visible */}
+            {google.configured ? (
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            ) : null}
 
             {/* Form */}
             <FadeInView delay={220} duration={500} direction="up">

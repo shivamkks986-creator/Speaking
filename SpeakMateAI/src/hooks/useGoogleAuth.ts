@@ -50,7 +50,10 @@ function configureOnce() {
 
 export function useGoogleAuth(): GoogleAuthState {
   const webClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
-  const isConfigured = !!webClientId;
+  // Feature flag — set EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=true in .env to enable.
+  // Default OFF until production OAuth setup (SHA-1, consent screen) is finalised.
+  const featureEnabled = process.env.EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN === 'true';
+  const isConfigured = !!webClientId && featureEnabled;
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

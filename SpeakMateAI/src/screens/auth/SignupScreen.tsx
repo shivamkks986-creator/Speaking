@@ -115,20 +115,24 @@ export default function SignupScreen({ navigation }: Props) {
               ))}
             </FadeInView>
 
-            {/* Google CTA */}
-            <FadeInView delay={180} duration={500} direction="up">
-              <Pressable onPress={onGoogle} style={styles.googleBtn} testID="signup-google-btn">
-                <Ionicons name="logo-google" size={18} color="#0B0618" />
-                <Text style={styles.googleText}>Sign up with Google</Text>
-              </Pressable>
-            </FadeInView>
+            {/* Google CTA — hidden by default; enable via EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=true */}
+            {google.configured ? (
+              <FadeInView delay={180} duration={500} direction="up">
+                <Pressable onPress={onGoogle} style={styles.googleBtn} testID="signup-google-btn">
+                  <Ionicons name="logo-google" size={18} color="#0B0618" />
+                  <Text style={styles.googleText}>Sign up with Google</Text>
+                </Pressable>
+              </FadeInView>
+            ) : null}
 
-            {/* Divider */}
-            <View style={styles.divider}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>OR</Text>
-              <View style={styles.dividerLine} />
-            </View>
+            {/* Divider — only render when there's something above (i.e. Google CTA is shown) */}
+            {google.configured ? (
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>OR</Text>
+                <View style={styles.dividerLine} />
+              </View>
+            ) : null}
 
             {/* Form */}
             <FadeInView delay={240} duration={500} direction="up">
