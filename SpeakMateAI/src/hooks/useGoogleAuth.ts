@@ -63,15 +63,21 @@ export function useGoogleAuth(): GoogleAuthState {
   useEffect(() => {
     if (!response) return;
     if (response.type === 'success') {
-      const idToken = response.authentication?.idToken;
-      if (!idToken) {
-        setError('Google did not return an ID token. Ensure your OAuth client is correctly configured.');
+      // Prefer id_token (request includes 'openid' scope, so Google SHOULD return one)
+      // but fall back to access_token — Firebase's GoogleAuthProvider.credential(null, accessToken)
+      // is fully supported and works the same way.
+      const idToken = response.authentication?.idToken ?? null;
+      const accessToken = response.authentication?.accessToken ?? null;
+      if (!idToken && !accessToken) {
+        setError(
+          'Google did not return any token. Try again, or check that your OAuth client has both "profile" and "email" scopes enabled.'
+        );
         setLoading(false);
         return;
       }
       (async () => {
         try {
-          await authService.signInWithGoogleIdToken(idToken);
+          await authService.signInWithGoogleCredential({ idToken, accessToken });
         } catch (e) {
           setError(e instanceof Error ? e.message : 'Failed to sign in with Google');
         } finally {

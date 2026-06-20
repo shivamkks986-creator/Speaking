@@ -81,8 +81,16 @@ export const authService = {
     await sendPasswordResetEmail(auth, email.trim());
   },
 
-  // Google Sign-In — completes the Firebase auth using an ID token obtained
-  // from Google's OAuth flow (see useGoogleAuth hook in src/hooks/useGoogleAuth.ts).
+  // Google Sign-In — completes the Firebase auth using a credential built from
+  // either an ID token (preferred) OR an access token returned by Google's OAuth
+  // flow. Firebase's GoogleAuthProvider.credential() supports both.
+  async signInWithGoogleCredential(tokens: { idToken: string | null; accessToken: string | null }) {
+    const credential = GoogleAuthProvider.credential(tokens.idToken, tokens.accessToken);
+    const cred = await signInWithCredential(auth, credential);
+    await ensureUserDoc(cred.user);
+  },
+
+  // Backwards-compat alias (some screens may still import this)
   async signInWithGoogleIdToken(idToken: string) {
     const credential = GoogleAuthProvider.credential(idToken);
     const cred = await signInWithCredential(auth, credential);
