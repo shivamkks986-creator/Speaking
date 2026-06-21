@@ -11,13 +11,14 @@ Multi-agent setup:
 """
 from __future__ import annotations
 
+import asyncio
 import base64
 import json
 import os
 import re
 import tempfile
 import uuid
-from typing import List, Optional
+from typing import Any, Dict, List, Optional
 
 from emergentintegrations.llm.chat import LlmChat, UserMessage
 from emergentintegrations.llm.openai import OpenAITextToSpeech, OpenAISpeechToText
@@ -478,24 +479,28 @@ async def tmay_evaluate(
     )
 
 
-# ==================== 30-DAY JOB-READY ROADMAP (GPT-5.2) ====================
+# ==================== 30-DAY JOB-READY ROADMAP (Gemini 3 Flash, parallel chunked) ====================
 
-ROADMAP_SYSTEM = (
-    "You are a senior career coach designing a **30-day job-readiness roadmap** for an "
-    "Indian English learner. The plan must blend: communication skills, interview prep, "
-    "vocabulary, confidence-building, TMAY, mock interviews, soft skills, resume/LinkedIn polish. "
-    "Each day must have ONE focus theme + 3 short actionable tasks (≤15 min total) + a daily quote/tip. "
-    "Vary themes day-to-day (no two consecutive days same focus). Days 1-10 = fundamentals, "
-    "11-20 = applied practice, 21-30 = mock & polish. "
-    "Return ONLY a JSON object — no prose, no code fences — in this exact shape: "
-    '{"summary": "2-3 sentence overview of the plan", '
-    '"goal_title": "personalised goal headline", '
-    '"days": [ '
-    '  {"day": 1, "title": "Day title", "focus": "speaking|vocabulary|tmay|interview|resume|grammar|confidence|listening", '
-    '   "tasks": ["task1 (5 min)", "task2 (5 min)", "task3 (5 min)"], '
-    '   "tip": "motivational tip or quote"}, '
-    '  ... 30 entries total ... '
-    ']}'
+ROADMAP_PHASES = [
+    (1, 10, "fundamentals — build basics in self-intro, vocabulary, grammar, listening"),
+    (11, 20, "applied practice — TMAY, interview answers, resume bullets, real scenarios"),
+    (21, 30, "mock interviews & polish — full mocks, LinkedIn, body language, weakness handling"),
+]
+
+ROADMAP_CHUNK_SYSTEM = (
+    "You are a senior career coach designing part of a 30-day job-readiness roadmap for an "
+    "Indian English learner. Focus areas to mix: communication, interview prep, vocabulary, "
+    "confidence, TMAY, mock interviews, soft skills, resume/LinkedIn. "
+    "Each day: ONE focus + 3 short tasks (≤15 min total) + a daily tip. "
+    "Vary themes day-to-day (never two consecutive same focus). "
+    "Return ONLY a JSON object — no prose, no fences — exact shape: "
+    '{"days":[{"day":N,"title":"...","focus":"speaking|vocabulary|tmay|interview|resume|grammar|confidence|listening",'
+    '"tasks":["t1 (5 min)","t2 (5 min)","t3 (5 min)"],"tip":"motivational tip"}]}'
+)
+
+ROADMAP_META_SYSTEM = (
+    "You are a senior career coach. Return ONLY this JSON — no prose, no fences: "
+    '{"summary":"2-3 sentence overview","goal_title":"personalised headline (≤60 chars)"}'
 )
 
 
@@ -521,6 +526,28 @@ class RoadmapGenerateResponse(BaseModel):
     days: List[RoadmapDay]
 
 
+async def _gen_roadmap_chunk(start: int, end: int, phase_desc: str, ctx: str) -> List[Dict[str, Any]]:
+    chat = _new_chat(str(uuid.uuid4()), ROADMAP_CHUNK_SYSTEM, "gemini", "gemini-3-flash-preview")
+    prompt = (
+        f"{ctx}\n\n"
+        f"Generate days {start}-{end} ({phase_desc}). "
+        f"Return JSON with exactly {end - start + 1} day entries numbered {start} through {end}."
+    )
+    raw = await chat.send_message(UserMessage(text=prompt))
+    data = _extract_json(raw)
+    return data.get("days") or []
+
+
+async def _gen_roadmap_meta(ctx: str) -> Dict[str, str]:
+    chat = _new_chat(str(uuid.uuid4()), ROADMAP_META_SYSTEM, "gemini", "gemini-3-flash-preview")
+    raw = await chat.send_message(UserMessage(text=ctx + "\n\nReturn summary + goal_title only."))
+    data = _extract_json(raw)
+    return {
+        "summary": str(data.get("summary", "Your 30-day job-ready roadmap.")),
+        "goal_title": str(data.get("goal_title", "30-Day Job Ready Plan")),
+    }
+
+
 @router.post("/roadmap/generate", response_model=RoadmapGenerateResponse)
 async def roadmap_generate(
     req: RoadmapGenerateRequest,
@@ -529,20 +556,27 @@ async def roadmap_generate(
 ) -> RoadmapGenerateResponse:
     is_premium = _is_premium_hdr(x_is_premium)
     await _guard("roadmap_generate", uid=x_user_id, is_premium=is_premium)
-    chat = _new_chat(str(uuid.uuid4()), ROADMAP_SYSTEM, "openai", "gpt-5.2")
     weak_str = ", ".join(req.weak_areas) if req.weak_areas else "none specified"
-    prompt = (
+    ctx = (
         f"Learner name: {req.user_name or 'Learner'}\n"
         f"Target role: {req.role_target or 'general fresher job in India'}\n"
         f"Current level: {req.current_level or 'beginner'}\n"
         f"Daily commitment: {req.daily_minutes} minutes\n"
-        f"Self-reported weak areas: {weak_str}\n\n"
-        "Generate a personalised 30-day roadmap. Return JSON with exactly 30 day entries."
+        f"Self-reported weak areas: {weak_str}"
     )
-    raw = await chat.send_message(UserMessage(text=prompt))
+
+    # Fire 3 chunks + 1 meta call in parallel — ~3-5x faster than sequential 30-day generation
+    chunk_tasks = [_gen_roadmap_chunk(s, e, desc, ctx) for s, e, desc in ROADMAP_PHASES]
+    meta_task = _gen_roadmap_meta(ctx)
+    chunks, meta = await asyncio.gather(asyncio.gather(*chunk_tasks), meta_task)
+
     await _record("roadmap_generate", uid=x_user_id)
-    data = _extract_json(raw)
-    raw_days = data.get("days") or []
+
+    raw_days: List[Dict[str, Any]] = []
+    for chunk in chunks:
+        if isinstance(chunk, list):
+            raw_days.extend(chunk)
+
     days: List[RoadmapDay] = []
     for i, d in enumerate(raw_days[:30]):
         if not isinstance(d, dict):
@@ -568,8 +602,8 @@ async def roadmap_generate(
             tip="Small wins compound — show up daily.",
         ))
     return RoadmapGenerateResponse(
-        summary=str(data.get("summary", "Your 30-day job-ready roadmap.")),
-        goal_title=str(data.get("goal_title", "30-Day Job Ready Plan")),
+        summary=meta["summary"],
+        goal_title=meta["goal_title"],
         days=days,
     )
 
