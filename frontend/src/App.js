@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import axios from "axios";
 import { HOME } from "@/constants/testIds";
 import PrivacyPolicy from "@/components/PrivacyPolicy";
+import DataDeletion from "@/components/DataDeletion";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
@@ -46,6 +47,13 @@ const Home = () => {
           >
             Privacy Policy
           </Link>
+          <Link
+            to="/data-deletion"
+            className="px-5 py-2.5 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-sm font-medium transition"
+            data-testid="home-deletion-link"
+          >
+            Delete Account
+          </Link>
           <a
             href="mailto:support@speakmate.ai"
             className="px-5 py-2.5 rounded-lg bg-white text-slate-900 hover:bg-slate-100 text-sm font-medium transition"
@@ -69,6 +77,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/data-deletion" element={<DataDeletion />} />
         </Routes>
       </BrowserRouter>
     </div>
