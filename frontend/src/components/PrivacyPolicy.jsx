@@ -225,7 +225,7 @@ export default function PrivacyPolicy() {
           <h3 className="text-xl font-semibold text-slate-900 mb-3">9. Contact</h3>
           <div className="bg-slate-50 rounded-lg p-5 border border-slate-200">
             <p className="text-slate-700">
-              <strong>Developer:</strong> Shivam Singh
+              <strong>Developer:</strong> Shivam Kumar
             </p>
             <p className="text-slate-700 mt-1">
               <strong>Email:</strong>{" "}

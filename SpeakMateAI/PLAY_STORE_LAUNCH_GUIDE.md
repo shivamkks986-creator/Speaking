@@ -34,7 +34,7 @@ keytool -genkeypair -v `
 
 It will ask:
 - **Keystore password:** Choose a strong one. **Save it in a password manager.**
-- **First and last name:** Shivam Singh (or your name)
+- **First and last name:** Shivam Kumar (or your name)
 - **Organizational unit:** SpeakMate AI
 - **Organization:** SpeakMate AI
 - **City / State / Country code (IN)**

@@ -112,7 +112,7 @@ We may update this Privacy Policy. You'll be notified via in-app banner and emai
 
 ## 9. Contact
 
-**Developer:** Shivam Singh
+**Developer:** Shivam Kumar
 **Email:** privacy@speakmate.ai
 **Address:** [Your Address — required by Play Store]
 
