@@ -4,7 +4,7 @@ import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator, Animated } 
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 
 import { useGamification } from '@/contexts/GamificationContext';
@@ -36,6 +36,7 @@ const AI = BACKEND_URL ? `${BACKEND_URL.replace(/\/$/, '')}/api/ai` : '';
 
 export default function FlashcardsScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const { awardAction } = useGamification();
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -100,7 +101,7 @@ export default function FlashcardsScreen() {
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} testID="flashcards-back">
             <Ionicons name="chevron-back" size={22} color="#F2EEFF" />
           </Pressable>

@@ -13,7 +13,7 @@ import {
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +29,7 @@ const MAX_MB = 5;
 
 export default function ResumeUploadScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
 
   const [parsing, setParsing] = useState(false);
   const [generatingQs, setGeneratingQs] = useState(false);
@@ -100,7 +101,7 @@ export default function ResumeUploadScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>

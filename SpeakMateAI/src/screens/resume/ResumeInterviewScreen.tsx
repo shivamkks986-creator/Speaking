@@ -16,7 +16,7 @@ import {
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -40,6 +40,7 @@ interface AnswerLog {
 export default function ResumeInterviewScreen() {
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<RootStackParamList, 'ResumeInterview'>>();
+  const insets = useSafeAreaInsets();
   const { questions, targetRole, focusAreas } = route.params;
 
   const [idx, setIdx] = useState(0);
@@ -140,7 +141,7 @@ export default function ResumeInterviewScreen() {
         <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
               <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
                 <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
               </Pressable>
@@ -191,7 +192,7 @@ export default function ResumeInterviewScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 200 }}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
               <Ionicons name="close" size={20} color="#F2EEFF" />
             </Pressable>

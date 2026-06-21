@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
@@ -20,12 +20,13 @@ export default function CompanionsScreen() {
   const { companions, companion: selected, selectCompanion } = useCompanion();
   const { user } = useAuth();
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} testID="companions-back-btn">
             <Ionicons name="chevron-back" size={22} color="#F2EEFF" />
           </Pressable>

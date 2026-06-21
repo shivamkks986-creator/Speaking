@@ -13,7 +13,7 @@ import {
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -58,6 +58,7 @@ function focusMeta(focus: string) {
 export default function RoadmapScreen() {
   const navigation = useNavigation<Nav>();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -150,7 +151,7 @@ export default function RoadmapScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="roadmap-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>

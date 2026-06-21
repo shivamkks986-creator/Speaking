@@ -15,7 +15,7 @@ import {
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -42,6 +42,7 @@ const ROLE_PRESETS = [
 
 export default function TmayTrainerScreen() {
   const navigation = useNavigation<Nav>();
+  const insets = useSafeAreaInsets();
   const { recordActivity } = useProgress();
 
   const [phase, setPhase] = useState<Phase>('idle');
@@ -155,7 +156,7 @@ export default function TmayTrainerScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="tmay-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>

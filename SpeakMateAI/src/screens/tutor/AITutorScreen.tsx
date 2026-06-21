@@ -15,7 +15,7 @@ import {
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Clipboard from 'expo-clipboard';
@@ -34,6 +34,7 @@ import { radius, spacing } from '@/config/theme';
 
 export default function AITutorScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   // AITutorScreen lives inside MainTabNavigator, so the bottom tab bar overlays it.
   // We add this height as bottom padding to the input bar so nothing is hidden.
   const tabBarHeight = useBottomTabBarHeight();
@@ -124,7 +125,7 @@ export default function AITutorScreen() {
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
           <Pressable onPress={() => navigation.navigate('Companions' as never)} style={{ flexDirection: 'row', alignItems: 'center' }} testID="tutor-switch-companion-btn">
             <CompanionAvatar companion={companion} size={40} />
             <View style={{ marginLeft: spacing.md }}>
