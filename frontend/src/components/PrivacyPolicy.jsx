@@ -1,6 +1,16 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 export default function PrivacyPolicy() {
+  useEffect(() => {
+    // Hide the floating "Made with Emergent" badge on this public legal page
+    const badge = document.getElementById("emergent-badge");
+    const prevDisplay = badge ? badge.style.display : null;
+    if (badge) badge.style.display = "none";
+    return () => {
+      if (badge) badge.style.display = prevDisplay || "";
+    };
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
       <div className="max-w-3xl mx-auto px-6 py-12 text-slate-800">
