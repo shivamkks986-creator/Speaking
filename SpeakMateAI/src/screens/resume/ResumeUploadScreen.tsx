@@ -101,7 +101,7 @@ export default function ResumeUploadScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top, 12) + 8 }]}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, 36) + 12 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>
