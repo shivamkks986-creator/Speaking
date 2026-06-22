@@ -41,6 +41,11 @@
       "versionCode": 1,
       "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
+      "statusBar": {
+        "translucent": false,
+        "backgroundColor": "#0A0418",
+        "barStyle": "light-content"
+      },
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",

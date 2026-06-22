@@ -69,7 +69,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 32, 90) }]}>
+          <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
               <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
