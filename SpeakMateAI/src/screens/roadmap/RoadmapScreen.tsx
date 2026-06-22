@@ -151,7 +151,7 @@ export default function RoadmapScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top + 28, 80) }]}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top + 32, 90) }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="roadmap-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>
