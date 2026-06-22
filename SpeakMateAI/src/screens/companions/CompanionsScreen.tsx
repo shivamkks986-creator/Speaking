@@ -26,7 +26,7 @@ export default function CompanionsScreen() {
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={[styles.header, { paddingTop: Math.max(insets.top + 16, 56) }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top + 28, 80) }]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} testID="companions-back-btn">
             <Ionicons name="chevron-back" size={22} color="#F2EEFF" />
           </Pressable>

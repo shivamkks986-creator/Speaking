@@ -156,7 +156,7 @@ export default function TmayTrainerScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top + 16, 56) }]}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top + 28, 80) }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="tmay-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>
