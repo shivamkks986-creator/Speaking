@@ -273,9 +273,9 @@ export default function HomeScreen() {
                   style={styles.careerTile}
                 >
                   <Ionicons name="megaphone" size={22} color="#fff" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.careerTitle}>Sales Trainer</Text>
-                    <Text style={styles.careerSub}>Indian roleplay · 6 scenarios</Text>
+                  <View style={{ flex: 1, flexShrink: 1 }}>
+                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Sales Trainer</Text>
+                    <Text style={styles.careerSub} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Indian roleplay · 6 scenarios</Text>
                   </View>
                 </LinearGradient>
               </Pressable>
@@ -291,9 +291,9 @@ export default function HomeScreen() {
                   style={styles.careerTile}
                 >
                   <Ionicons name="document-text" size={22} color="#fff" />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.careerTitle}>Resume Mock</Text>
-                    <Text style={styles.careerSub}>Upload PDF · AI Qs</Text>
+                  <View style={{ flex: 1, flexShrink: 1 }}>
+                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Resume Mock</Text>
+                    <Text style={styles.careerSub} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Upload PDF · AI Qs</Text>
                   </View>
                 </LinearGradient>
               </Pressable>
@@ -580,9 +580,9 @@ const styles = StyleSheet.create({
   goalRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   goalLabel: { color: '#F2EEFF', fontSize: 12, fontWeight: '600', marginBottom: 6 },
   goalTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.pill, overflow: 'hidden' },
-  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.md },
-  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13 },
+  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16, flexShrink: 1 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.md, paddingHorizontal: 2 },
+  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13, paddingHorizontal: 6, paddingVertical: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   quickWrap: { width: '48%' },
   quickCard: {
