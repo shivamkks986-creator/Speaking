@@ -5,6 +5,7 @@ import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
@@ -22,6 +23,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function InterviewCoachScreen() {
   const navigation = useNavigation<Nav>();
+  const tabBarHeight = useBottomTabBarHeight();
   const { stats } = useProgress();
   const { user } = useAuth();
   const [difficulty, setDifficulty] = React.useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
@@ -57,7 +59,7 @@ export default function InterviewCoachScreen() {
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: tabBarHeight + 32 }} showsVerticalScrollIndicator={false}>
           {/* Readiness hero */}
           <LinearGradient colors={['#7C5CFF', '#FF6B9D']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.readinessCard}>
             <View style={{ flex: 1 }}>

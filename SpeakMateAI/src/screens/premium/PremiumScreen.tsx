@@ -5,6 +5,7 @@ import { Text, ActivityIndicator } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import FadeInView from '@/components/common/FadeInView';
 
@@ -47,6 +48,7 @@ const TESTIMONIALS = [
 
 export default function PremiumScreen() {
   const navigation = useNavigation();
+  const tabBarHeight = useBottomTabBarHeight();
   const { user, updateProfile } = useAuth();
   const [products, setProducts] = useState<PremiumProduct[]>([]);
   const [selected, setSelected] = useState<string>('speakmate_quarterly');
@@ -81,7 +83,7 @@ export default function PremiumScreen() {
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} showsVerticalScrollIndicator={false}>
           {/* Hero */}
           <View style={styles.heroWrap}>
             <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn} testID="premium-close">

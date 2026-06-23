@@ -4,6 +4,7 @@ import { Text, useTheme, Avatar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const { companion } = useCompanion();
   const { claimDailyLogin } = useGamification();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
 
   useEffect(() => {
     // attempt daily login reward on mount
@@ -66,7 +68,7 @@ export default function HomeScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 120, paddingHorizontal: spacing.lg }}
+          contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
           <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
