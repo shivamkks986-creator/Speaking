@@ -21,6 +21,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#0A0418"
     },
+    "androidStatusBar": {
+      "translucent": false,
+      "barStyle": "light-content",
+      "backgroundColor": "#0A0418"
+    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -41,11 +46,6 @@
       "versionCode": 1,
       "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
-      "statusBar": {
-        "translucent": false,
-        "backgroundColor": "#0A0418",
-        "barStyle": "light-content"
-      },
       "permissions": [
         "RECORD_AUDIO",
         "MODIFY_AUDIO_SETTINGS",
@@ -88,8 +88,7 @@
           }
         }
       ],
-      "expo-web-browser",
-      "@react-native-google-signin/google-signin"
+      "expo-web-browser"
     ],
     "extra": {
       "router": {},
