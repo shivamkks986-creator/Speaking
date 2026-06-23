@@ -581,8 +581,8 @@ const styles = StyleSheet.create({
   goalLabel: { color: '#F2EEFF', fontSize: 12, fontWeight: '600', marginBottom: 6 },
   goalTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.pill, overflow: 'hidden' },
   section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16, flexShrink: 1 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: spacing.xl, marginBottom: spacing.md, paddingHorizontal: 2 },
-  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13, paddingHorizontal: 6, paddingVertical: 4 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, marginBottom: spacing.md, paddingHorizontal: 4 },
+  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13, paddingHorizontal: 8, paddingVertical: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   quickWrap: { width: '48%' },
   quickCard: {

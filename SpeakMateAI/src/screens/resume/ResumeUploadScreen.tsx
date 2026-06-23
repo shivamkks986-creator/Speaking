@@ -300,15 +300,15 @@ function diffColor(diff: string) {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800' },
-  subtitle: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  subtitle: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 4, lineHeight: 16 },
 
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: spacing.lg, marginTop: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
   errorText: { color: '#FCA5A5', fontSize: 12, flex: 1 },
 
-  uploadCard: { marginHorizontal: spacing.lg, marginTop: spacing.lg, borderRadius: radius.xl, overflow: 'hidden' },
+  uploadCard: { marginHorizontal: spacing.lg, marginTop: spacing.xl, borderRadius: radius.xl, overflow: 'hidden' },
   uploadInner: { alignItems: 'center', padding: spacing.xl, gap: 8 },
   uploadTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 4 },
   uploadSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, textAlign: 'center' },

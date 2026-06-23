@@ -321,10 +321,10 @@ export default function ResumeInterviewScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.sm },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800' },
-  subtitle: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  subtitle: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 4, lineHeight: 16 },
   scorePill: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: radius.pill, backgroundColor: 'rgba(124,92,255,0.2)', borderWidth: 1, borderColor: 'rgba(124,92,255,0.4)' },
   scorePillText: { color: '#A992FF', fontSize: 11, fontWeight: '800' },
 
