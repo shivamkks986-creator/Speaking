@@ -9,6 +9,8 @@ import {
   Pressable,
   ActivityIndicator,
   TextInput as RNTextInput,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -151,7 +153,7 @@ export default function RoadmapScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0) + 12 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="roadmap-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>

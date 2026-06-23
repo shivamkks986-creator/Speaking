@@ -1,6 +1,6 @@
 // Flashcards screen — swipeable vocabulary flashcards with AI lookup
 import React, { useEffect, useState, useCallback, useRef } from 'react';
-import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator, Animated } from 'react-native';
+import { View, StyleSheet, Pressable, ScrollView, ActivityIndicator, Animated , Platform, StatusBar } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
@@ -101,7 +101,7 @@ export default function FlashcardsScreen() {
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0) + 12 }]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} testID="flashcards-back">
             <Ionicons name="chevron-back" size={22} color="#F2EEFF" />
           </Pressable>

@@ -12,6 +12,8 @@ import {
   TextInput as RNTextInput,
   Animated,
   Easing,
+  Platform,
+  StatusBar,
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
@@ -141,7 +143,7 @@ export default function ResumeInterviewScreen() {
         <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
         <SafeAreaView style={{ flex: 1 }} edges={['top']}>
           <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-            <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0) + 12 }]}>
               <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
                 <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
               </Pressable>
@@ -192,7 +194,7 @@ export default function ResumeInterviewScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['top']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 200 }}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight ?? 0) : 0) + 12 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
               <Ionicons name="close" size={20} color="#F2EEFF" />
             </Pressable>

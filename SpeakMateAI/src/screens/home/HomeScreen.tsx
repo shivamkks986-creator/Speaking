@@ -301,10 +301,15 @@ export default function HomeScreen() {
           </FadeInView>
 
           {/* Companions strip */}
-          <FadeInView delay={220} duration={500}>
+          <FadeInView delay={220} duration={500} style={{ width: '100%' }}>
             <View style={styles.sectionRow}>
-              <Text style={styles.section}>AI Companions</Text>
-              <Pressable onPress={() => navigation.navigate('Companions')} testID="home-see-all-companions">
+              <Text style={styles.section} numberOfLines={1}>AI Companions</Text>
+              <Pressable
+                onPress={() => navigation.navigate('Companions')}
+                testID="home-see-all-companions"
+                hitSlop={8}
+                style={{ flexShrink: 0 }}
+              >
                 <Text style={styles.seeAll}>See all →</Text>
               </Pressable>
             </View>
@@ -580,9 +585,9 @@ const styles = StyleSheet.create({
   goalRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   goalLabel: { color: '#F2EEFF', fontSize: 12, fontWeight: '600', marginBottom: 6 },
   goalTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.pill, overflow: 'hidden' },
-  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16, flexShrink: 1 },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, marginBottom: spacing.md, paddingHorizontal: 4 },
-  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13, paddingHorizontal: 8, paddingVertical: 6 },
+  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16, flexShrink: 1, marginRight: spacing.sm },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, marginBottom: spacing.md, width: '100%' },
+  seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   quickWrap: { width: '48%' },
   quickCard: {
