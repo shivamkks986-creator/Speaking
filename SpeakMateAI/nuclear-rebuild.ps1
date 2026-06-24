@@ -48,14 +48,20 @@ OK "Dependencies installed"
 
 # ===== 4. Align Expo SDK 54 versions =====
 Step "Aligning Expo SDK 54 package versions"
-& npx expo install --fix
+# IMPORTANT: 'npx expo' fails on Windows with 'could not determine executable to run'
+# Use 'node node_modules\expo\bin\cli' directly — works reliably cross-platform.
+& node node_modules\expo\bin\cli install --fix
+if ($LASTEXITCODE -ne 0) {
+    Warn "expo install --fix returned non-zero — versions are exact-pinned anyway, continuing"
+}
 OK "Versions aligned"
 
 # ===== 5. Fresh prebuild =====
 Step "Fresh expo prebuild (3-5 min)"
-& npx expo prebuild --platform android --clean --no-install
+& node node_modules\expo\bin\cli prebuild --platform android --clean --no-install
 if ($LASTEXITCODE -ne 0) {
     Write-Host "ERROR: expo prebuild failed" -ForegroundColor Red
+    Write-Host "TRY MANUALLY: node node_modules\expo\bin\cli prebuild --platform android --clean --no-install" -ForegroundColor Yellow
     exit 1
 }
 OK "Android folder regenerated"
