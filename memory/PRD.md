@@ -195,3 +195,31 @@ Firebase Auth — created by user during signup. No seed accounts.
 - `/app/SpeakMateAI/src/screens/interview/InterviewResultsScreen.tsx` (+ShareScoreCard)
 - `/app/SpeakMateAI/src/utils/constants.ts` (Tagline update)
 - `/app/SpeakMateAI/package.json` (+expo-clipboard, pinned `@expo/vector-icons@15.0.3` & `expo-font@14.0.12`)
+
+
+---
+
+## 🔧 UI Overlap Fix — Feb 2026 (latest)
+
+### Root cause
+Android 15+ with `targetSdk 36` **forces edge-to-edge mode** regardless of the `androidStatusBar.translucent` setting. Previous code had `androidStatusBar.translucent: false` in app.json + a brittle pattern `paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0) + 12` INSIDE `<SafeAreaView edges={['top']}>`. On Android 15+ this returned 0 for BOTH values → only 12px padding → header clipped behind status bar icons.
+
+### Files fixed (status bar overlap)
+- `app.json` — `androidStatusBar.translucent: true`, `backgroundColor: "#00000000"` (transparent, edge-to-edge friendly)
+- `src/screens/resume/ResumeUploadScreen.tsx` — removed broken paddingTop math; SafeAreaView handles it
+- `src/screens/resume/ResumeInterviewScreen.tsx` — same (2 occurrences)
+- `src/screens/companions/CompanionsScreen.tsx` — same
+- `src/screens/tmay/TmayTrainerScreen.tsx` — same
+- `src/screens/tutor/AITutorScreen.tsx` — same
+- `src/screens/vocabulary/FlashcardsScreen.tsx` — same
+- `src/screens/roadmap/RoadmapScreen.tsx` — same
+- `src/screens/home/HomeScreen.tsx` — topBar `paddingTop: Math.max(insets.top+8, 16)` → `paddingTop: 8` (SafeAreaView already pads)
+
+### Files fixed (text clipping)
+- `src/screens/home/HomeScreen.tsx` careerTile (Sales Trainer + Resume Mock) — removed `adjustsFontSizeToFit minimumFontScale={0.85}` (was unreliable); sub text now `numberOfLines={2}` allowing wrapping on 360px screens
+
+### Verification
+- TypeScript `npx tsc --noEmit` passes with zero errors
+- Static code verification by testing_agent passed 100% (iteration_3.json)
+- Zero regression: grep `Math.max(insets.top` returns 0 matches across src/**
+- Visual verification: **pending user device test** (must rebuild local APK after `git pull`)
