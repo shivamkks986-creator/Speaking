@@ -28,8 +28,14 @@ Remove-Item -Force       yarn.lock              -ErrorAction SilentlyContinue
 Remove-Item -Force       package-lock.json      -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force android             -ErrorAction SilentlyContinue
 Remove-Item -Recurse -Force .expo               -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\transforms-*" -ErrorAction SilentlyContinue
-OK "All state cleared"
+Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\transforms-*"      -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\modules-2\files-2.1\host.exp.exponent" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\modules-2\files-2.1\com.facebook.react" -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\build-cache-*"     -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\.gradle\caches\jars-*"            -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\AppData\Local\Temp\react-*"       -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "$env:USERPROFILE\AppData\Local\Temp\metro-*"       -ErrorAction SilentlyContinue
+OK "All state cleared (incl. expo + react-native gradle caches)"
 
 # ===== 3. Fresh yarn install =====
 Step "Fresh yarn install (5-10 min)"

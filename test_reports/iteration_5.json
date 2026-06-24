@@ -1,0 +1,38 @@
+{
+  "summary": "Static dependency + code verification for iteration 5 (expo-modules-core / expo-crypto NoClassDefFoundError fix). All 8 verification items PASS. package.json is valid JSON, expo-auth-session is fully removed (zero occurrences in package.json and zero real imports in src/ — only a documentation comment in useGoogleAuth.ts mentioning it). All expo-* packages use exact versions (no ~/^). expo-modules-core 3.0.30 explicitly added to dependencies. Yarn `resolutions` block present with expo-modules-core:3.0.30 and expo-crypto:15.0.9. node_modules installed versions verified: expo-modules-core@3.0.30, expo-crypto@15.0.9, @react-native-google-signin/google-signin@16.1.2. expo-auth-session directory not present in node_modules. nuclear-rebuild.ps1 step 2 contains all the new gradle cache paths (host.exp.exponent, com.facebook.react, build-cache-*, jars-*) plus Windows temp react-*/metro-* dirs. TypeScript `tsc --noEmit` exits with code 0. Previous UI fix (Math.max(insets.top, StatusBar.currentHeight ?? 0, 28)) intact with all 9 occurrences across src/screens.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_results": [
+    {"check": "expo-auth-session removed from package.json", "result": "PASS", "details": "grep -c returned 0"},
+    {"check": "All expo-* packages use exact versions (no ~ or ^)", "result": "PASS", "details": "expo=54.0.0, expo-av=16.0.8, expo-build-properties=1.0.9, expo-clipboard=8.0.7, expo-crypto=15.0.9, expo-document-picker=14.0.8, expo-file-system=19.0.16, expo-haptics=15.0.8, expo-linear-gradient=15.0.8, expo-modules-core=3.0.30, expo-notifications=0.32.17, expo-speech=14.0.8, expo-status-bar=3.0.9, expo-updates=29.0.18, expo-web-browser=15.0.11, babel-preset-expo=54.0.0 — all exact"},
+    {"check": "expo-modules-core 3.0.30 explicitly in dependencies", "result": "PASS"},
+    {"check": "resolutions block has expo-modules-core:3.0.30 and expo-crypto:15.0.9", "result": "PASS"},
+    {"check": "package.json is syntactically valid JSON", "result": "PASS", "details": "JSON.parse succeeded"},
+    {"check": "node_modules/expo-modules-core version is 3.0.30", "result": "PASS"},
+    {"check": "node_modules/expo-crypto version is 15.0.9", "result": "PASS"},
+    {"check": "node_modules/expo-auth-session does NOT exist", "result": "PASS"},
+    {"check": "No real imports of expo-auth-session in src/", "result": "PASS", "details": "grep returned zero matches; only a comment block in src/hooks/useGoogleAuth.ts mentions the package name in prose"},
+    {"check": "nuclear-rebuild.ps1 step 2 wipes new gradle paths", "result": "PASS", "details": "Lines 32-37 include host.exp.exponent, com.facebook.react, build-cache-*, jars-*, AppData\\Local\\Temp\\react-*, AppData\\Local\\Temp\\metro-*"},
+    {"check": "TypeScript compilation (npx tsc --noEmit)", "result": "PASS", "details": "exit code 0"},
+    {"check": "UI fix Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) intact", "result": "PASS", "details": "9 occurrences found across HomeScreen, RoadmapScreen, CompanionsScreen, FlashcardsScreen, TmayTrainerScreen, AITutorScreen, ResumeInterviewScreen (x2), ResumeUploadScreen"},
+    {"check": "@react-native-google-signin/google-signin pinned 16.1.2", "result": "PASS"}
+  ],
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "package.json still has 3 carets remaining on non-expo deps (@react-navigation/* and firebase, react-native-paper, @babel/core, babel-plugin-module-resolver). These are fine for now since they are not part of the expo-modules-core/expo-crypto crash chain, but pinning them later would further reduce drift risk.",
+    "useGoogleAuth.ts has a long doc comment that mentions 'expo-auth-session' in prose — this is harmless (grep for real imports returns 0) but could confuse future code-search; consider rewording to avoid string match noise.",
+    "nuclear-rebuild.ps1 uses Get-Content with -Raw then Set-Content -NoNewline for build.gradle patching — works on Windows but the regex-based gradle edits are brittle; if Expo SDK 55 lands and prebuild output changes layout, those replaces may silently no-op. Not blocking for this fix."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped per request)", "frontend": "100% static checks" },
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "This iteration was a NATIVE Android crash fix (NoClassDefFoundError: expo.modules.kotlin.types.AnyTypeCache) — not reproducible in this Linux cloud environment. Only static checks possible. The actual validation has to happen on the user's Windows machine via nuclear-rebuild.ps1 → device install → app launch. All static checks pass: package.json is valid JSON, exact versions pinned, resolutions block in place, expo-auth-session fully removed, node_modules tree matches expectations, TypeScript compiles clean, UI fix from iteration_4 still intact (9 Math.max occurrences). If the user comes back with the same crash, the next agent should ask for the fresh logcat to see if the failing class has changed.",
+  "rca of the issue": "ROOT CAUSE (already correctly identified by main agent): expo-crypto was pulled in as a transitive dependency of unused expo-auth-session at a version that referenced expo.modules.kotlin.types.AnyTypeCache — a class that does not exist in expo-modules-core 3.0.30 (Expo SDK 54). The version drift was caused by tilde-versioning (~) on the expo-* packages combined with no resolutions block, so yarn was free to upgrade expo-crypto to a patch built against a newer expo-modules-core. FIX: Removed unused expo-auth-session entirely, pinned every expo-* package to exact versions, added explicit expo-modules-core 3.0.30 dependency, and added a yarn resolutions block forcing expo-modules-core 3.0.30 + expo-crypto 15.0.9 across the whole tree. Also enhanced the Windows nuclear-rebuild script to purge stale gradle AAR caches that could still contain the mismatched compiled classes. STATIC VERIFICATION CONFIRMS THE FIX IS IN PLACE; on-device validation pending on user's Windows machine."
+}
