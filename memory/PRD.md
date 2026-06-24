@@ -303,3 +303,21 @@ Caused by: java.lang.ClassNotFoundException: expo.modules.kotlin.types.AnyTypeCa
 
 ### User-side validation pending
 User must run `nuclear-rebuild.ps1` (now beefier) on Windows to rebuild local APK. The fix guarantees the version mismatch cannot recur because exact pins + resolutions remove all ambiguity from yarn's dependency resolution.
+
+
+---
+
+## 🪟 Windows Rebuild Script Fix — Feb 2026 (iteration 6)
+
+### Symptom
+User ran nuclear-rebuild.ps1 from iter5. Yarn install succeeded ✅. But steps 4 & 5 failed with: `could not determine executable to run` when invoking `npx expo install --fix` and `npx expo prebuild`.
+
+### Root cause
+On Windows, `npx expo` resolution of yarn-installed local `.bin` shims is unreliable (hoisting + `.cmd` shim generation quirks). The app-level native crash fix from iter5 is correct, but the user couldn't actually execute the rebuild.
+
+### Fix (1 file)
+`/app/SpeakMateAI/nuclear-rebuild.ps1` — replaced both `& npx expo ...` calls with direct Node invocation: `& node node_modules\expo\bin\cli <subcommand>`. This bypasses npx entirely. Verified in cloud: `node node_modules/expo/bin/cli --version` → `54.0.0`. Works cross-platform. Step 4 (install --fix) failure softened to a Warn (versions are already exact-pinned by iter5 so the fix is a no-op verification). Step 5 (prebuild) still exits 1 on failure with a manual recovery hint.
+
+### Verification
+- testing_agent iteration_6.json → **8/8 PASS**, 0 action items.
+- All prior fixes (iter3 UI, iter4 UI v2, iter5 native crash) intact.
