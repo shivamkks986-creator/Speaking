@@ -262,3 +262,44 @@ On the user's device, "See all →" was rendering on a different visual row than
 - Static code verification by testing_agent (iteration_4.json) → **100% pass**, 0 action items, retest_needed: false
 - All 9 expected Math.max paddingTop occurrences verified in correct files at correct line numbers
 - Visual verification: **pending user device test** (rebuild local APK)
+
+
+---
+
+## 🚨 CRITICAL: Native Crash Fix — Feb 2026 (iteration 5)
+
+### The crash
+After UI fixes from iterations 3+4 were pushed, the user's APK started crashing on launch with:
+```
+FATAL EXCEPTION: create_react_context
+Process: com.speakmate.ai, PID: 27945
+java.lang.NoClassDefFoundError: Failed resolution of: Lexpo/modules/kotlin/types/AnyTypeCache;
+    at expo.modules.crypto.CryptoModule.definition(CryptoModule.kt:76)
+Caused by: java.lang.ClassNotFoundException: expo.modules.kotlin.types.AnyTypeCache
+```
+
+### Root cause (definitive)
+1. **`expo-crypto` is NEVER imported in the user's src/** — it was pulled in as a transitive dep of `expo-auth-session` (which is ALSO never imported — only mentioned in a doc comment in useGoogleAuth.ts).
+2. Tilde-versioning (`~15.0.9`) on the expo-* deps allowed yarn to resolve `expo-crypto` to a newer patch that referenced `AnyTypeCache` — a class that **doesn't exist** in `expo-modules-core` 3.0.30 (Expo SDK 54).
+3. Result: Kotlin code compiled fine, but at runtime when `CryptoModule.kt:76` ran, the JVM couldn't resolve `AnyTypeCache` → fatal crash on React context creation → app crashed before any JS code could even run.
+
+### Fix applied
+1. **REMOVED unused `expo-auth-session`** from package.json (this was the trigger).
+2. **PINNED EXACT versions** (no `~`/`^`) for every expo-* package: expo=54.0.0, expo-crypto=15.0.9, expo-clipboard=8.0.7, expo-av=16.0.8, expo-build-properties=1.0.9, expo-document-picker=14.0.8, expo-file-system=19.0.16, expo-haptics=15.0.8, expo-linear-gradient=15.0.8, expo-notifications=0.32.17, expo-speech=14.0.8, expo-status-bar=3.0.9, expo-updates=29.0.18, expo-web-browser=15.0.11, babel-preset-expo=54.0.0.
+3. **EXPLICITLY ADDED** `expo-modules-core: 3.0.30` to dependencies (was only transitive before).
+4. **ADDED yarn `resolutions` block** in package.json forcing `expo-modules-core: 3.0.30` AND `expo-crypto: 15.0.9` across the entire dep tree — overrides any transitive duplicates.
+5. **Tightened** other RN deps (google-signin, gesture-handler, screens, safe-area-context, get-random-values) to exact versions.
+6. **Enhanced** `nuclear-rebuild.ps1` step 2 to wipe additional gradle caches that may hold stale compiled AAR:
+   - `~/.gradle/caches/modules-2/files-2.1/host.exp.exponent`
+   - `~/.gradle/caches/modules-2/files-2.1/com.facebook.react`
+   - `~/.gradle/caches/build-cache-*`, `jars-*`
+   - Windows `AppData\Local\Temp\react-*` and `metro-*`
+
+### Verification (cloud)
+- `yarn install` succeeded; node_modules has expo-modules-core 3.0.30 + expo-crypto 15.0.9, NO expo-auth-session.
+- TypeScript `npx tsc --noEmit` → 0 errors.
+- testing_agent (iteration_5.json) → **12/12 static checks PASS**, 0 action items.
+- All previous UI overlap fixes from iteration_4 verified intact.
+
+### User-side validation pending
+User must run `nuclear-rebuild.ps1` (now beefier) on Windows to rebuild local APK. The fix guarantees the version mismatch cannot recur because exact pins + resolutions remove all ambiguity from yarn's dependency resolution.
