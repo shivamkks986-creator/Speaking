@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable, StatusBar } from 'react-native';
 import { Text, useTheme, Avatar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -65,13 +65,13 @@ export default function HomeScreen() {
         colors={['#0A0418', '#150828', '#1F0E3D']}
         style={StyleSheet.absoluteFillObject}
       />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: 8 }]}>
+          <View style={[styles.topBar, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 8 }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
               <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
@@ -301,14 +301,13 @@ export default function HomeScreen() {
           </FadeInView>
 
           {/* Companions strip */}
-          <FadeInView delay={220} duration={500} style={{ width: '100%' }}>
+          <FadeInView delay={220} duration={500}>
             <View style={styles.sectionRow}>
-              <Text style={styles.section} numberOfLines={1}>AI Companions</Text>
+              <Text style={[styles.section, { flex: 1 }]} numberOfLines={1}>AI Companions</Text>
               <Pressable
                 onPress={() => navigation.navigate('Companions')}
                 testID="home-see-all-companions"
                 hitSlop={8}
-                style={{ flexShrink: 0 }}
               >
                 <Text style={styles.seeAll}>See all →</Text>
               </Pressable>
@@ -585,8 +584,8 @@ const styles = StyleSheet.create({
   goalRow: { flexDirection: 'row', alignItems: 'center', marginTop: spacing.md },
   goalLabel: { color: '#F2EEFF', fontSize: 12, fontWeight: '600', marginBottom: 6 },
   goalTrack: { height: 6, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: radius.pill, overflow: 'hidden' },
-  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16, flexShrink: 1, marginRight: spacing.sm },
-  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, marginBottom: spacing.md, width: '100%' },
+  section: { color: '#F2EEFF', fontWeight: '700', fontSize: 16 },
+  sectionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 32, marginBottom: spacing.md },
   seeAll: { color: '#A992FF', fontWeight: '700', fontSize: 13 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   quickWrap: { width: '48%' },

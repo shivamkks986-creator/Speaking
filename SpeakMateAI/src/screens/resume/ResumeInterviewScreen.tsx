@@ -141,9 +141,9 @@ export default function ResumeInterviewScreen() {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
         <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
-        <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+        <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
           <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
-            <View style={styles.header}>
+            <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 12 }]}>
               <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
                 <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
               </Pressable>
@@ -191,10 +191,10 @@ export default function ResumeInterviewScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 200 }}>
           {/* Header */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 12 }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-int-back-btn">
               <Ionicons name="close" size={20} color="#F2EEFF" />
             </Pressable>
