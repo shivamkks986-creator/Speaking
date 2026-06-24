@@ -71,7 +71,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: Math.max(insets.top + 8, 16) }]}>
+          <View style={[styles.topBar, { paddingTop: 8 }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
               <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
@@ -274,8 +274,8 @@ export default function HomeScreen() {
                 >
                   <Ionicons name="megaphone" size={22} color="#fff" />
                   <View style={{ flex: 1, flexShrink: 1 }}>
-                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Sales Trainer</Text>
-                    <Text style={styles.careerSub} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Indian roleplay · 6 scenarios</Text>
+                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail">Sales Trainer</Text>
+                    <Text style={styles.careerSub} numberOfLines={2} ellipsizeMode="tail">Indian roleplay · 6 scenarios</Text>
                   </View>
                 </LinearGradient>
               </Pressable>
@@ -292,8 +292,8 @@ export default function HomeScreen() {
                 >
                   <Ionicons name="document-text" size={22} color="#fff" />
                   <View style={{ flex: 1, flexShrink: 1 }}>
-                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Resume Mock</Text>
-                    <Text style={styles.careerSub} numberOfLines={1} ellipsizeMode="tail" adjustsFontSizeToFit minimumFontScale={0.85}>Upload PDF · AI Qs</Text>
+                    <Text style={styles.careerTitle} numberOfLines={1} ellipsizeMode="tail">Resume Mock</Text>
+                    <Text style={styles.careerSub} numberOfLines={2} ellipsizeMode="tail">Upload PDF · AI Qs</Text>
                   </View>
                 </LinearGradient>
               </Pressable>
