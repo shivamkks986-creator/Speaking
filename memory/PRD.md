@@ -223,3 +223,42 @@ Android 15+ with `targetSdk 36` **forces edge-to-edge mode** regardless of the `
 - Static code verification by testing_agent passed 100% (iteration_3.json)
 - Zero regression: grep `Math.max(insets.top` returns 0 matches across src/**
 - Visual verification: **pending user device test** (must rebuild local APK after `git pull`)
+
+
+---
+
+## 🔧 UI Overlap Fix v2 — Feb 2026 (iteration 4)
+
+### Why a v2 was needed
+v1 fix (above) relied on `SafeAreaView edges={['top']}` to handle the status bar inset after setting `androidStatusBar.translucent: true`. On the user's Android 15 device, SafeAreaView's top inset resolution proved **unreliable** — sometimes returning 0 even when the status bar height should have been applied. Result: header had only the static styles.header padding (`spacing.md = 16px`), insufficient to clear the ~28-32px status bar.
+
+### v2 Fix — bulletproof manual padding
+Replaced SafeAreaView-only approach with **explicit manual paddingTop using a guaranteed minimum**:
+```ts
+paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 12
+```
+The literal `28` floor ensures the header is always pushed below the status bar even if BOTH `insets.top` and `StatusBar.currentHeight` return 0 (the Android 15+ edge-to-edge bug case). Additionally, changed SafeAreaView `edges` from `['top']` → `['left', 'right']` in those 8 affected files to prevent double-padding on devices where SafeAreaView DOES work correctly.
+
+### Files patched (v2)
+- `src/screens/resume/ResumeUploadScreen.tsx` (header L106 + SafeAreaView L103)
+- `src/screens/resume/ResumeInterviewScreen.tsx` (2 headers L146 & L197 + 2 SafeAreaViews L144 & L194)
+- `src/screens/companions/CompanionsScreen.tsx` (L28-29)
+- `src/screens/tmay/TmayTrainerScreen.tsx` (L158-161)
+- `src/screens/tutor/AITutorScreen.tsx` (L127-129)
+- `src/screens/vocabulary/FlashcardsScreen.tsx` (L103-104)
+- `src/screens/roadmap/RoadmapScreen.tsx` (L153-156)
+- `src/screens/home/HomeScreen.tsx` (topBar L74 + SafeAreaView L68 + StatusBar import L2)
+
+### See all alignment fix (HomeScreen)
+On the user's device, "See all →" was rendering on a different visual row than "AI Companions" heading. Root cause: `flexShrink: 1` + `marginRight: spacing.sm` on `styles.section` was conflicting with `flexShrink: 0` on the Pressable + `width: '100%'` on the FadeInView wrapper. Layout calculation was inconsistent.
+
+**Fix**: Pure flex layout:
+- `<Text style={[styles.section, { flex: 1 }]} numberOfLines={1}>AI Companions</Text>` (flex:1 forces title to expand fully)
+- Removed `flexShrink: 0` from Pressable, `width: '100%'` from FadeInView, `flexShrink: 1` + `marginRight` from styles.section, `width: '100%'` from styles.sectionRow
+- `justifyContent: 'space-between'` on the row now reliably places heading + See all on same line.
+
+### Verification (v2)
+- TypeScript `npx tsc --noEmit` → 0 errors
+- Static code verification by testing_agent (iteration_4.json) → **100% pass**, 0 action items, retest_needed: false
+- All 9 expected Math.max paddingTop occurrences verified in correct files at correct line numbers
+- Visual verification: **pending user device test** (rebuild local APK)
