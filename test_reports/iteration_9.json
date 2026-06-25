@@ -1,0 +1,36 @@
+{
+  "summary": "Iteration 9 static + local functional verification of the Metro bundle.js shim patch. All 9 verification checks PASSED. The postinstall hook script is syntactically valid, idempotent, safely handles missing nested paths, both candidate shim files are currently patched (marker present), and the patched module exposes both `save` and `build` as functions in this Linux Node.js env (proxy for the Windows release-build fix). iter5 dependency pins, iter7 Expo config plugin reference, and TypeScript compilation are all intact.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_results": {
+    "1_script_exists_and_valid_js": "PASS — `node -c scripts/fix-metro-bundle.js` exits 0. Targets 2 candidate paths. Skips already-patched files via marker check.",
+    "2_postinstall_hook_in_package_json": "PASS — `\"postinstall\": \"node scripts/fix-metro-bundle.js\"` present. start/android/ios/web/typecheck scripts unchanged.",
+    "3_patched_files_have_marker": "PASS — `head -1` on both files returns `// Patched by scripts/fix-metro-bundle.js — falls back to direct src/ path`. Both candidate paths exist in this env and are patched.",
+    "4_functional_save_and_build": "PASS — `require('@expo/metro/metro/shared/output/bundle')` returns object with `typeof save === 'function'` AND `typeof build === 'function'`.",
+    "5_idempotency": "PASS — Re-running the script twice on already-patched files outputs `no changes needed (already patched or files not found)` with no `patched` lines.",
+    "6_iter5_pins_intact": "PASS — `expo-modules-core: 3.0.30` present in both dependencies and resolutions; `expo-crypto: 15.0.9` in resolutions; expo-auth-session ABSENT from package.json.",
+    "7_iter7_plugin_intact": "PASS — `grep -c './plugins/withAndroidBuildFixes' app.json` returns 1.",
+    "8_typescript_compiles": "PASS — `npx tsc --noEmit` exits 0.",
+    "9_script_safety_on_missing_files": "PASS — `fs.existsSync` gate ensures missing nested copies are skipped via `continue` without throwing. Also validated by fresh-patch test: reverted top-level shim to the original one-liner, re-ran script — it patched only the unpatched file (1 file), left the already-patched nested copy alone, and the functional test post-patch still returned `function function`."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Script is well-bounded: only 79 lines, single responsibility, idempotent via marker comment. No business logic risk.",
+    "Last-ditch fallback path on line 44 (`../../node_modules/metro/src/shared/output/bundle`) is relative to the patched file's directory, which would resolve to `node_modules/@expo/metro/node_modules/metro/src/...` — this is plausible since transitive metro copies often live there, but if that copy is also missing the script re-throws the src/ error (line 46: `throw e`). This is acceptable as a last-ditch; the primary `metro/src/shared/output/bundle` fallback on line 40 is the main safety net and worked in the cloud env.",
+    "The postinstall hook will run on EVERY `yarn install`, including the user's `expo prebuild` flow which re-installs deps. This is the correct trigger point.",
+    "No data-testid or UI elements involved — purely a build-tooling fix."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped)", "frontend": "100% (9/9 static + functional checks passed)"},
+  "test_credentials": "N/A",
+  "seed_data_creation": "Temporarily reverted top-level shim to the original one-liner to validate fresh-patch path, then re-ran the script and confirmed it restores the patched content. The patched state is the final state on disk in /app.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iter9 patch is fully verified in the cloud env. The actual proof of fix is on the user's Windows machine running the Gradle release task `:app:createBundleReleaseJsAndAssets` — that cannot be reproduced here. If the user reports the release build still fails after running `yarn install` (or `expo prebuild`), check (a) that postinstall actually ran on their machine — yarn sometimes silently skips postinstall if `--ignore-scripts` is set or in some lockfile-only flows; advise running `node scripts/fix-metro-bundle.js` manually to confirm. (b) That on their machine `head -1 node_modules/@expo/metro/metro/shared/output/bundle.js` shows the marker. (c) If a deeper nested copy exists on Windows that we didn't enumerate, the user can share the failing require trace and we add the path to the PATCHES array.",
+  "rca_of_the_issue": "Root cause as stated in the problem statement is plausible: Node.js subpath exports for `metro/private/*` resolving to undefined on certain Windows + Node.js combinations leading to `_interop_require_default(undefined).default.save` throwing. The defensive try/catch fallback to the direct `metro/src/shared/output/bundle` path bypasses the subpath-exports resolver entirely, which is the canonical workaround for this class of issues. Verified locally that the fallback module exposes the same `save`/`build` API surface, so behavioral equivalence is preserved."
+}
