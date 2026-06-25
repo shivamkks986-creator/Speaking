@@ -108,8 +108,8 @@ export default function ResumeUploadScreen() {
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>
             <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <Text style={styles.title}>Resume → Custom Interview</Text>
-              <Text style={styles.subtitle}>AI parses your PDF · generates personalised questions</Text>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Resume → Custom Interview</Text>
+              <Text style={styles.subtitle} numberOfLines={2}>AI parses your PDF · generates personalised questions</Text>
             </View>
           </View>
 

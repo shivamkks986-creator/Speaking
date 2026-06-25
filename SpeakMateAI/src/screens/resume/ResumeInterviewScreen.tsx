@@ -148,8 +148,8 @@ export default function ResumeInterviewScreen() {
                 <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
               </Pressable>
               <View style={{ flex: 1, marginLeft: spacing.md }}>
-                <Text style={styles.title}>Interview Complete 🎉</Text>
-                <Text style={styles.subtitle}>{answers.length} questions answered</Text>
+                <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Interview Complete 🎉</Text>
+                <Text style={styles.subtitle} numberOfLines={1}>{answers.length} questions answered</Text>
               </View>
             </View>
 
@@ -199,8 +199,8 @@ export default function ResumeInterviewScreen() {
               <Ionicons name="close" size={20} color="#F2EEFF" />
             </Pressable>
             <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <Text style={styles.title}>{targetRole} Mock</Text>
-              <Text style={styles.subtitle}>Question {idx + 1} of {questions.length}</Text>
+              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{targetRole} Mock</Text>
+              <Text style={styles.subtitle} numberOfLines={1}>Question {idx + 1} of {questions.length}</Text>
             </View>
             <View style={styles.scorePill}>
               <Text style={styles.scorePillText}>Avg {avgScore}</Text>

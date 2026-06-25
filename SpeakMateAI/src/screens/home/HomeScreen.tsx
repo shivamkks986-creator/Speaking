@@ -308,8 +308,9 @@ export default function HomeScreen() {
                 onPress={() => navigation.navigate('Companions')}
                 testID="home-see-all-companions"
                 hitSlop={8}
+                style={{ paddingLeft: 12 }}
               >
-                <Text style={styles.seeAll}>See all →</Text>
+                <Text style={styles.seeAll} numberOfLines={1}>See all →</Text>
               </Pressable>
             </View>
             <CompanionsStrip />
