@@ -71,7 +71,7 @@ export default function HomeScreen() {
           contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 8 }]}>
+          <View style={[styles.topBar, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 48) + 12 }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
               <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
