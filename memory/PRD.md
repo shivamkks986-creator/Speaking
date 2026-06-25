@@ -348,3 +348,28 @@ After iter5+iter6, user ran `expo prebuild` + Android Studio Run ▶. Gradle cra
 | 5 | Native crash (removed expo-auth-session, exact pins, resolutions) |
 | 6 | Windows script (node direct invoke, bypass npx) |
 | 7 | Gradle build (Expo plugin: Metaspace + lint disable persistent) |
+
+
+---
+
+## 🪡 Metro Bundle Resolution Fix — Feb 2026 (iteration 8)
+
+### Symptom
+After iter7 unblocked Gradle, the build progressed to Metro bundling. At 99.2% / 1556 modules, bundling failed with:
+```
+Error: Unable to resolve module expo-auth-session/providers/google from src/hooks/useGoogleAuth.ts
+  21 | import * as Google from 'expo-auth-session/providers/google';
+```
+
+### Root cause
+User's LOCAL `src/hooks/useGoogleAuth.ts` is the **older revision** that still imports `expo-auth-session/providers/google`. Cloud-side that file was refactored to use `@react-native-google-signin/google-signin` (native SDK), but the user hasn't clicked "Save to GitHub" → `git reset --hard origin/SpeakMATEAI` reverts them to the older GitHub state. iter5 removed `expo-auth-session` from package.json so the package isn't in node_modules → Metro can't resolve the import → bundle fails.
+
+### Fix delivered to user (cannot push to GitHub from cloud)
+PowerShell here-string command that overwrites local `src/hooks/useGoogleAuth.ts` with a **minimal STUB** exporting the same `GoogleAuthState` API surface (`signIn`, `loading`, `error`, `configured`) but with no-op behavior — Google Sign-In is feature-flag-gated OFF (`EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=false`) so the stub is functionally equivalent for now. Plus Metro cache clear (.cache, .expo, %TEMP%\\metro-*, %TEMP%\\react-*).
+
+After user clicks "Save to GitHub" + `git reset --hard origin/SpeakMATEAI`, the proper native-SDK version replaces the stub automatically.
+
+### Verification (cloud)
+- testing_agent iteration_8.json → **8/8 PASS**, 0 action items for main agent.
+- Confirmed cloud-side: useGoogleAuth.ts uses google-signin native SDK, package.json has no expo-auth-session, node_modules has no expo-auth-session, tsc passes, LoginScreen API surface matches stub.
+- All previous fixes (iter3 UI, iter4 UI v2, iter5 native crash, iter6 Windows script, iter7 Gradle plugin) intact.
