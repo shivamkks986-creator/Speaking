@@ -1,78 +1,99 @@
 #!/usr/bin/env node
 /**
- * fix-metro-bundle.js
+ * fix-metro-bundle.js (v2 — auto-discovery + .save() validation)
  *
- * Patches node_modules/@expo/metro/metro/shared/output/bundle.js to be RESILIENT
- * to the `metro/private/*` subpath export resolution. On some Windows + Node.js
- * combinations, `require('metro/private/shared/output/bundle')` returns undefined
- * even though the subpath export `./private/* -> ./src/*.js` is declared.
+ * Walks node_modules to find EVERY @expo/metro shim at
+ * `**​/@expo/metro/metro/shared/output/bundle.js` and patches each so the
+ * exported module is GUARANTEED to expose `.save` and `.build` functions.
  *
- * Result: `_bundle().default.save(...)` in @expo/cli's exportEmbedAsync throws
- * "Cannot read properties of undefined (reading 'save')" — failing the
- * createBundleReleaseJsAndAssets Gradle task and breaking release builds /
- * Play Store AABs.
+ * Original shim is a one-liner:
+ *     module.exports = require('metro/private/shared/output/bundle');
+ * On some Windows + Node combinations the `metro/private/*` subpath export
+ * either resolves to undefined or to a partial module that lacks `.save`,
+ * breaking `@expo/cli`'s exportEmbedAsync → `:app:createBundleReleaseJsAndAssets`.
  *
- * This script overwrites the shim with a try/catch fallback that requires
- * `metro/src/shared/output/bundle` directly when the subpath export resolution
- * fails. It runs on every `yarn install` via the package.json postinstall hook.
+ * This patch tries multiple paths in order and returns the first one whose
+ * exports include a callable `.save` function. Idempotent via marker comment.
+ *
+ * Runs automatically as a postinstall hook.
  */
 
 const fs = require('fs');
 const path = require('path');
 
-const PATCHES = [
-  // (@expo/metro shim at the top-level location used by @expo/cli)
-  'node_modules/@expo/metro/metro/shared/output/bundle.js',
-  // Nested copies pulled in by transitive dependencies
-  'node_modules/@expo/cli/node_modules/@expo/metro-config/node_modules/@expo/metro/metro/shared/output/bundle.js',
-];
-
-const PATCHED_CONTENT = `// Patched by scripts/fix-metro-bundle.js — falls back to direct src/ path
-// when Node.js subpath exports for 'metro/private/*' don't resolve (Windows quirk).
-let mod;
-try {
-  mod = require('metro/private/shared/output/bundle');
-} catch (e) {
-  // ignore — try src/ directly below
-}
-if (!mod) {
+const PATCHED_CONTENT = `// Patched by scripts/fix-metro-bundle.js v2 — guaranteed-save fallback for Windows/Node quirks.
+'use strict';
+function _try(p) {
   try {
-    mod = require('metro/src/shared/output/bundle');
-  } catch (e) {
-    // last-ditch: try resolving through the parent @expo/metro's own metro
-    try {
-      mod = require('../../node_modules/metro/src/shared/output/bundle');
-    } catch (_) {
-      throw e;
-    }
-  }
+    const m = require(p);
+    if (m && typeof m.save === 'function' && typeof m.build === 'function') return m;
+    // some envs return module under .default
+    if (m && m.default && typeof m.default.save === 'function') return m.default;
+  } catch (_) {}
+  return null;
+}
+const mod =
+  _try('metro/private/shared/output/bundle') ||
+  _try('metro/src/shared/output/bundle') ||
+  _try('../../../metro/src/shared/output/bundle') ||
+  _try('../../../../metro/src/shared/output/bundle') ||
+  _try(require('path').join(__dirname, '..', '..', '..', '..', '..', 'metro', 'src', 'shared', 'output', 'bundle.js'));
+if (!mod) {
+  throw new Error(
+    "[fix-metro-bundle] Could not resolve a working metro/shared/output/bundle. " +
+    "Tried multiple paths; none exposed a callable .save() function."
+  );
 }
 module.exports = mod;
 `;
 
-let patchedCount = 0;
-for (const rel of PATCHES) {
-  const abs = path.resolve(process.cwd(), rel);
-  if (!fs.existsSync(abs)) {
-    // not all nested copies exist on every install — that's fine
-    continue;
-  }
+const MARKER = 'Patched by scripts/fix-metro-bundle.js v2';
+
+function walkAndCollect(dir, results = []) {
+  let entries;
   try {
-    const current = fs.readFileSync(abs, 'utf8');
-    if (current.includes('Patched by scripts/fix-metro-bundle.js')) {
-      // already patched
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch (_) {
+    return results;
+  }
+  for (const ent of entries) {
+    if (ent.name === '.bin' || ent.name === '.cache') continue;
+    const full = path.join(dir, ent.name);
+    if (ent.isDirectory()) walkAndCollect(full, results);
+    else if (
+      ent.isFile() &&
+      ent.name === 'bundle.js' &&
+      full.replace(/\\/g, '/').endsWith('/@expo/metro/metro/shared/output/bundle.js')
+    ) {
+      results.push(full);
+    }
+  }
+  return results;
+}
+
+const root = path.resolve(process.cwd(), 'node_modules');
+if (!fs.existsSync(root)) {
+  console.log('[fix-metro-bundle] node_modules not present yet, skipping.');
+  process.exit(0);
+}
+
+const targets = walkAndCollect(root);
+let patchedCount = 0;
+let skippedCount = 0;
+
+for (const file of targets) {
+  try {
+    const cur = fs.readFileSync(file, 'utf8');
+    if (cur.includes(MARKER)) {
+      skippedCount += 1;
       continue;
     }
-    fs.writeFileSync(abs, PATCHED_CONTENT, 'utf8');
+    fs.writeFileSync(file, PATCHED_CONTENT, 'utf8');
     patchedCount += 1;
-    console.log('[fix-metro-bundle] patched', rel);
+    console.log('[fix-metro-bundle] patched', path.relative(process.cwd(), file));
   } catch (e) {
-    console.warn('[fix-metro-bundle] could not patch', rel, '-', e.message);
+    console.warn('[fix-metro-bundle] could not patch', file, '-', e.message);
   }
 }
 
-if (patchedCount > 0) {
-  console.log('[fix-metro-bundle] done. Patched', patchedCount, 'file(s).');
-} else {
-  console.log('[fix-metro-bundle] no changes needed (already patched or files not found).');
-}
+console.log('[fix-metro-bundle] done. patched=' + patchedCount + ', already-patched=' + skippedCount + ', total-shims=' + targets.length);
