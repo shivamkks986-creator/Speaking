@@ -1,0 +1,65 @@
+{
+  "summary": "Iter11 dependency root-cause fix verified. All 10 static/tooling checks from review request PASS. expo-doctor returns 18/18 checks passed, TypeScript compiles cleanly, node_modules contains single copies of previously-duplicated packages, Metro v2 shim still applied via postinstall, and prior iter4/iter7 fixes remain intact.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_checks": {
+    "package_json_pins": {
+      "status": "PASS",
+      "details": "expo=54.0.35, @expo/vector-icons=15.1.1, expo-file-system=19.0.23, expo-build-properties=1.0.10, expo-clipboard=8.0.8, babel-preset-expo=54.0.10. All EXACT pins (no ~/^ on expo-* deps)."
+    },
+    "expo_modules_core_removed_from_deps": {
+      "status": "PASS",
+      "details": "grep 'expo-modules-core' package.json returns ONLY line 53 (resolutions). No dependencies entry."
+    },
+    "resolutions_block": {
+      "status": "PASS",
+      "details": "Exactly 4 entries: expo-modules-core=3.0.30, expo-crypto=15.0.9, @expo/vector-icons=15.1.1, expo-file-system=19.0.23."
+    },
+    "expo_doctor": {
+      "status": "PASS",
+      "details": "Exit code 0. Output: '18/18 checks passed. No issues detected!'"
+    },
+    "no_duplicate_packages": {
+      "status": "PASS",
+      "details": "find node_modules -name vector-icons -type d -> exactly ONE path (node_modules/@expo/vector-icons). expo-file-system also single copy at node_modules/expo-file-system."
+    },
+    "transitive_versions": {
+      "status": "PASS",
+      "details": "expo-modules-core@3.0.30 installed transitively; expo-crypto@15.0.9 installed."
+    },
+    "metro_bundle_v2_patch": {
+      "status": "PASS",
+      "details": "head -1 node_modules/@expo/metro/metro/shared/output/bundle.js shows v2 marker: '// Patched by scripts/fix-metro-bundle.js v2'."
+    },
+    "typescript": {
+      "status": "PASS",
+      "details": "npx tsc --noEmit exit code 0."
+    },
+    "ui_insets_fix": {
+      "status": "PASS",
+      "details": "9 occurrences of Math.max(insets.top across 8 screen files (RoadmapScreen, CompanionsScreen, HomeScreen, FlashcardsScreen, TmayTrainerScreen, ResumeInterviewScreen, ResumeUploadScreen, AITutorScreen). Meets >=9 requirement."
+    },
+    "expo_plugin_intact": {
+      "status": "PASS",
+      "details": "withAndroidBuildFixes referenced exactly once in app.json plugins array."
+    }
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Iter11 fix is structurally correct: pinning to expo-doctor's recommended SDK 54 patches + adding resolutions for previously-duplicated packages addresses the actual root cause (dependency tree coherence) rather than downstream symptoms.",
+    "Note: This is a static/tooling verification only. Actual Windows local `yarn install` + Gradle build cannot be validated from the Linux container. User should re-run `yarn install` (clean node_modules first) and `npx expo run:android` locally to confirm end-to-end build success.",
+    "Recommendation: Once the user confirms a successful Windows build, consider documenting the resolutions strategy in a README to prevent regressions in future SDK 54 patch bumps."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100% (10/10 static checks)"},
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All iter11 verifications passed in cloud container. expo-doctor 18/18 PASS, TS clean, no duplicate node_modules, Metro v2 patch applied, iter4/iter7 fixes intact. Next phase belongs to USER's Windows machine: clean node_modules -> yarn install -> npx expo run:android. If Windows build still fails, the issue would be Windows-specific (path length, file locking, JDK version) NOT dependency-related.",
+  "rca of the issue": "Iter5 pinned outdated patch versions (e.g. @expo/vector-icons 15.0.3) that diverged from what expo@54.0.35 ships transitively (15.1.1). This created duplicate copies in node_modules, which caused Gradle/Metro to resolve mismatched binaries -> the iter6-iter10 symptom cascade. Iter11 resolves by (a) pinning to expo-doctor recommended patches, (b) moving expo-modules-core out of direct deps into resolutions only, (c) adding @expo/vector-icons and expo-file-system to resolutions to force single copies. Verified via expo-doctor 18/18 PASS."
+}
