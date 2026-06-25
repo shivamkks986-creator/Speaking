@@ -414,3 +414,42 @@ with a defensive try/catch chain: tries `metro/private/shared/output/bundle` →
 | 7 | Gradle Metaspace OOM | Expo plugin (persistent Metaspace + lint disable) |
 | 8 | Metro bundle: expo-auth-session unresolved | useGoogleAuth.ts stub for local |
 | 9 | Release bundle `.save` undefined | postinstall patch for @expo/metro shim |
+
+
+---
+
+## 🎯 TRUE ROOT-CAUSE FIX — Dependency Alignment — Feb 2026 (iteration 11)
+
+### Discovery via expo-doctor
+User ran `npx expo-doctor`. Output: 15/18 pass, 3 fail:
+1. `expo-modules-core` installed directly (should be transitive only)
+2. Duplicates: `@expo/vector-icons` (15.0.3 + 15.1.1), `expo-file-system` (19.0.16 + 19.0.23)
+3. Patch mismatches: expo 54.0.0 vs ~54.0.35, etc.
+
+### Why this was the underlying issue
+iter5's pinned patch versions became outdated as SDK 54 advanced. Old pins clashed with what `expo@54.0.35` ships transitively → duplicates → root cause of iter6-iter10 symptoms (Gradle picked wrong AARs, Metro resolved wrong copies).
+
+### Fix
+**`package.json`**:
+- All expo-* deps updated to SDK 54.0.35-recommended patches (exact pins): expo 54.0.35, expo-build-properties 1.0.10, expo-clipboard 8.0.8, expo-file-system 19.0.23, babel-preset-expo 54.0.10, @expo/vector-icons 15.1.1.
+- `expo-modules-core` removed from dependencies (kept only in `resolutions`).
+- `resolutions` expanded to 4 entries: expo-modules-core, expo-crypto, @expo/vector-icons, expo-file-system — single copy guarantee.
+
+### Verification
+- **`npx expo-doctor` → 18/18 PASS, no issues** ✓
+- testing_agent iteration_11.json → **10/10 PASS**, 0 action items
+- Single copies of previously-duplicated packages
+- expo-modules-core 3.0.30 transitive, expo-crypto 15.0.9 (AnyTypeCache prevention intact)
+- Postinstall ran during yarn install — iter10 v2 Metro shim patch auto-applied
+- TypeScript clean, all prior fixes intact
+
+### Final session — 6-layer defense
+| Iter | Issue | Status |
+|---|---|---|
+| 3+4 | UI overlap | ✓ |
+| 5 | Native crash AnyTypeCache | ✓ |
+| 6 | Windows npx expo fail | ✓ |
+| 7 | Gradle Metaspace OOM | ✓ |
+| 8 | Metro expo-auth-session | ✓ (cloud) |
+| 9+10 | Release bundle .save | ✓ (postinstall) |
+| 11 | **Dependency duplicates (true root)** | ✓ |
