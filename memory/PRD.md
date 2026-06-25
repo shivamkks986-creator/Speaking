@@ -373,3 +373,44 @@ After user clicks "Save to GitHub" + `git reset --hard origin/SpeakMATEAI`, the 
 - testing_agent iteration_8.json → **8/8 PASS**, 0 action items for main agent.
 - Confirmed cloud-side: useGoogleAuth.ts uses google-signin native SDK, package.json has no expo-auth-session, node_modules has no expo-auth-session, tsc passes, LoginScreen API surface matches stub.
 - All previous fixes (iter3 UI, iter4 UI v2, iter5 native crash, iter6 Windows script, iter7 Gradle plugin) intact.
+
+
+---
+
+## 🛠 Release-build Bundle Saver Fix — Feb 2026 (iteration 9)
+
+### Symptom
+After iter8 unblocked Metro (1556/1556 modules ✓), `:app:createBundleReleaseJsAndAssets` Gradle task failed with:
+```
+TypeError: Cannot read properties of undefined (reading 'save')
+    at exportEmbedInternalAsync (.../node_modules/@expo/cli/.../exportEmbedAsync.js)
+```
+Line ~201: `_bundle().default.save(bundle, options, _log.Log.log)`.
+
+### Root cause
+`_bundle()` requires `@expo/metro/metro/shared/output/bundle.js` — a one-line shim: `module.exports = require('metro/private/shared/output/bundle');`. The subpath uses Node.js `exports` mapping (`./private/* -> ./src/*.js`). On user's Windows + Node combination, this resolution returns undefined → `.default.save` throws.
+
+### Fix — postinstall patch script (auto-applied on every install)
+**NEW `scripts/fix-metro-bundle.js`** — overwrites the shim at:
+- `node_modules/@expo/metro/metro/shared/output/bundle.js`
+- `node_modules/@expo/cli/node_modules/@expo/metro-config/node_modules/@expo/metro/metro/shared/output/bundle.js`
+
+with a defensive try/catch chain: tries `metro/private/shared/output/bundle` → falls back to direct `metro/src/shared/output/bundle` → last-ditch relative path. Idempotent via marker comment.
+
+**Modified `package.json`** — added `"postinstall": "node scripts/fix-metro-bundle.js"` so the patch is auto-applied on every `yarn install` (including the install triggered by `expo prebuild`).
+
+### Verification
+- testing_agent iteration_9.json → **9/9 PASS**, 0 action items
+- Functional check in cloud: `require('@expo/metro/metro/shared/output/bundle').save` → `function` (was undefined on Windows before patch)
+- All prior fixes (iter3-iter8) intact
+- TypeScript passes
+
+### 5-layer defense complete (Feb 2026 session)
+| Iter | Issue | Fix |
+|------|-------|-----|
+| 3+4 | Status bar + See all overlap | Math.max + 28 floor (9 screens) + flex layout |
+| 5 | App launch crash (AnyTypeCache) | Removed expo-auth-session, exact pins, resolutions |
+| 6 | Windows `npx expo` fail | Direct `node node_modules\expo\bin\cli` |
+| 7 | Gradle Metaspace OOM | Expo plugin (persistent Metaspace + lint disable) |
+| 8 | Metro bundle: expo-auth-session unresolved | useGoogleAuth.ts stub for local |
+| 9 | Release bundle `.save` undefined | postinstall patch for @expo/metro shim |
