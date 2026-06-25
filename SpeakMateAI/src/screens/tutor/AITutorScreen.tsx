@@ -126,7 +126,7 @@ export default function AITutorScreen() {
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 48) + 16 }]}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 64) + 24 }]}>
           <Pressable onPress={() => navigation.navigate('Companions' as never)} style={{ flexDirection: 'row', alignItems: 'center' }} testID="tutor-switch-companion-btn">
             <CompanionAvatar companion={companion} size={40} />
             <View style={{ marginLeft: spacing.md }}>

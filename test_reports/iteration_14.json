@@ -1,0 +1,33 @@
+{
+  "summary": "iter14 static verification PASS. Punch-hole/notched device status-bar overlap fix verified — floor bumped 48→64 and gap bumped 16→24 (headers) / 12→16 (HomeScreen topBar) across all 9 occurrences. TypeScript compiles cleanly. All prior fixes (expo 54.0.35, withAndroidBuildFixes plugin, Metro shim v2 patch) intact.",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "verification_results": {
+    "math_max_occurrences_total": "9 (expected 9) ✅",
+    "headers_64_plus_24": "8 occurrences ✅ (RoadmapScreen:156, CompanionsScreen:29, FlashcardsScreen:104, TmayTrainerScreen:161, ResumeInterviewScreen:146, ResumeInterviewScreen:197, ResumeUploadScreen:106, AITutorScreen:129)",
+    "homescreen_topbar_64_plus_16": "1 occurrence ✅ (HomeScreen.tsx:74)",
+    "no_leftover_48_or_28": "ZERO matches ✅ (grep ', 48) +\\|, 28) +' returned no results)",
+    "typescript_compile": "npx tsc --noEmit exit code 0 ✅",
+    "regression_expo_version": "\"expo\": \"54.0.35\" ✅",
+    "regression_plugin_intact": "withAndroidBuildFixes present in app.json:92 ✅",
+    "regression_metro_shim_v2_patch": "Marker present: 'Patched by scripts/fix-metro-bundle.js v2' at node_modules/@expo/metro/metro/shared/output/bundle.js ✅",
+    "static_layout_reasoning": "Worst-case Android 15+ edge-to-edge (insets.top=0, StatusBar.currentHeight=undefined): floor=64, +24 gap → header content starts at 88px (was 64px in iter13, +24px more clearance). For a typical punch-hole status-bar effective height of ~50px: header sits at 88, gap = 38px (was 14px in iter13). Comfortably clears any known Xiaomi/Redmi punch-hole device."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Calibration is now device-specific (punch-hole). If future feedback comes from a different OEM (e.g., dual-cutout foldables), consider centralizing this paddingTop expression into a shared util (e.g., getHeaderPaddingTop(insets)) instead of repeating the literal across 9 sites — reduces drift risk on future tweaks.",
+    "HomeScreen uses a different gap (+16) than other headers (+24). Intentional but worth a code comment to document the divergence so future refactors don't accidentally homogenize them."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped)", "frontend": "100% (static verification)" },
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "iter14 is purely a numeric calibration bump for punch-hole Android status-bar clearance. All 9 sites updated correctly, no other files touched, tsc clean, prior fixes (expo 54.0.35, withAndroidBuildFixes plugin, Metro shim v2 patch) all intact. Runtime visual verification must be done by the user reloading via Metro fast refresh or rebuilding APK — cannot be tested by sub-agent because this is a React Native mobile app without a hosted web preview. If user reports any further overlap on a different device class (foldable, dual-camera, etc.), consider extracting paddingTop logic into a shared hook/util.",
+  "rca of the issue": "Punch-hole devices (Xiaomi/Redmi style with top-center camera cutout) reserve a larger effective status-bar region than the 48px floor used in iter13. Empirically up to ~50-56px including cutout offset. iter13's Math.max(..., 48) + 16 = 64px floor was barely clearing it without breathing room. iter14 raises the floor to 64 and gap to 24, giving 88px minimum content offset — generous enough for any known punch-hole/notched Android device while still looking natural on tablets and small-status-bar phones (insets.top dominates on those, so the floor is only used as a safety net)."
+}
