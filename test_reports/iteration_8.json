@@ -1,0 +1,63 @@
+{
+  "summary": "Iteration 8 STATIC verification of cloud SpeakMateAI codebase to confirm Metro-bundler-breaking `expo-auth-session/providers/google` import is GONE cloud-side and cloud is internally consistent. All 8 verification points PASS. Cloud truth source is correct; once the user syncs (Save to GitHub + git pull), their local will also be correct. No runtime/device testing performed (cannot test Android device from Linux env).",
+  "backend_issues": { "critical": [], "minor": [] },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "static_verification_results": {
+    "1_useGoogleAuth_no_expo_auth_session_import": {
+      "status": "PASS",
+      "detail": "Only 1 occurrence of 'expo-auth-session' in src/hooks/useGoogleAuth.ts and it is line 5 inside the doc-comment block ('// Why native SDK over expo-auth-session:'). Actual import statement at lines 22-27 correctly uses '@react-native-google-signin/google-signin' (GoogleSignin, statusCodes, isErrorWithCode)."
+    },
+    "2_package_json_no_expo_auth_session": {
+      "status": "PASS",
+      "detail": "grep 'expo-auth-session' package.json => 0 matches. iter5 removal intact."
+    },
+    "3_node_modules_no_expo_auth_session": {
+      "status": "PASS",
+      "detail": "ls node_modules/expo-auth-session => 'No such file or directory'."
+    },
+    "4_all_expo_imports_resolve_to_installed_packages": {
+      "status": "PASS",
+      "detail": "All expo-* imports in src/ resolve to packages present in package.json: expo-av (16.0.8), expo-clipboard (8.0.7), expo-document-picker (14.0.8), expo-file-system/legacy (19.0.16), expo-haptics (15.0.8), expo-linear-gradient (15.0.8), expo-notifications (0.32.17), expo-speech (14.0.8). expo-status-bar is imported in App.tsx (also in pkg). expo-web-browser is referenced in app.json plugins. ZERO direct expo-crypto imports (it's a transitive dep). ZERO expo-auth-session imports.",
+      "note": "Spec's allow-list omitted expo-av, but expo-av IS in package.json and used by src/services/speechService.ts for Audio recording/playback — this is fine, just an incomplete spec list."
+    },
+    "5_iter7_gradle_plugin_intact": {
+      "status": "PASS",
+      "detail": "android/gradle.properties has 'org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8' and 'kotlin.incremental=false'. android/app/build.gradle has lint block with 'abortOnError false' and 'checkReleaseBuilds false'."
+    },
+    "6_iter4_statusbar_math_max_intact": {
+      "status": "PASS",
+      "detail": "9 occurrences of `Math.max(insets.top, StatusBar.currentHeight ?? 0, 28)` across 8 screen files: RoadmapScreen, CompanionsScreen, HomeScreen, FlashcardsScreen, TmayTrainerScreen, ResumeInterviewScreen, ResumeUploadScreen, AITutorScreen (HomeScreen has 2 instances). Exactly matches iter4 expectation."
+    },
+    "7_typescript_compiles_clean": {
+      "status": "PASS",
+      "detail": "`npx tsc --noEmit` returned exit code 0 with no output → cloud code is type-safe and consistent. No dangling imports, no missing modules."
+    },
+    "8_LoginScreen_API_surface_matches_hook": {
+      "status": "PASS",
+      "detail": "LoginScreen.tsx line 22 imports `useGoogleAuth` from `@/hooks/useGoogleAuth` (tsconfig path alias → src/hooks/useGoogleAuth.ts). Line 30 calls `const google = useGoogleAuth();`. Usages: `google.signIn()` (line 57), `google.error` (line 58), `google.configured` (lines 100, 112). The hook's GoogleAuthState type exports exactly { signIn, loading, error, configured } → API surface is fully compatible. User's local STUB replacement that exports the same 4-property shape will be drop-in compatible."
+    }
+  },
+  "test_report_links": [],
+  "action_items": [
+    "NONE for main agent — cloud side is verified correct.",
+    "USER ACTION (out of cloud's control): user must run the provided PowerShell here-string command on their Windows machine to overwrite local src/hooks/useGoogleAuth.ts with the stub, then clear Metro caches (.cache, .expo, %TEMP%\\metro-*, %TEMP%\\react-*) and rerun the bundler.",
+    "FUTURE ACTION: once user clicks 'Save to GitHub' and does `git pull` locally, the proper native-SDK version will replace their stub automatically and Metro will keep resolving (the package is in package.json + app.json plugins)."
+  ],
+  "critical_code_review_comments": [
+    "useGoogleAuth.ts is well-documented (lines 1-21 explain native-SDK choice over expo-auth-session) — preserves rationale for future maintainers.",
+    "Path alias `@/hooks/useGoogleAuth` is used in LoginScreen — confirm tsconfig.json `paths` mapping is intact (tsc --noEmit passing implies yes).",
+    "expo-file-system import uses `/legacy` subpath (`import * as FileSystem from 'expo-file-system/legacy'`) — intentional for SDK compatibility, not a bug."
+  ],
+  "updated_files": [],
+  "success_rate": { "backend": "N/A (skipped per request)", "frontend": "100% static verification" },
+  "test_credentials": "N/A — no auth flow tested at runtime",
+  "seed_data_creation": "None",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Cloud SpeakMateAI useGoogleAuth.ts uses @react-native-google-signin/google-signin (NOT expo-auth-session). package.json/node_modules confirmed without expo-auth-session (iter5 removal). iter7 Gradle JVM args (Xmx4096m, MaxMetaspaceSize=1024m, kotlin.incremental=false) and lint block intact. iter4 StatusBar Math.max polish present in all 8 screen files (9 occurrences total). tsc --noEmit exits 0. LoginScreen consumer API matches hook export shape {signIn, loading, error, configured}. The remaining work is on the USER's local Windows env — cannot be tested from this Linux container.",
+  "rca_of_the_issue": "Metro bundling failed at 99.2% with `Unable to resolve module expo-auth-session/providers/google from src/hooks/useGoogleAuth.ts` because user's LOCAL useGoogleAuth.ts is an older revision (pre-native-SDK migration) that still imports expo-auth-session, while iter5 removed expo-auth-session from package.json (so node_modules has no such package). Cloud copy of useGoogleAuth.ts (verified in this iteration) is already the correct native-SDK version — user just hasn't pushed cloud→GitHub yet, and `git reset --hard origin/SpeakMATEAI` reverted them to the older GitHub state. MITIGATION: user runs the PowerShell stub-replacement command locally as a tactical bridge until they Save to GitHub and git pull the proper version."
+}
