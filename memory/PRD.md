@@ -1,455 +1,81 @@
 # SpeakMate AI — Product Requirements Document
 
-## Vision
-Premium AI-powered English learning + Interview coaching app for Indian users.
-**Tagline:** "Speak Better. Get Hired Faster."
+## Original Problem Statement
+Transform English-learning app (SpeakMate AI) into a complete **Communication Skills and Job Readiness platform** ready for Google Play Store launch. Stack: React Native + Expo (SDK 54) + FastAPI + Firebase Auth + Firestore.
 
-## ⚠️ Critical Build Note (Feb 2026)
-Due to persistent Windows local-build C++ compilation failures with `react-native-reanimated`, the entire app has been **migrated to stock React Native `Animated` API**. A reusable `FadeInView` helper at `src/components/common/FadeInView.tsx` replaces all `FadeIn / FadeInUp / FadeInDown` entrance animations. `react-native-reanimated` is completely removed from `package.json` and `babel.config.js`. This unblocks the local APK build.
+## Tech Stack (Locked)
+- **Mobile**: React Native 0.81.5, Expo SDK 54.0.35, expo-modules-core 3.0.30
+- **Backend**: FastAPI (server.py + ai_routes.py)
+- **Auth**: Firebase Email/Password + Native Google Sign-In via `@react-native-google-signin/google-signin@16.1.2`
+- **AI**: Gemini via Emergent LLM key
+- **Build**: Local Windows + Android Studio → Release APK/AAB
 
-## Target Users
-- College students, freshers, job seekers
-- Working professionals upgrading interview skills
-- IELTS aspirants
-- Anyone improving spoken English
+## Completed Work (this fork — Feb 2026)
 
-## Core Features (Implemented)
+### P0 — Build & Launch Readiness ✅ DONE
+- [x] Re-enabled Google Sign-In (native SDK) — `useGoogleAuth.ts` synced
+- [x] Fixed SDK 54 vs SDK 56 version mismatch (AnyTypeCache crash)
+- [x] `package.json` resolutions block enforced (`expo-modules-core: 3.0.30`, `expo-crypto: 15.0.9`)
+- [x] Removed all `expo-auth-session` references — pure native Google Sign-In
+- [x] Keystore signing wired in `android/app/build.gradle` (keystore.properties)
+- [x] `lintVitalAnalyzeRelease` disabled project-wide via `subprojects { plugins.withId... }` in `android/build.gradle`
+- [x] Missing `scripts/fix-metro-bundle.js` recreated locally
+- [x] `plugins/withAndroidBuildFixes.js` confirmed present (Gradle memory + lint)
+- [x] Firebase SHA-1 fingerprint added: `5C:54:79:92:90:C4:F4:18:8E:B3:D5:0A:B0:31:A5:96:81:AC:6A:13`
+- [x] Updated `google-services.json` integrated
+- [x] `authService.ts` synced with `signInWithGoogleCredential` method
+- [x] **Release APK successfully built + installed + Google Sign-In flow verified by user (Feb 2026)**
 
-### 🎨 Branding & Visual
-- ✅ Premium dark theme (deep purple #0A0418 / #150828 / #1F0E3D)
-- ✅ Glassmorphism cards + neon accent gradients
-- ✅ AI-generated app icon (Diamond + Speech Bubble, purple gradient, 1024x1024)
-- ✅ AI-generated splash screen with ambient glow
-- ✅ Adaptive icon (Android) + favicon (web)
-- ✅ Premium tagline updated everywhere
+### UI/UX Polish (previous session) ✅ DONE
+- [x] Punch-hole/notch padding floor: `Math.max(insets.top, StatusBar.currentHeight, 88)` across 9 screens
+- [x] Text clipping fix on Resume cards (`adjustsFontSizeToFit`)
+- [x] "See all" alignment fix on HomeScreen
 
-### 👋 Onboarding (NEW)
-- ✅ 5 swipeable slides — Improve English / AI Tutors / Interviews / Streaks / Premium
-- ✅ Skip + Continue + animated dots, gradient icon ring with glow halos
-- ✅ One-time only (AsyncStorage flag `onboarding.completed`)
-- ✅ Auto-routes to Welcome on completion
+## Critical Build Config
 
-### 🤖 AI Tutor (Enhanced)
-- ✅ ChatGPT-style chat with companion avatar
-- ✅ Voice in + voice out (OpenAI TTS + Whisper STT)
-- ✅ Typing indicator
-- ✅ **NEW: Quick action chips** — Fix my grammar / Improve sentence / Explain meaning / Translate Hindi → English
-- ✅ Suggested starters
-- ✅ Hindi + English support
+### Files that MUST exist locally (and in repo)
+- `/app/SpeakMateAI/plugins/withAndroidBuildFixes.js` (Expo plugin — gradle memory + lint disable)
+- `/app/SpeakMateAI/scripts/fix-metro-bundle.js` (Postinstall — Metro Windows fix)
+- `/app/SpeakMateAI/google-services.json` (Firebase config, SHA-1 must match release keystore)
+- `/app/SpeakMateAI/speakmateai-release.jks` (Release keystore — gitignored)
+- `/app/SpeakMateAI/android/keystore.properties` (passwords — gitignored)
 
-### 🎤 Speaking Practice
-- ✅ Real-time scoring (Pronunciation / Fluency / Grammar)
-- ✅ Score ring + sub-score breakdown
-- ✅ AI feedback card with quick wins
-- ✅ **NEW: Viral Share Score Card** — WhatsApp / Instagram / More
-
-### 💼 Interview System (Flagship)
-- ✅ 11 tracks: HR · Tech · Fresher · Experienced · Sales · Manager · Customer Support · Business Analyst …
-- ✅ Live voice interview mode (Whisper STT + AI evaluation)
-- ✅ 6-axis evaluation: Communication / Confidence / Content / Fluency / Grammar / Relevance
-- ✅ Strengths + suggestions in result
-- ✅ **NEW: Viral Share Score Card** on results
-
-### 💎 Premium Subscription
-- ✅ Pricing tiers updated: **Monthly ₹99 · Quarterly ₹249 · Yearly ₹999**
-- ✅ 7-day free trial messaging
-- ✅ **NEW: Free vs Premium comparison table**
-- ✅ Benefits list (Unlimited AI · IELTS Mode · Resume Review · Premium Voices · Progress Reports)
-- ⚠️ Real Google Play Billing — **MOCKED**, needs Play Console product setup
-
-### 🏆 Gamification
-- ✅ XP, Levels, Badges, Coins, Daily login streak
-- ✅ Daily Missions
-- ✅ **NEW: Leaderboard (Firestore-backed with mock fallback, podium UI)**
-- ✅ Achievements / unlocked-badges screen
-
-### 🔁 Viral Growth (NEW)
-- ✅ **Invite Friends screen** — Referral code (`SM{uid6}`), WhatsApp + Instagram share, 7-day Premium reward messaging
-- ✅ **Share Score Cards** embedded in Speaking & Interview results
-- ✅ Pre-filled message templates with hashtags
-- ✅ Clipboard copy support (`expo-clipboard`)
-
-### 📊 Home Page
-- ✅ Daily goal progress, streak, badges, XP bar
-- ✅ Companion hero card with conversation CTA
-- ✅ Premium dashboard preview
-- ✅ Quick actions grid
-- ✅ **NEW: Leaderboard + Invite Friends tiles**
-
-### 🛡️ Production Polish (NEW v2)
-- ✅ **ErrorBoundary** wrapping the entire app — catches React errors and shows a beautiful recovery UI with "Try Again" button
-- ✅ **Skeleton loader** component (animated shimmer) for loading states
-- ✅ **Hybrid AI fallback chain** in backend — auto-switches between GPT-5.2 → Claude 4.5 → Gemini 3 Flash if any provider fails
-- ✅ **Premium Login + Signup redesign** — gradient hero, trust badges (4.8★ · 50K+ Convos · 1000+ Learners), benefit chips, Google CTA, glass-style fields
-- ✅ **Word of the Day** card on Home — 10 curated words rotated daily with phonetic, meaning, usage
-
-## Tech Stack
-- **Mobile:** React Native + Expo SDK 54 (CNG via `expo prebuild` for Android Studio)
-- **Backend:** FastAPI + Multi-agent LLM (GPT-5.2, Claude 4.5, Gemini 3 Flash)
-- **Auth/DB:** Firebase Auth + Firestore
-- **Voice:** OpenAI TTS-1 + Whisper-1
-- **Build:** Android Gradle 8.13, Target SDK 35, Hermes
-
-## Production Build
-- Standalone Release APK via Android Studio: `Build → Build APK(s)` with `release` variant
-- Output: `D:\rn\SpeakMateAI\android\app\build\outputs\apk\release\app-release.apk`
-- ProGuard/Shrink: temporarily disabled to avoid obfuscation issues
-- App ID: `com.speakmate.ai`
-
-## Roadmap (P1)
-- Real Google Play Billing integration (`react-native-iap` + Play Console products)
-- Firebase Analytics events tracking
-- Streak Freeze logic (spend coins to protect streak)
-- Resume-based interviews + PDF upload + AI parsing
-- Sales / Counselling trainer modules (Indian market)
-- Firebase Admin SDK backend token verification (security against mod APKs)
-- Notification scheduling for daily missions + 30-day roadmap reminders
-
-## Phase 1: Career Launchpad (NEW — Feb 2026)
-**Goal:** Pivot from pure English-learning to full Communication-Skills + Job-Readiness platform (Duolingo + Unstop + Naukri).
-
-### ✅ Implemented (Phase 1)
-- **TMAY Trainer** (`/api/ai/tmay/evaluate`, `src/screens/tmay/TmayTrainerScreen.tsx`)
-  - Voice-first 60-second self-introduction practice (Whisper STT → Claude evaluation)
-  - 6-axis scoring: Overall · Structure · Clarity · Confidence · Relevance · Impact
-  - PPF (Past → Present → Future) coverage chips + hook detection
-  - Filler-word detection, strengths/weaknesses/missing-elements lists
-  - Polished native-style version with TTS listen button
-  - Next-goal coaching line
-- **30-Day Job Ready Roadmap** (`/api/ai/roadmap/generate`, `src/screens/roadmap/RoadmapScreen.tsx`)
-  - GPT-5.2 generates a personalised 30-day plan based on role target, level, weak areas and daily minutes
-  - Hybrid structure: Days 1-10 fundamentals, 11-20 applied practice, 21-30 mock & polish
-  - Per-day: focus tag (speaking/vocabulary/tmay/interview/resume/grammar/confidence/listening), 3 actionable tasks (≤15 min), motivational tip
-  - Progress tracking with AsyncStorage persistence + per-day mark-done toggle + overall progress bar
-- **Unified 5-Axis Speaking Feedback** (`/api/ai/speaking/score`, `src/screens/speaking/SpeakingPracticeScreen.tsx`)
-  - Added: confidence (5th score axis), strengths[], weaknesses[], next_goal, action_plan[] alongside existing mistakes/corrected/suggested
-  - UI shows new sections with colour-coded cards
-- **Home banner + nav shortcuts**: Prominent "30-Day Job Ready Roadmap" banner + TMAY tile in Quick Start grid + tiles inside SpeakingPracticeScreen action grid
-
-### 🧪 Testing (iteration_1.json)
-- All 6 backend tests passed (100%) — TMAY shape, Roadmap structure (30 days, focus rotation), 5-axis Speaking, per-user 429 quota guard, /api/system/config + /api/ai/tutor/chat regressions
-- Pytest file: `/app/backend/tests/test_phase1_endpoints.py`
-
-### 🔜 Future Phase 1 polish (from testing agent review)
-- Split `ai_routes.py` (now 1423+ lines) into modules: tutor.py / speaking.py / tmay.py / roadmap.py / sales.py / resume.py / interview.py / vocab.py / media.py
-- Wrap speaking_score / tmay_evaluate / roadmap_generate / sales_turn / resume_parse / resume_interview_questions in `_send_with_fallback` for multi-provider resilience
-- Log a warning when roadmap backfill triggers; add pad-or-retry for resume Q under-return
-- Tighten resume "empty PDF" guard (currently <40 chars → consider <80 + unique-char check)
-- Stream-validate uploaded PDF size before reading the full body
-- Move sales scenarios from in-memory constant to a config/mongo collection (enables A/B testing)
-- Return 502 if TMAY response is clearly empty (overall=0 AND polished_version=='')
-
-## Phase 1.5: Sales Trainer + Resume Pipeline (NEW — Feb 2026)
-### ✅ Implemented
-- **Sales / Counselling Trainer** (`GET /api/ai/sales/scenarios`, `POST /api/ai/sales/turn`, `POST /api/ai/sales/score-session`, `src/screens/sales/SalesTrainerScreen.tsx`)
-  - 6 Indian-market roleplay scenarios: EdTech (parent + student), Insurance, Real Estate, B2B SaaS, College Admission
-  - Multi-turn chat — AI plays a tough Hinglish customer with realistic objections (price, trust, family, comparison, urgency)
-  - Per-turn 5-axis scoring + objection-detection + inline coach notes
-  - Auto-end after 6 turns + AI decides converted/not
-  - Final report: Empathy / Persuasion / Objection Handling / Product Knowledge / Closing + strengths/improvements + missed opportunities + expert winning pitch
-- **Resume PDF Upload + AI Parsing + Personalised Interview Qs** (`POST /api/ai/resume/parse`, `POST /api/ai/resume/interview-questions`, `src/screens/resume/ResumeUploadScreen.tsx`, `src/screens/resume/ResumeInterviewScreen.tsx`)
-  - PDF picker via `expo-document-picker` (5 MB limit)
-  - Server extracts text with `pypdf` → Claude Sonnet 4.6 returns structured JSON (name, role_target, summary, skills, experience, education, projects, certifications, years_of_experience)
-  - "Generate Questions" produces 8-10 resume-grounded interview Qs (project / technical / hr / situational / gap) with rationale + focus areas
-  - "Start Voice Mock Interview" auto-launches the in-app interview screen pre-loaded with these Qs — voice (Whisper STT) or typed answers, per-question scoring via existing `/interview/evaluate`, final aggregate report
-- **Home shortcuts**: 2-tile "Career Tools" row (Sales Trainer + Resume Mock) right after the 30-Day Roadmap banner
-
-### 🧪 Testing (iteration_2.json)
-- All 17 backend tests passed (100%) — sales list / turn / auto-end / 404, sales/score-session, resume/parse happy + 400/413/422 errors, resume Qs with resume-grounded outputs, regression smokes, 429 quota guard across all 4 new endpoints
-- Pytest file: `/app/backend/tests/test_phase2_endpoints.py`
-
-## Roadmap (P2)
-- Group challenges + friend leaderboards
-- Pronunciation phoneme-level analysis
-- Live group interview rooms (multi-user)
-- Apple App Store deployment
-- Dedicated Communication Skills tab + dashboard
-- Spaced Repetition Flashcards
-
-## Pricing Strategy
-| Tier      | Price | Notes |
-|-----------|-------|-------|
-| Free      | ₹0    | 5 chats · 3 voice · 1 interview / day |
-| Monthly   | ₹99   | Unlimited everything |
-| Quarterly | ₹249  | Save 16%, most popular |
-| Yearly    | ₹999  | Save 16%, best value |
-
-7-day free trial on all paid plans.
-
-## Test Credentials
-Firebase Auth — created by user during signup. No seed accounts.
-
-## Key Files (Updated in this iteration)
-- `/app/SpeakMateAI/assets/icon.png`, `splash.png`, `adaptive-icon.png`, `favicon.png` (AI-generated)
-- `/app/SpeakMateAI/src/screens/onboarding/OnboardingScreen.tsx` (NEW)
-- `/app/SpeakMateAI/src/screens/gamification/LeaderboardScreen.tsx` (NEW)
-- `/app/SpeakMateAI/src/screens/gamification/InviteFriendsScreen.tsx` (NEW)
-- `/app/SpeakMateAI/src/components/feature/ShareScoreCard.tsx` (NEW)
-- `/app/SpeakMateAI/src/navigation/AuthNavigator.tsx` (Onboarding first-run flow)
-- `/app/SpeakMateAI/src/navigation/RootNavigator.tsx` (+Leaderboard, +InviteFriends)
-- `/app/SpeakMateAI/src/services/billingService.ts` (₹99/249/999)
-- `/app/SpeakMateAI/src/screens/premium/PremiumScreen.tsx` (Free vs Premium table)
-- `/app/SpeakMateAI/src/screens/tutor/AITutorScreen.tsx` (Quick action chips)
-- `/app/SpeakMateAI/src/screens/home/HomeScreen.tsx` (+Social row)
-- `/app/SpeakMateAI/src/screens/speaking/SpeakingScoreScreen.tsx` (+ShareScoreCard)
-- `/app/SpeakMateAI/src/screens/interview/InterviewResultsScreen.tsx` (+ShareScoreCard)
-- `/app/SpeakMateAI/src/utils/constants.ts` (Tagline update)
-- `/app/SpeakMateAI/package.json` (+expo-clipboard, pinned `@expo/vector-icons@15.0.3` & `expo-font@14.0.12`)
-
-
----
-
-## 🔧 UI Overlap Fix — Feb 2026 (latest)
-
-### Root cause
-Android 15+ with `targetSdk 36` **forces edge-to-edge mode** regardless of the `androidStatusBar.translucent` setting. Previous code had `androidStatusBar.translucent: false` in app.json + a brittle pattern `paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0) + 12` INSIDE `<SafeAreaView edges={['top']}>`. On Android 15+ this returned 0 for BOTH values → only 12px padding → header clipped behind status bar icons.
-
-### Files fixed (status bar overlap)
-- `app.json` — `androidStatusBar.translucent: true`, `backgroundColor: "#00000000"` (transparent, edge-to-edge friendly)
-- `src/screens/resume/ResumeUploadScreen.tsx` — removed broken paddingTop math; SafeAreaView handles it
-- `src/screens/resume/ResumeInterviewScreen.tsx` — same (2 occurrences)
-- `src/screens/companions/CompanionsScreen.tsx` — same
-- `src/screens/tmay/TmayTrainerScreen.tsx` — same
-- `src/screens/tutor/AITutorScreen.tsx` — same
-- `src/screens/vocabulary/FlashcardsScreen.tsx` — same
-- `src/screens/roadmap/RoadmapScreen.tsx` — same
-- `src/screens/home/HomeScreen.tsx` — topBar `paddingTop: Math.max(insets.top+8, 16)` → `paddingTop: 8` (SafeAreaView already pads)
-
-### Files fixed (text clipping)
-- `src/screens/home/HomeScreen.tsx` careerTile (Sales Trainer + Resume Mock) — removed `adjustsFontSizeToFit minimumFontScale={0.85}` (was unreliable); sub text now `numberOfLines={2}` allowing wrapping on 360px screens
-
-### Verification
-- TypeScript `npx tsc --noEmit` passes with zero errors
-- Static code verification by testing_agent passed 100% (iteration_3.json)
-- Zero regression: grep `Math.max(insets.top` returns 0 matches across src/**
-- Visual verification: **pending user device test** (must rebuild local APK after `git pull`)
-
-
----
-
-## 🔧 UI Overlap Fix v2 — Feb 2026 (iteration 4)
-
-### Why a v2 was needed
-v1 fix (above) relied on `SafeAreaView edges={['top']}` to handle the status bar inset after setting `androidStatusBar.translucent: true`. On the user's Android 15 device, SafeAreaView's top inset resolution proved **unreliable** — sometimes returning 0 even when the status bar height should have been applied. Result: header had only the static styles.header padding (`spacing.md = 16px`), insufficient to clear the ~28-32px status bar.
-
-### v2 Fix — bulletproof manual padding
-Replaced SafeAreaView-only approach with **explicit manual paddingTop using a guaranteed minimum**:
-```ts
-paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 28) + 12
+### .env requirements (local — gitignored)
 ```
-The literal `28` floor ensures the header is always pushed below the status bar even if BOTH `insets.top` and `StatusBar.currentHeight` return 0 (the Android 15+ edge-to-edge bug case). Additionally, changed SafeAreaView `edges` from `['top']` → `['left', 'right']` in those 8 affected files to prevent double-padding on devices where SafeAreaView DOES work correctly.
-
-### Files patched (v2)
-- `src/screens/resume/ResumeUploadScreen.tsx` (header L106 + SafeAreaView L103)
-- `src/screens/resume/ResumeInterviewScreen.tsx` (2 headers L146 & L197 + 2 SafeAreaViews L144 & L194)
-- `src/screens/companions/CompanionsScreen.tsx` (L28-29)
-- `src/screens/tmay/TmayTrainerScreen.tsx` (L158-161)
-- `src/screens/tutor/AITutorScreen.tsx` (L127-129)
-- `src/screens/vocabulary/FlashcardsScreen.tsx` (L103-104)
-- `src/screens/roadmap/RoadmapScreen.tsx` (L153-156)
-- `src/screens/home/HomeScreen.tsx` (topBar L74 + SafeAreaView L68 + StatusBar import L2)
-
-### See all alignment fix (HomeScreen)
-On the user's device, "See all →" was rendering on a different visual row than "AI Companions" heading. Root cause: `flexShrink: 1` + `marginRight: spacing.sm` on `styles.section` was conflicting with `flexShrink: 0` on the Pressable + `width: '100%'` on the FadeInView wrapper. Layout calculation was inconsistent.
-
-**Fix**: Pure flex layout:
-- `<Text style={[styles.section, { flex: 1 }]} numberOfLines={1}>AI Companions</Text>` (flex:1 forces title to expand fully)
-- Removed `flexShrink: 0` from Pressable, `width: '100%'` from FadeInView, `flexShrink: 1` + `marginRight` from styles.section, `width: '100%'` from styles.sectionRow
-- `justifyContent: 'space-between'` on the row now reliably places heading + See all on same line.
-
-### Verification (v2)
-- TypeScript `npx tsc --noEmit` → 0 errors
-- Static code verification by testing_agent (iteration_4.json) → **100% pass**, 0 action items, retest_needed: false
-- All 9 expected Math.max paddingTop occurrences verified in correct files at correct line numbers
-- Visual verification: **pending user device test** (rebuild local APK)
-
-
----
-
-## 🚨 CRITICAL: Native Crash Fix — Feb 2026 (iteration 5)
-
-### The crash
-After UI fixes from iterations 3+4 were pushed, the user's APK started crashing on launch with:
-```
-FATAL EXCEPTION: create_react_context
-Process: com.speakmate.ai, PID: 27945
-java.lang.NoClassDefFoundError: Failed resolution of: Lexpo/modules/kotlin/types/AnyTypeCache;
-    at expo.modules.crypto.CryptoModule.definition(CryptoModule.kt:76)
-Caused by: java.lang.ClassNotFoundException: expo.modules.kotlin.types.AnyTypeCache
+EXPO_PUBLIC_BACKEND_URL=<backend>
+EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=true
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=688960403070-20qvj005f03k8koa7m4u885b3fpg1b0p.apps.googleusercontent.com
 ```
 
-### Root cause (definitive)
-1. **`expo-crypto` is NEVER imported in the user's src/** — it was pulled in as a transitive dep of `expo-auth-session` (which is ALSO never imported — only mentioned in a doc comment in useGoogleAuth.ts).
-2. Tilde-versioning (`~15.0.9`) on the expo-* deps allowed yarn to resolve `expo-crypto` to a newer patch that referenced `AnyTypeCache` — a class that **doesn't exist** in `expo-modules-core` 3.0.30 (Expo SDK 54).
-3. Result: Kotlin code compiled fine, but at runtime when `CryptoModule.kt:76` ran, the JVM couldn't resolve `AnyTypeCache` → fatal crash on React context creation → app crashed before any JS code could even run.
-
-### Fix applied
-1. **REMOVED unused `expo-auth-session`** from package.json (this was the trigger).
-2. **PINNED EXACT versions** (no `~`/`^`) for every expo-* package: expo=54.0.0, expo-crypto=15.0.9, expo-clipboard=8.0.7, expo-av=16.0.8, expo-build-properties=1.0.9, expo-document-picker=14.0.8, expo-file-system=19.0.16, expo-haptics=15.0.8, expo-linear-gradient=15.0.8, expo-notifications=0.32.17, expo-speech=14.0.8, expo-status-bar=3.0.9, expo-updates=29.0.18, expo-web-browser=15.0.11, babel-preset-expo=54.0.0.
-3. **EXPLICITLY ADDED** `expo-modules-core: 3.0.30` to dependencies (was only transitive before).
-4. **ADDED yarn `resolutions` block** in package.json forcing `expo-modules-core: 3.0.30` AND `expo-crypto: 15.0.9` across the entire dep tree — overrides any transitive duplicates.
-5. **Tightened** other RN deps (google-signin, gesture-handler, screens, safe-area-context, get-random-values) to exact versions.
-6. **Enhanced** `nuclear-rebuild.ps1` step 2 to wipe additional gradle caches that may hold stale compiled AAR:
-   - `~/.gradle/caches/modules-2/files-2.1/host.exp.exponent`
-   - `~/.gradle/caches/modules-2/files-2.1/com.facebook.react`
-   - `~/.gradle/caches/build-cache-*`, `jars-*`
-   - Windows `AppData\Local\Temp\react-*` and `metro-*`
-
-### Verification (cloud)
-- `yarn install` succeeded; node_modules has expo-modules-core 3.0.30 + expo-crypto 15.0.9, NO expo-auth-session.
-- TypeScript `npx tsc --noEmit` → 0 errors.
-- testing_agent (iteration_5.json) → **12/12 static checks PASS**, 0 action items.
-- All previous UI overlap fixes from iteration_4 verified intact.
-
-### User-side validation pending
-User must run `nuclear-rebuild.ps1` (now beefier) on Windows to rebuild local APK. The fix guarantees the version mismatch cannot recur because exact pins + resolutions remove all ambiguity from yarn's dependency resolution.
-
-
----
-
-## 🪟 Windows Rebuild Script Fix — Feb 2026 (iteration 6)
-
-### Symptom
-User ran nuclear-rebuild.ps1 from iter5. Yarn install succeeded ✅. But steps 4 & 5 failed with: `could not determine executable to run` when invoking `npx expo install --fix` and `npx expo prebuild`.
-
-### Root cause
-On Windows, `npx expo` resolution of yarn-installed local `.bin` shims is unreliable (hoisting + `.cmd` shim generation quirks). The app-level native crash fix from iter5 is correct, but the user couldn't actually execute the rebuild.
-
-### Fix (1 file)
-`/app/SpeakMateAI/nuclear-rebuild.ps1` — replaced both `& npx expo ...` calls with direct Node invocation: `& node node_modules\expo\bin\cli <subcommand>`. This bypasses npx entirely. Verified in cloud: `node node_modules/expo/bin/cli --version` → `54.0.0`. Works cross-platform. Step 4 (install --fix) failure softened to a Warn (versions are already exact-pinned by iter5 so the fix is a no-op verification). Step 5 (prebuild) still exits 1 on failure with a manual recovery hint.
-
-### Verification
-- testing_agent iteration_6.json → **8/8 PASS**, 0 action items.
-- All prior fixes (iter3 UI, iter4 UI v2, iter5 native crash) intact.
-
-
----
-
-## 🛡️ Gradle Metaspace + Lint Permanent Fix — Feb 2026 (iteration 7)
-
-### Symptom
-After iter5+iter6, user ran `expo prebuild` + Android Studio Run ▶. Gradle crashed during `react-native-async-storage_async-storage:lintVitalAnalyzeRelease` with `java.lang.OutOfMemoryError: Metaspace`. Recurring Metaspace OOM — every `expo prebuild --clean` wipes manual gradle.properties edits.
-
-### Fix — Expo config plugin (persistent across prebuilds)
-**NEW: `plugins/withAndroidBuildFixes.js`** — custom config plugin using `withGradleProperties` + `withAppBuildGradle` hooks. Auto-applies on EVERY prebuild:
-1. **gradle.properties**: idempotently sets `org.gradle.jvmargs=-Xmx4096m -XX:MaxMetaspaceSize=1024m -Dfile.encoding=UTF-8`, daemon=false, parallel=false, kotlin.incremental=false.
-2. **app/build.gradle**: injects `lint { abortOnError false; checkReleaseBuilds false; disable 'NewerVersionAvailable', 'GradleDependency', 'InvalidPackage' }` block right after `android {` — disables the OOM-ing lintVitalAnalyzeRelease task.
-
-**Modified `app.json`** — added `'./plugins/withAndroidBuildFixes'` as last entry of plugins array.
-
-### Verification
-- End-to-end cloud test: clean prebuild → exit code 0; both files correctly patched
-- testing_agent iteration_7.json → **10/10 PASS**
-
-### 3-layer defense complete
-| Iter | Fixes |
-|------|-------|
-| 3+4 | UI overlap (Math.max + 28 floor, See all alignment) |
-| 5 | Native crash (removed expo-auth-session, exact pins, resolutions) |
-| 6 | Windows script (node direct invoke, bypass npx) |
-| 7 | Gradle build (Expo plugin: Metaspace + lint disable persistent) |
-
-
----
-
-## 🪡 Metro Bundle Resolution Fix — Feb 2026 (iteration 8)
-
-### Symptom
-After iter7 unblocked Gradle, the build progressed to Metro bundling. At 99.2% / 1556 modules, bundling failed with:
+### Build commands (verified working)
+```powershell
+yarn install --force
+node node_modules\expo\bin\cli prebuild --platform android --clean --no-install
+cd android
+.\gradlew assembleRelease --no-daemon --max-workers=1 -x lintVitalAnalyzeRelease
 ```
-Error: Unable to resolve module expo-auth-session/providers/google from src/hooks/useGoogleAuth.ts
-  21 | import * as Google from 'expo-auth-session/providers/google';
-```
+APK: `android/app/build/outputs/apk/release/app-release.apk`
 
-### Root cause
-User's LOCAL `src/hooks/useGoogleAuth.ts` is the **older revision** that still imports `expo-auth-session/providers/google`. Cloud-side that file was refactored to use `@react-native-google-signin/google-signin` (native SDK), but the user hasn't clicked "Save to GitHub" → `git reset --hard origin/SpeakMATEAI` reverts them to the older GitHub state. iter5 removed `expo-auth-session` from package.json so the package isn't in node_modules → Metro can't resolve the import → bundle fails.
+## P1 — Pending (Backlog)
+- [ ] Generate AAB (`gradlew bundleRelease`) for Play Store upload (only APK done locally)
+- [ ] Play Store legal pages: Privacy Policy, Data Deletion URL (hostable on GitHub Pages)
+- [ ] Play Store assets: Feature graphic 1024x500, screenshots, store description
+- [ ] Data Safety form + Content Rating questionnaire in Play Console
+- [ ] Real Google Play Billing integration (currently MOCKED in app)
+- [ ] Performance: 30-Day Roadmap backend API speed optimization
 
-### Fix delivered to user (cannot push to GitHub from cloud)
-PowerShell here-string command that overwrites local `src/hooks/useGoogleAuth.ts` with a **minimal STUB** exporting the same `GoogleAuthState` API surface (`signIn`, `loading`, `error`, `configured`) but with no-op behavior — Google Sign-In is feature-flag-gated OFF (`EXPO_PUBLIC_FEATURE_GOOGLE_SIGNIN=false`) so the stub is functionally equivalent for now. Plus Metro cache clear (.cache, .expo, %TEMP%\\metro-*, %TEMP%\\react-*).
+## P2 — Future Tasks
+- [ ] Dedicated Communication Skills Tab & Dashboard
+- [ ] Spaced Repetition Flashcards
+- [ ] Push Notifications (expo-notifications already installed)
+- [ ] Multi-language UI (Hindi + English toggle)
+- [ ] Offline mode / cache strategy
 
-After user clicks "Save to GitHub" + `git reset --hard origin/SpeakMATEAI`, the proper native-SDK version replaces the stub automatically.
-
-### Verification (cloud)
-- testing_agent iteration_8.json → **8/8 PASS**, 0 action items for main agent.
-- Confirmed cloud-side: useGoogleAuth.ts uses google-signin native SDK, package.json has no expo-auth-session, node_modules has no expo-auth-session, tsc passes, LoginScreen API surface matches stub.
-- All previous fixes (iter3 UI, iter4 UI v2, iter5 native crash, iter6 Windows script, iter7 Gradle plugin) intact.
-
-
----
-
-## 🛠 Release-build Bundle Saver Fix — Feb 2026 (iteration 9)
-
-### Symptom
-After iter8 unblocked Metro (1556/1556 modules ✓), `:app:createBundleReleaseJsAndAssets` Gradle task failed with:
-```
-TypeError: Cannot read properties of undefined (reading 'save')
-    at exportEmbedInternalAsync (.../node_modules/@expo/cli/.../exportEmbedAsync.js)
-```
-Line ~201: `_bundle().default.save(bundle, options, _log.Log.log)`.
-
-### Root cause
-`_bundle()` requires `@expo/metro/metro/shared/output/bundle.js` — a one-line shim: `module.exports = require('metro/private/shared/output/bundle');`. The subpath uses Node.js `exports` mapping (`./private/* -> ./src/*.js`). On user's Windows + Node combination, this resolution returns undefined → `.default.save` throws.
-
-### Fix — postinstall patch script (auto-applied on every install)
-**NEW `scripts/fix-metro-bundle.js`** — overwrites the shim at:
-- `node_modules/@expo/metro/metro/shared/output/bundle.js`
-- `node_modules/@expo/cli/node_modules/@expo/metro-config/node_modules/@expo/metro/metro/shared/output/bundle.js`
-
-with a defensive try/catch chain: tries `metro/private/shared/output/bundle` → falls back to direct `metro/src/shared/output/bundle` → last-ditch relative path. Idempotent via marker comment.
-
-**Modified `package.json`** — added `"postinstall": "node scripts/fix-metro-bundle.js"` so the patch is auto-applied on every `yarn install` (including the install triggered by `expo prebuild`).
-
-### Verification
-- testing_agent iteration_9.json → **9/9 PASS**, 0 action items
-- Functional check in cloud: `require('@expo/metro/metro/shared/output/bundle').save` → `function` (was undefined on Windows before patch)
-- All prior fixes (iter3-iter8) intact
-- TypeScript passes
-
-### 5-layer defense complete (Feb 2026 session)
-| Iter | Issue | Fix |
-|------|-------|-----|
-| 3+4 | Status bar + See all overlap | Math.max + 28 floor (9 screens) + flex layout |
-| 5 | App launch crash (AnyTypeCache) | Removed expo-auth-session, exact pins, resolutions |
-| 6 | Windows `npx expo` fail | Direct `node node_modules\expo\bin\cli` |
-| 7 | Gradle Metaspace OOM | Expo plugin (persistent Metaspace + lint disable) |
-| 8 | Metro bundle: expo-auth-session unresolved | useGoogleAuth.ts stub for local |
-| 9 | Release bundle `.save` undefined | postinstall patch for @expo/metro shim |
-
-
----
-
-## 🎯 TRUE ROOT-CAUSE FIX — Dependency Alignment — Feb 2026 (iteration 11)
-
-### Discovery via expo-doctor
-User ran `npx expo-doctor`. Output: 15/18 pass, 3 fail:
-1. `expo-modules-core` installed directly (should be transitive only)
-2. Duplicates: `@expo/vector-icons` (15.0.3 + 15.1.1), `expo-file-system` (19.0.16 + 19.0.23)
-3. Patch mismatches: expo 54.0.0 vs ~54.0.35, etc.
-
-### Why this was the underlying issue
-iter5's pinned patch versions became outdated as SDK 54 advanced. Old pins clashed with what `expo@54.0.35` ships transitively → duplicates → root cause of iter6-iter10 symptoms (Gradle picked wrong AARs, Metro resolved wrong copies).
-
-### Fix
-**`package.json`**:
-- All expo-* deps updated to SDK 54.0.35-recommended patches (exact pins): expo 54.0.35, expo-build-properties 1.0.10, expo-clipboard 8.0.8, expo-file-system 19.0.23, babel-preset-expo 54.0.10, @expo/vector-icons 15.1.1.
-- `expo-modules-core` removed from dependencies (kept only in `resolutions`).
-- `resolutions` expanded to 4 entries: expo-modules-core, expo-crypto, @expo/vector-icons, expo-file-system — single copy guarantee.
-
-### Verification
-- **`npx expo-doctor` → 18/18 PASS, no issues** ✓
-- testing_agent iteration_11.json → **10/10 PASS**, 0 action items
-- Single copies of previously-duplicated packages
-- expo-modules-core 3.0.30 transitive, expo-crypto 15.0.9 (AnyTypeCache prevention intact)
-- Postinstall ran during yarn install — iter10 v2 Metro shim patch auto-applied
-- TypeScript clean, all prior fixes intact
-
-### Final session — 6-layer defense
-| Iter | Issue | Status |
-|---|---|---|
-| 3+4 | UI overlap | ✓ |
-| 5 | Native crash AnyTypeCache | ✓ |
-| 6 | Windows npx expo fail | ✓ |
-| 7 | Gradle Metaspace OOM | ✓ |
-| 8 | Metro expo-auth-session | ✓ (cloud) |
-| 9+10 | Release bundle .save | ✓ (postinstall) |
-| 11 | **Dependency duplicates (true root)** | ✓ |
+## Known Issue Recurrence Log
+| Issue | Recurrence | Status |
+|-------|-----------|--------|
+| Gradle Metaspace OOM | High | Resolved via `withAndroidBuildFixes.js` plugin + `-x lintVital` flag |
+| Stale node_modules on Windows | High | Mitigated via clean install workflow |
+| SDK version drift (yarn cache) | Medium | Pinned via `resolutions` block in package.json |
+| Google Sign-In SHA-1 mismatch | One-time (Feb 2026) | Resolved — keystore SHA-1 registered in Firebase |
+| `undefined is not a function` on Google button | One-time (Feb 2026) | Resolved — `authService.signInWithGoogleCredential` synced |
