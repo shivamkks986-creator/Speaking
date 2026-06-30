@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -71,6 +72,42 @@ async def get_status_checks():
 
 api_router.include_router(ai_router)
 api_router.include_router(system_router)
+
+
+# ---------------------------------------------------------------------------
+# Fix-file delivery endpoint
+# Serves the latest SpeakMateAI UI-fix source files so the local Windows
+# PowerShell build script can `Invoke-WebRequest` the freshest copies without
+# needing the user to git-pull. Each file is mapped to a short safe key so the
+# server never exposes arbitrary filesystem paths.
+# ---------------------------------------------------------------------------
+SPEAKMATE_ROOT = Path("/app/SpeakMateAI")
+FIX_FILES = {
+    "useScreenInsets.ts":      SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
+    "ScreenContainer.tsx":     SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
+    "SpeakingPracticeScreen.tsx": SPEAKMATE_ROOT / "src/screens/speaking/SpeakingPracticeScreen.tsx",
+    "InterviewCoachScreen.tsx":   SPEAKMATE_ROOT / "src/screens/interview/InterviewCoachScreen.tsx",
+    "PremiumScreen.tsx":          SPEAKMATE_ROOT / "src/screens/premium/PremiumScreen.tsx",
+    "fix-overlap-and-build.ps1":  SPEAKMATE_ROOT / "fix-overlap-and-build.ps1",
+}
+
+
+@api_router.get("/fix-files/{name}", response_class=PlainTextResponse)
+async def get_fix_file(name: str):
+    """Serve a whitelisted SpeakMate source file as plain UTF-8 text."""
+    path = FIX_FILES.get(name)
+    if path is None:
+        raise HTTPException(status_code=404, detail=f"Unknown fix file: {name}")
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"File missing on server: {name}")
+    return path.read_text(encoding="utf-8")
+
+
+@api_router.get("/fix-files")
+async def list_fix_files():
+    """List all available fix files (handy debug endpoint)."""
+    return {"files": sorted(FIX_FILES.keys())}
+
 
 # Include the router in the main app
 app.include_router(api_router)

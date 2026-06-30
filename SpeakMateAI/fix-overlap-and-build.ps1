@@ -1,25 +1,37 @@
 # =============================================================================
-# SpeakMate AI — One-Shot UI Overlap Permanent Fix + Build Script
+# SpeakMate AI — One-Shot UI Overlap Fix + AAB Build (Cloud Sync Edition)
 # =============================================================================
 # What this does (in order):
-#   1. Verifies you're in the SpeakMateAI folder
-#   2. Writes the centralised useScreenInsets hook (single-source-of-truth)
-#   3. Rewrites ScreenContainer to use the hook
-#   4. Patches Speaking / Interview / Premium tab screens (top + bottom padding)
-#   5. Kills stale Java/Gradle/Kotlin processes
-#   6. Backs up old android folder, runs `expo prebuild --clean`
-#   7. Patches gradle.properties (4 GB heap, in-process Kotlin) + lint disable
-#   8. Wires release keystore (if speakmateai-release.jks present)
-#   9. Builds the Release AAB (Play Store) via `gradlew bundleRelease`
-#  10. Prints AAB path + opens the output folder
+#   1. Downloads the 5 latest UI-fix source files from the Emergent cloud
+#   2. Overwrites your local copies (so you always get the freshest version)
+#   3. Kills stale Java/Gradle/Kotlin processes
+#   4. Backs up old android folder & regenerates via `expo prebuild --clean`
+#   5. Patches gradle.properties (4 GB heap, in-process Kotlin)
+#   6. Wires release keystore in app/build.gradle (if .jks present)
+#   7. Builds the Release AAB via `gradlew bundleRelease`
+#   8. Opens the AAB output folder
 #
-# Run from your SpeakMateAI folder (e.g. D:\sm\SpeakMateAI):
+# Run from D:\sm\SpeakMateAI:
 #     powershell -ExecutionPolicy Bypass -File .\fix-overlap-and-build.ps1
+#
+# Tip: if the script can't reach the cloud (no internet / preview expired),
+# it falls back gracefully with a clear error — your local code is untouched.
 # =============================================================================
 
 $ErrorActionPreference = "Continue"
 $startTime = Get-Date
 
+# ---- CLOUD URLs (update only if backend preview URL changes) ----------------
+$CloudBase = "https://gift-hub-sync.preview.emergentagent.com/api/fix-files"
+$Files = @(
+    @{ Url = "$CloudBase/useScreenInsets.ts";          Dest = "src\hooks\useScreenInsets.ts" }
+    @{ Url = "$CloudBase/ScreenContainer.tsx";         Dest = "src\components\common\ScreenContainer.tsx" }
+    @{ Url = "$CloudBase/SpeakingPracticeScreen.tsx";  Dest = "src\screens\speaking\SpeakingPracticeScreen.tsx" }
+    @{ Url = "$CloudBase/InterviewCoachScreen.tsx";    Dest = "src\screens\interview\InterviewCoachScreen.tsx" }
+    @{ Url = "$CloudBase/PremiumScreen.tsx";           Dest = "src\screens\premium\PremiumScreen.tsx" }
+)
+
+# ---- helpers ---------------------------------------------------------------
 function Write-Step { param([string]$Msg) Write-Host "" ; Write-Host "==> $Msg" -ForegroundColor Cyan }
 function Write-Ok   { param([string]$Msg) Write-Host "    [OK]   $Msg" -ForegroundColor Green }
 function Write-Warn { param([string]$Msg) Write-Host "    [WARN] $Msg" -ForegroundColor Yellow }
@@ -33,217 +45,48 @@ if (-not (Test-Path "package.json")) {
     Write-Err "Not in SpeakMateAI folder. cd into it first (e.g. cd D:\sm\SpeakMateAI)."
     exit 1
 }
-$pkgName = (Get-Content package.json -Raw | ConvertFrom-Json).name
-if ($pkgName -ne "speakmate-ai") { Write-Warn "package.json name is '$pkgName' — proceeding anyway." }
 Write-Ok "In folder: $(Get-Location)"
 
-# ---------------------------------------------------------------------------
-# STEP 1 — Write src/hooks/useScreenInsets.ts (NEW)
-# ---------------------------------------------------------------------------
-Write-Step "Writing src/hooks/useScreenInsets.ts (centralised safe-area hook)"
-New-Item -ItemType Directory -Force -Path "src\hooks" | Out-Null
-$useScreenInsets = @'
-// useScreenInsets — single source of truth for safe-area padding across the app.
-import { useContext } from 'react';
-import { StatusBar, Platform } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
-
-const MIN_TOP_FLOOR = Platform.OS === 'android' ? 28 : 20;
-
-export interface ScreenInsets {
-  top: number;
-  bottom: number;
-  tabBarHeight: number;
-  headerPaddingTop: number;
-  bottomPad: number;
-}
-
-export function useScreenInsets(extraTop = 0, extraBottom = 24): ScreenInsets {
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
-  const statusBarH = Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0;
-  const top = Math.max(insets.top, statusBarH, MIN_TOP_FLOOR);
-  return {
-    top,
-    bottom: insets.bottom,
-    tabBarHeight,
-    headerPaddingTop: top + extraTop,
-    bottomPad: Math.max(tabBarHeight, insets.bottom) + extraBottom,
-  };
-}
-'@
-Set-Content -Path "src\hooks\useScreenInsets.ts" -Value $useScreenInsets -Encoding UTF8
-Write-Ok "Wrote src\hooks\useScreenInsets.ts"
+# Force TLS 1.2 (older PowerShell defaults to TLS 1.0 which Cloudflare blocks)
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls
 
 # ---------------------------------------------------------------------------
-# STEP 2 — Rewrite src/components/common/ScreenContainer.tsx
+# STEP 1 — Download latest fix files from cloud
 # ---------------------------------------------------------------------------
-Write-Step "Rewriting src\components\common\ScreenContainer.tsx"
-$screenContainer = @'
-import React from 'react';
-import { View, StyleSheet, ScrollView, ViewStyle, StyleProp } from 'react-native';
-import { useTheme } from 'react-native-paper';
-import { useScreenInsets } from '@/hooks/useScreenInsets';
-
-interface Props {
-  children: React.ReactNode;
-  scroll?: boolean;
-  padded?: boolean;
-  contentStyle?: StyleProp<ViewStyle>;
-}
-
-export default function ScreenContainer({
-  children,
-  scroll = false,
-  padded = true,
-  contentStyle,
-}: Props) {
-  const theme = useTheme();
-  const { headerPaddingTop, bottomPad } = useScreenInsets();
-  const Container = scroll ? ScrollView : View;
-  return (
-    <View
-      style={[styles.flex, { backgroundColor: theme.colors.background, paddingTop: headerPaddingTop }]}
-    >
-      <Container
-        style={styles.flex}
-        contentContainerStyle={[
-          padded ? styles.padded : null,
-          scroll ? { paddingBottom: bottomPad } : null,
-          contentStyle,
-        ]}
-        keyboardShouldPersistTaps="handled"
-      >
-        {children}
-      </Container>
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  padded: { paddingHorizontal: 16, paddingVertical: 8 },
-});
-'@
-Set-Content -Path "src\components\common\ScreenContainer.tsx" -Value $screenContainer -Encoding UTF8
-Write-Ok "Wrote src\components\common\ScreenContainer.tsx"
-
-# ---------------------------------------------------------------------------
-# STEP 3 — Helper: in-place patch a file (search-and-replace exact strings)
-# ---------------------------------------------------------------------------
-function Patch-File {
-    param(
-        [Parameter(Mandatory)][string]$Path,
-        [Parameter(Mandatory)][string]$Find,
-        [Parameter(Mandatory)][string]$Replace,
-        [string]$Label = ""
-    )
-    if (-not (Test-Path $Path)) { Write-Warn "Skipped $Path (file not found)"; return $false }
-    $content = Get-Content $Path -Raw
-    # Idempotency: if the replacement string is already present in the file,
-    # skip — this allows running the script multiple times safely.
-    if ($content -like "*$Replace*") {
-        Write-Ok "$Label already patched ($Path)"
-        return $true
+Write-Step "Downloading latest UI-fix files from cloud"
+$downloaded = 0
+foreach ($f in $Files) {
+    $destDir = Split-Path -Parent $f.Dest
+    if ($destDir -and -not (Test-Path $destDir)) {
+        New-Item -ItemType Directory -Force -Path $destDir | Out-Null
     }
-    if ($content -notlike "*$Find*") {
-        Write-Warn "$Label — search string not found in $Path (skipping)"
-        return $false
+    try {
+        Invoke-WebRequest -Uri $f.Url -OutFile $f.Dest -UseBasicParsing -TimeoutSec 30
+        $size = [math]::Round((Get-Item $f.Dest).Length / 1KB, 1)
+        Write-Ok "$($f.Dest)  ($size KB)"
+        $downloaded++
+    } catch {
+        Write-Err "Failed to download $($f.Url)"
+        Write-Err $_.Exception.Message
+        Write-Warn "Continuing with existing local copy of $($f.Dest)"
     }
-    $newContent = $content.Replace($Find, $Replace)
-    Set-Content -Path $Path -Value $newContent -Encoding UTF8 -NoNewline
-    Write-Ok "$Label patched ($Path)"
-    return $true
+}
+if ($downloaded -eq 0) {
+    Write-Err "Could not download ANY files — check internet / cloud URL."
+    Write-Warn "Falling back to local code (build will proceed but UI fix may be missing)"
+} else {
+    Write-Ok "$downloaded / $($Files.Count) files refreshed from cloud"
 }
 
 # ---------------------------------------------------------------------------
-# STEP 4 — Patch SpeakingPracticeScreen.tsx
-# ---------------------------------------------------------------------------
-Write-Step "Patching tab screens (Speaking / Interview / Premium)"
-
-$speakFile = "src\screens\speaking\SpeakingPracticeScreen.tsx"
-Patch-File -Path $speakFile -Label "Speaking [import]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`r`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-# Fallback for LF line endings
-Patch-File -Path $speakFile -Label "Speaking [import LF]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-
-Patch-File -Path $speakFile -Label "Speaking [hook]" `
-    -Find "const navigation = useNavigation<Nav>();`r`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "const navigation = useNavigation<Nav>();`r`n  const tabBarHeight = useBottomTabBarHeight();`r`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-Patch-File -Path $speakFile -Label "Speaking [hook LF]" `
-    -Find "const navigation = useNavigation<Nav>();`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "const navigation = useNavigation<Nav>();`n  const tabBarHeight = useBottomTabBarHeight();`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-
-Patch-File -Path $speakFile -Label "Speaking [edges+padding]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`r`n        <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`r`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 140, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>" | Out-Null
-Patch-File -Path $speakFile -Label "Speaking [edges+padding LF]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`n        <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 140, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>" | Out-Null
-
-# ---------------------------------------------------------------------------
-# STEP 5 — Patch InterviewCoachScreen.tsx
-# ---------------------------------------------------------------------------
-$interviewFile = "src\screens\interview\InterviewCoachScreen.tsx"
-Patch-File -Path $interviewFile -Label "Interview [import]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`r`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-Patch-File -Path $interviewFile -Label "Interview [import LF]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-
-Patch-File -Path $interviewFile -Label "Interview [hook]" `
-    -Find "export default function InterviewCoachScreen() {`r`n  const navigation = useNavigation<Nav>();`r`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "export default function InterviewCoachScreen() {`r`n  const navigation = useNavigation<Nav>();`r`n  const tabBarHeight = useBottomTabBarHeight();`r`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-Patch-File -Path $interviewFile -Label "Interview [hook LF]" `
-    -Find "export default function InterviewCoachScreen() {`n  const navigation = useNavigation<Nav>();`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "export default function InterviewCoachScreen() {`n  const navigation = useNavigation<Nav>();`n  const tabBarHeight = useBottomTabBarHeight();`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-
-Patch-File -Path $interviewFile -Label "Interview [edges+header]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`r`n        <View style={styles.header}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`r`n        <View style={[styles.header, { paddingTop: headerPaddingTop + 8 }]}>" | Out-Null
-Patch-File -Path $interviewFile -Label "Interview [edges+header LF]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`n        <View style={styles.header}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`n        <View style={[styles.header, { paddingTop: headerPaddingTop + 8 }]}>" | Out-Null
-
-# ---------------------------------------------------------------------------
-# STEP 6 — Patch PremiumScreen.tsx
-# ---------------------------------------------------------------------------
-$premiumFile = "src\screens\premium\PremiumScreen.tsx"
-Patch-File -Path $premiumFile -Label "Premium [import]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`r`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`r`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-Patch-File -Path $premiumFile -Label "Premium [import LF]" `
-    -Find "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';" `
-    -Replace "import { SafeAreaView } from 'react-native-safe-area-context';`nimport { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';`nimport { useScreenInsets } from '@/hooks/useScreenInsets';" | Out-Null
-
-Patch-File -Path $premiumFile -Label "Premium [hook]" `
-    -Find "export default function PremiumScreen() {`r`n  const navigation = useNavigation();`r`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "export default function PremiumScreen() {`r`n  const navigation = useNavigation();`r`n  const tabBarHeight = useBottomTabBarHeight();`r`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-Patch-File -Path $premiumFile -Label "Premium [hook LF]" `
-    -Find "export default function PremiumScreen() {`n  const navigation = useNavigation();`n  const tabBarHeight = useBottomTabBarHeight();" `
-    -Replace "export default function PremiumScreen() {`n  const navigation = useNavigation();`n  const tabBarHeight = useBottomTabBarHeight();`n  const { headerPaddingTop } = useScreenInsets();" | Out-Null
-
-Patch-File -Path $premiumFile -Label "Premium [edges+padding]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`r`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} showsVerticalScrollIndicator={false}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`r`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>" | Out-Null
-Patch-File -Path $premiumFile -Label "Premium [edges+padding LF]" `
-    -Find "<SafeAreaView style={{ flex: 1 }} edges={['top']}>`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} showsVerticalScrollIndicator={false}>" `
-    -Replace "<SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>`n        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>" | Out-Null
-
-# ---------------------------------------------------------------------------
-# STEP 7 — TypeScript sanity check (non-blocking)
+# STEP 2 — TypeScript sanity check (non-blocking)
 # ---------------------------------------------------------------------------
 Write-Step "Running quick TypeScript check"
 & npx --no-install tsc --noEmit -p tsconfig.json 2>&1 | Out-Null
-if ($LASTEXITCODE -eq 0) { Write-Ok "TypeScript compile clean" } else { Write-Warn "TypeScript warnings present (build will still proceed)" }
+if ($LASTEXITCODE -eq 0) { Write-Ok "TypeScript compile clean" } else { Write-Warn "TS warnings present (build still proceeds)" }
 
 # ---------------------------------------------------------------------------
-# STEP 8 — Kill stale Java/Gradle/Kotlin processes
+# STEP 3 — Kill stale Java/Gradle/Kotlin processes
 # ---------------------------------------------------------------------------
 Write-Step "Killing stale Java / Gradle / Kotlin processes"
 if (Test-Path "android\gradlew.bat") { & .\android\gradlew --stop -p android 2>$null }
@@ -251,7 +94,7 @@ Get-Process java, kotlin*, studio64 -ErrorAction SilentlyContinue | Stop-Process
 Write-Ok "Processes cleared"
 
 # ---------------------------------------------------------------------------
-# STEP 9 — Backup old android folder & expo prebuild --clean
+# STEP 4 — Backup old android folder & expo prebuild --clean
 # ---------------------------------------------------------------------------
 Write-Step "Backing up old android folder & regenerating via expo prebuild"
 if (Test-Path "android") {
@@ -264,7 +107,7 @@ if ($LASTEXITCODE -ne 0) { Write-Err "expo prebuild failed"; exit 1 }
 Write-Ok "Fresh android folder generated"
 
 # ---------------------------------------------------------------------------
-# STEP 10 — Patch gradle.properties (memory + Kotlin in-process)
+# STEP 5 — Patch gradle.properties (memory + Kotlin in-process)
 # ---------------------------------------------------------------------------
 Write-Step "Patching android/gradle.properties (4 GB heap, in-process Kotlin)"
 $gradleProps = "android\gradle.properties"
@@ -282,7 +125,7 @@ kotlin.incremental=false
 Write-Ok "gradle.properties patched"
 
 # ---------------------------------------------------------------------------
-# STEP 11 — Patch app/build.gradle (lintOptions + release signing)
+# STEP 6 — Patch app/build.gradle (lintOptions + release signing)
 # ---------------------------------------------------------------------------
 Write-Step "Patching app/build.gradle (lintOptions + release signing)"
 $appGradle = "android\app\build.gradle"
@@ -311,12 +154,12 @@ if (Test-Path "speakmateai-release.jks") {
         Write-Ok "Release signing already wired"
     }
 } else {
-    Write-Warn "speakmateai-release.jks not found — AAB will be debug-signed (NOT uploadable to Play Store)"
+    Write-Warn "speakmateai-release.jks not found — AAB will be debug-signed (NOT uploadable)"
 }
 Set-Content $appGradle -Value $content -NoNewline
 
 # ---------------------------------------------------------------------------
-# STEP 12 — keystore.properties (prompt if missing)
+# STEP 7 — keystore.properties (prompt if missing)
 # ---------------------------------------------------------------------------
 $keystoreProps = "android\keystore.properties"
 if ((Test-Path "speakmateai-release.jks") -and -not (Test-Path $keystoreProps)) {
@@ -335,7 +178,7 @@ keyPassword=$sp
 }
 
 # ---------------------------------------------------------------------------
-# STEP 13 — Build the Release AAB (Play Store)
+# STEP 8 — Build the Release AAB (Play Store)
 # ---------------------------------------------------------------------------
 Write-Step "Building Release AAB for Play Store (~10-20 min, please wait)"
 Push-Location android
@@ -344,8 +187,8 @@ $buildExit = $LASTEXITCODE
 Pop-Location
 
 if ($buildExit -ne 0) {
-    Write-Err "AAB build failed (exit $buildExit). Check the error above. Common fixes:"
-    Write-Host "    - Stop Android Studio + close all gradle daemons" -ForegroundColor White
+    Write-Err "AAB build failed (exit $buildExit). Common fixes:"
+    Write-Host "    - Close Android Studio + all gradle daemons" -ForegroundColor White
     Write-Host "    - Re-run this script" -ForegroundColor White
     Write-Host "    - If still failing: delete %USERPROFILE%\.gradle\caches and retry" -ForegroundColor White
     exit $buildExit
