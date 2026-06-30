@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, StyleSheet, ScrollView, ViewStyle, StyleProp } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'react-native-paper';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 
 interface Props {
   children: React.ReactNode;
@@ -10,6 +10,14 @@ interface Props {
   contentStyle?: StyleProp<ViewStyle>;
 }
 
+/**
+ * ScreenContainer — every regular (non custom-header) screen should use this.
+ * It guarantees:
+ *   • Top padding never clipped behind the status bar / punch-hole camera
+ *   • Bottom content never hidden behind the floating bottom tab bar
+ * Both values come from `useScreenInsets` so the fix is centralized and
+ * cannot regress when an individual screen is refactored.
+ */
 export default function ScreenContainer({
   children,
   scroll = false,
@@ -17,30 +25,28 @@ export default function ScreenContainer({
   contentStyle,
 }: Props) {
   const theme = useTheme();
+  const { headerPaddingTop, bottomPad } = useScreenInsets();
   const Container = scroll ? ScrollView : View;
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
+    <View
+      style={[styles.flex, { backgroundColor: theme.colors.background, paddingTop: headerPaddingTop }]}
     >
       <Container
         style={styles.flex}
         contentContainerStyle={[
           padded ? styles.padded : null,
-          scroll ? styles.scrollContent : null,
+          scroll ? { paddingBottom: bottomPad } : null,
           contentStyle,
         ]}
         keyboardShouldPersistTaps="handled"
       >
         {children}
       </Container>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
   flex: { flex: 1 },
   padded: { paddingHorizontal: 16, paddingVertical: 8 },
-  scrollContent: { paddingBottom: 32 },
 });

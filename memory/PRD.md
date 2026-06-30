@@ -31,6 +31,13 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] Text clipping fix on Resume cards (`adjustsFontSizeToFit`)
 - [x] "See all" alignment fix on HomeScreen
 
+### Permanent SafeArea Fix (Feb 2026 — this session) ✅ DONE
+- [x] Created `src/hooks/useScreenInsets.ts` — single source of truth combining `useSafeAreaInsets`, `StatusBar.currentHeight` floor (28dp min on Android), and auto-detected `BottomTabBarHeightContext`. Returns `{ headerPaddingTop, bottomPad }` drop-ins.
+- [x] Upgraded `src/components/common/ScreenContainer.tsx` to use the hook — fixes Settings, Progress, Vocabulary, Profile, Notification, Privacy, MockInterview, Favorites, ForgotPassword screens automatically.
+- [x] Patched 3 tab screens directly: `SpeakingPracticeScreen`, `InterviewCoachScreen`, `PremiumScreen` — now use `headerPaddingTop` floor + `tabBarHeight` bottom padding.
+- [x] TypeScript compile: clean (`tsc --noEmit -p tsconfig.json` passes).
+- **Why permanent**: future screens just import `useScreenInsets()` (or use `ScreenContainer`) — cannot regress via git reset on individual screens because logic lives in 1 hook.
+
 ## Critical Build Config
 
 ### Files that MUST exist locally (and in repo)

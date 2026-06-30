@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useNavigation } from '@react-navigation/native';
 import FadeInView from '@/components/common/FadeInView';
 
@@ -49,6 +50,7 @@ const TESTIMONIALS = [
 export default function PremiumScreen() {
   const navigation = useNavigation();
   const tabBarHeight = useBottomTabBarHeight();
+  const { headerPaddingTop } = useScreenInsets();
   const { user, updateProfile } = useAuth();
   const [products, setProducts] = useState<PremiumProduct[]>([]);
   const [selected, setSelected] = useState<string>('speakmate_quarterly');
@@ -82,8 +84,8 @@ export default function PremiumScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32 }} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>
           {/* Hero */}
           <View style={styles.heroWrap}>
             <Pressable onPress={() => navigation.goBack()} style={styles.closeBtn} testID="premium-close">

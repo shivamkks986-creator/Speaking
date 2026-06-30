@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
@@ -24,6 +25,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 export default function InterviewCoachScreen() {
   const navigation = useNavigation<Nav>();
   const tabBarHeight = useBottomTabBarHeight();
+  const { headerPaddingTop } = useScreenInsets();
   const { stats } = useProgress();
   const { user } = useAuth();
   const [difficulty, setDifficulty] = React.useState<'beginner' | 'intermediate' | 'advanced'>('intermediate');
@@ -44,8 +46,8 @@ export default function InterviewCoachScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <View style={styles.header}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+        <View style={[styles.header, { paddingTop: headerPaddingTop + 8 }]}>
           <View>
             <Text style={styles.title}>Interview Coach</Text>
             <Text style={styles.subtitle}>Live AI mock interviews · 11 tracks</Text>

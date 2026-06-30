@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -83,6 +84,7 @@ function todayWeekIndex(): number {
 export default function SpeakingPracticeScreen() {
   const navigation = useNavigation<Nav>();
   const tabBarHeight = useBottomTabBarHeight();
+  const { headerPaddingTop } = useScreenInsets();
   const { user } = useAuth();
   const { recordActivity, recordSpeakingScore, stats } = useProgress();
   const gam = useGamification();
@@ -229,8 +231,8 @@ export default function SpeakingPracticeScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
-      <SafeAreaView style={{ flex: 1 }} edges={['top']}>
-        <ScrollView contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+      <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+        <ScrollView contentContainerStyle={{ paddingBottom: tabBarHeight + 140, paddingTop: headerPaddingTop }} showsVerticalScrollIndicator={false}>
           {/* ============ HEADER ============ */}
           <View style={styles.header}>
             <View>
