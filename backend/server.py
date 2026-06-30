@@ -94,13 +94,21 @@ FIX_FILES = {
 
 @api_router.get("/fix-files/{name}", response_class=PlainTextResponse)
 async def get_fix_file(name: str):
-    """Serve a whitelisted SpeakMate source file as plain UTF-8 text."""
+    """Serve a whitelisted SpeakMate source file as plain UTF-8 text.
+
+    PowerShell files get a UTF-8 BOM so Windows PowerShell 5.1 parses them
+    correctly (otherwise non-ASCII chars get mis-read as Windows-1252).
+    """
     path = FIX_FILES.get(name)
     if path is None:
         raise HTTPException(status_code=404, detail=f"Unknown fix file: {name}")
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"File missing on server: {name}")
-    return path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    if name.endswith(".ps1"):
+        # Prepend UTF-8 BOM so Windows PowerShell 5.1 reads the file as UTF-8.
+        text = "\ufeff" + text
+    return text
 
 
 @api_router.get("/fix-files")
