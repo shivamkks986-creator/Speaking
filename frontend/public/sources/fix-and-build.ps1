@@ -39,12 +39,12 @@ foreach ($f in $files) {
     }
 }
 
-# ===== Step 2: Bump version to 1.0.1 + versionCode to 2 =====
+# ===== Step 2: Bump version to 1.0.2 + versionCode to 3 =====
 Write-Host ""
-Write-Host "[2/7] Bumping version to 1.0.1 (versionCode 2)..." -ForegroundColor Yellow
+Write-Host "[2/7] Bumping version to 1.0.2 (versionCode 3)..." -ForegroundColor Yellow
 $appJson = Get-Content app.json -Raw
-$appJson = $appJson -replace '"version":\s*"1\.0\.0"', '"version": "1.0.1"'
-$appJson = $appJson -replace '"versionCode":\s*1\s*,', '"versionCode": 2,'
+$appJson = $appJson -replace '"version":\s*"1\.0\.[01]"', '"version": "1.0.2"'
+$appJson = $appJson -replace '"versionCode":\s*[12]\s*,', '"versionCode": 3,'
 Set-Content app.json -Value $appJson -NoNewline
 Get-Content app.json | Select-String "version|versionCode" | Select-Object -First 2
 

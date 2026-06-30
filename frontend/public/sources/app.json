@@ -2,7 +2,7 @@
   "expo": {
     "name": "SpeakMate AI",
     "slug": "speakmate-ai",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
@@ -43,7 +43,7 @@
         "backgroundColor": "#0A0418"
       },
       "package": "com.speakmate.ai",
-      "versionCode": 2,
+      "versionCode": 3,
       "jsEngine": "hermes",
       "googleServicesFile": "./google-services.json",
       "permissions": [
