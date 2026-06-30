@@ -149,24 +149,55 @@ Write-Step "Patching app/build.gradle (lintOptions + release signing)"
 $appGradle = "android\app\build.gradle"
 $content = Get-Content $appGradle -Raw
 
+# 7a. Add lintOptions block if missing (Expo prebuild often already has `lint { ... }`)
 if ($content -notmatch "lintOptions" -and $content -notmatch "lint\s*\{") {
     $content = $content -replace '(android\s*\{[^\n]*\n)', "`$1    lintOptions { abortOnError false; checkReleaseBuilds false }`r`n"
     Write-Ok "lintOptions block added"
 }
 
+# 7b. Wire release keystore (only if .jks present)
 if (Test-Path "speakmateai-release.jks") {
     if ($content -notmatch "keystorePropertiesFile") {
-        $signingSnippet = "`r`n    def keystorePropertiesFile = rootProject.file('keystore.properties')`r`n"
-        $signingSnippet += "    def keystoreProperties = new Properties()`r`n"
-        $signingSnippet += "    if (keystorePropertiesFile.exists()) {`r`n"
-        $signingSnippet += "        keystoreProperties.load(new FileInputStream(keystorePropertiesFile))`r`n"
-        $signingSnippet += "    }`r`n"
 
-        $content = $content -replace '(android\s*\{[^\n]*\n[^\n]*lintOptions[^\n]*\n)', "`$1$signingSnippet`r`n"
-        $releaseBlock = "`$1`r`n        release {`r`n            if (keystorePropertiesFile.exists()) {`r`n                storeFile file(keystoreProperties['storeFile'])`r`n                storePassword keystoreProperties['storePassword']`r`n                keyAlias keystoreProperties['keyAlias']`r`n                keyPassword keystoreProperties['keyPassword']`r`n            }`r`n        }`r`n    "
-        $content = $content -replace '(signingConfigs\s*\{[^}]*debug\s*\{[^}]+\}\s*)', $releaseBlock
-        $content = $content -replace 'signingConfig signingConfigs\.debug(\s*\n[^}]*proguardFiles)', 'signingConfig signingConfigs.release$1'
-        Write-Ok "Release signing config wired"
+        # ---- STEP A: Prepend keystore loader at the VERY TOP of build.gradle ----
+        # This puts the Properties variable in script-global scope so the release {}
+        # block inside signingConfigs can read it.
+        $loader = "def keystorePropertiesFile = rootProject.file('keystore.properties')`r`n"
+        $loader += "def keystoreProperties = new Properties()`r`n"
+        $loader += "if (keystorePropertiesFile.exists()) {`r`n"
+        $loader += "    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))`r`n"
+        $loader += "}`r`n`r`n"
+        $content = $loader + $content
+
+        # ---- STEP B: Insert release {} block inside signingConfigs { debug { ... } } ----
+        # Match the entire debug { ... } block (it ends with `keyPassword 'android'` then `}`)
+        # and inject the release block immediately AFTER it (still inside signingConfigs).
+        $releaseSigning = @'
+
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+'@
+        # The regex matches the debug block's closing brace. We append the release block right after it.
+        # (?ms) = multiline + dotall. \r?\n handles both CRLF/LF.
+        $debugBlockPattern = "(?ms)(signingConfigs\s*\{\s*debug\s*\{[^}]+keyPassword\s+'android'\s*\r?\n\s*\})"
+        if ($content -match $debugBlockPattern) {
+            $content = $content -replace $debugBlockPattern, "`$1$releaseSigning"
+            Write-Ok "Release signing block inserted into signingConfigs"
+        } else {
+            Write-Warn "Could not find debug signing block - release block NOT inserted (manual fix needed)"
+        }
+
+        # ---- STEP C: Change release buildType to use signingConfigs.release ----
+        # Match ONLY the signingConfig line inside the release {} buildType (not debug)
+        $content = $content -replace "(release\s*\{[^}]*signingConfig\s+signingConfigs\.)debug", '$1release'
+        Write-Ok "Release buildType now uses signingConfigs.release"
+
     } else {
         Write-Ok "Release signing already wired"
     }
