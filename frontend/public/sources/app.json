@@ -1,0 +1,101 @@
+{
+  "expo": {
+    "name": "SpeakMate AI",
+    "slug": "speakmate-ai",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "scheme": "speakmate",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 5000,
+      "url": "https://u.expo.dev/fbee2ef0-7075-4006-af0b-791f69d23f93"
+    },
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0A0418"
+    },
+    "androidStatusBar": {
+      "translucent": true,
+      "barStyle": "light-content",
+      "backgroundColor": "#00000000"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.speakmate.ai",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "SpeakMate AI needs microphone access for speaking practice and AI conversations."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0A0418"
+      },
+      "package": "com.speakmate.ai",
+      "versionCode": 2,
+      "jsEngine": "hermes",
+      "googleServicesFile": "./google-services.json",
+      "permissions": [
+        "RECORD_AUDIO",
+        "MODIFY_AUDIO_SETTINGS",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "WAKE_LOCK"
+      ]
+    },
+    "plugins": [
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-av",
+        {
+          "microphonePermission": "Allow SpeakMate AI to access your microphone for speaking practice and AI voice conversations."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#7C5CFF"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
+            "buildToolsVersion": "36.0.0",
+            "gradleVersion": "8.13",
+            "enableProguardInReleaseBuilds": false,
+            "enableShrinkResourcesInReleaseBuilds": false,
+            "newArchEnabled": false
+          },
+          "ios": {
+            "deploymentTarget": "15.1",
+            "newArchEnabled": false
+          }
+        }
+      ],
+      "expo-web-browser",
+      "./plugins/withAndroidBuildFixes"
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "fbee2ef0-7075-4006-af0b-791f69d23f93"
+      }
+    }
+  }
+}
