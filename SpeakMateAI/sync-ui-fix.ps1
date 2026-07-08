@@ -23,6 +23,7 @@ $CloudBase = "https://gift-hub-sync.preview.emergentagent.com/api/fix-files"
 
 # All 13 UI-fix files
 $Files = @(
+    @{ Url = "$CloudBase/app.json";                   Dest = "app.json" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
@@ -46,7 +47,7 @@ if (-not (Test-Path "package.json")) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host ""
-Write-Host "==> Downloading 13 UI-fix files from cloud" -ForegroundColor Cyan
+Write-Host "==> Downloading 14 UI-fix files (incl. app.json) from cloud" -ForegroundColor Cyan
 $downloaded = 0
 foreach ($f in $Files) {
     $destDir = Split-Path -Parent $f.Dest
@@ -67,7 +68,7 @@ foreach ($f in $Files) {
 Write-Host ""
 if ($downloaded -eq $Files.Count) {
     Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "  ALL 13 UI-FIX FILES SYNCED SUCCESSFULLY" -ForegroundColor Green
+    Write-Host "  ALL 14 FILES SYNCED (incl. app.json v1.0.4 versionCode 5)" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
 } else {
     Write-Host "[WARN] Only $downloaded / $($Files.Count) files downloaded" -ForegroundColor Yellow
@@ -76,9 +77,7 @@ if ($downloaded -eq $Files.Count) {
 Write-Host ""
 Write-Host "  NEXT STEPS (in Android Studio):" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. IMPORTANT: Bump versionCode first" -ForegroundColor White
-Write-Host "     Open app.json  ->  android.versionCode : 4  (was 3)" -ForegroundColor White
-Write-Host "     Also update version: '1.0.3' (was '1.0.2')" -ForegroundColor White
+Write-Host "  1. app.json ALREADY updated to version 1.0.4 / versionCode 5" -ForegroundColor Green
 Write-Host ""
 Write-Host "  2. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
 Write-Host ""
