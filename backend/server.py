@@ -83,12 +83,21 @@ api_router.include_router(system_router)
 # ---------------------------------------------------------------------------
 SPEAKMATE_ROOT = Path("/app/SpeakMateAI")
 FIX_FILES = {
-    "useScreenInsets.ts":      SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
-    "ScreenContainer.tsx":     SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
+    "useScreenInsets.ts":         SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
+    "ScreenContainer.tsx":        SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
+    "HomeScreen.tsx":             SPEAKMATE_ROOT / "src/screens/home/HomeScreen.tsx",
+    "AITutorScreen.tsx":          SPEAKMATE_ROOT / "src/screens/tutor/AITutorScreen.tsx",
     "SpeakingPracticeScreen.tsx": SPEAKMATE_ROOT / "src/screens/speaking/SpeakingPracticeScreen.tsx",
     "InterviewCoachScreen.tsx":   SPEAKMATE_ROOT / "src/screens/interview/InterviewCoachScreen.tsx",
     "PremiumScreen.tsx":          SPEAKMATE_ROOT / "src/screens/premium/PremiumScreen.tsx",
+    "ResumeUploadScreen.tsx":     SPEAKMATE_ROOT / "src/screens/resume/ResumeUploadScreen.tsx",
+    "ResumeInterviewScreen.tsx":  SPEAKMATE_ROOT / "src/screens/resume/ResumeInterviewScreen.tsx",
+    "RoadmapScreen.tsx":          SPEAKMATE_ROOT / "src/screens/roadmap/RoadmapScreen.tsx",
+    "CompanionsScreen.tsx":       SPEAKMATE_ROOT / "src/screens/companions/CompanionsScreen.tsx",
+    "TmayTrainerScreen.tsx":      SPEAKMATE_ROOT / "src/screens/tmay/TmayTrainerScreen.tsx",
+    "FlashcardsScreen.tsx":       SPEAKMATE_ROOT / "src/screens/vocabulary/FlashcardsScreen.tsx",
     "fix-overlap-and-build.ps1":  SPEAKMATE_ROOT / "fix-overlap-and-build.ps1",
+    "push-ota-update.ps1":        SPEAKMATE_ROOT / "push-ota-update.ps1",
 }
 
 

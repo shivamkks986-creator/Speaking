@@ -15,7 +15,7 @@ import {
 import { Text } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as DocumentPicker from 'expo-document-picker';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +24,7 @@ import { RootStackParamList } from '@/navigation/types';
 import { aiService, QuotaExceededError } from '@/services/aiService';
 import { ParsedResume, ResumeInterviewQuestionSet } from '@/types';
 import { radius, spacing } from '@/config/theme';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -31,7 +32,7 @@ const MAX_MB = 5;
 
 export default function ResumeUploadScreen() {
   const navigation = useNavigation<Nav>();
-  const insets = useSafeAreaInsets();
+  const { headerPaddingTop } = useScreenInsets();
 
   const [parsing, setParsing] = useState(false);
   const [generatingQs, setGeneratingQs] = useState(false);
@@ -103,7 +104,7 @@ export default function ResumeUploadScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           {/* Header */}
-          <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 64) + 24 }]}>
+          <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
             <Pressable onPress={() => navigation.goBack()} style={styles.iconBtn} testID="resume-back-btn">
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>

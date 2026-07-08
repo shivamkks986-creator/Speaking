@@ -3,7 +3,8 @@ import { View, StyleSheet, ScrollView, Pressable , Platform, StatusBar } from 'r
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Text } from 'react-native-paper';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
@@ -20,13 +21,13 @@ export default function CompanionsScreen() {
   const { companions, companion: selected, selectCompanion } = useCompanion();
   const { user } = useAuth();
   const navigation = useNavigation<Nav>();
-  const insets = useSafeAreaInsets();
+  const { headerPaddingTop } = useScreenInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 64) + 24 }]}>
+        <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
           <Pressable onPress={() => navigation.goBack()} style={styles.backBtn} testID="companions-back-btn">
             <Ionicons name="chevron-back" size={22} color="#F2EEFF" />
           </Pressable>

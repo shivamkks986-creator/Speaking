@@ -16,11 +16,11 @@ import {
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
 import * as Clipboard from 'expo-clipboard';
 import FadeInView from '@/components/common/FadeInView';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 
 import { ChatMessage } from '@/types';
 import { aiService, QuotaExceededError } from '@/services/aiService';
@@ -35,10 +35,8 @@ import { radius, spacing } from '@/config/theme';
 
 export default function AITutorScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
-  // AITutorScreen lives inside MainTabNavigator, so the bottom tab bar overlays it.
-  // We add this height as bottom padding to the input bar so nothing is hidden.
-  const tabBarHeight = useBottomTabBarHeight();
+  // Single source of truth for safe-area on ALL device types (flat, curved, punch-hole, notch)
+  const { headerPaddingTop, tabBarHeight } = useScreenInsets();
   const { recordActivity } = useProgress();
   const { companion } = useCompanion();
   const { awardAction } = useGamification();
@@ -126,7 +124,7 @@ export default function AITutorScreen() {
       <LinearGradient colors={['#0A0418', '#150828', '#1F0E3D']} style={StyleSheet.absoluteFillObject} />
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         {/* Header */}
-        <View style={[styles.header, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 64) + 24 }]}>
+        <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
           <Pressable onPress={() => navigation.navigate('Companions' as never)} style={{ flexDirection: 'row', alignItems: 'center' }} testID="tutor-switch-companion-btn">
             <CompanionAvatar companion={companion} size={40} />
             <View style={{ marginLeft: spacing.md }}>

@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo } from 'react';
-import { View, StyleSheet, ScrollView, Pressable, StatusBar } from 'react-native';
+import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { Text, useTheme, Avatar } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import FadeInView from '@/components/common/FadeInView';
+import { useScreenInsets } from '@/hooks/useScreenInsets';
 
 import { RootStackParamList } from '@/navigation/types';
 import { useAuth } from '@/contexts/AuthContext';
@@ -31,8 +31,7 @@ export default function HomeScreen() {
   const { state: gam, level } = useGamification();
   const { companion } = useCompanion();
   const { claimDailyLogin } = useGamification();
-  const insets = useSafeAreaInsets();
-  const tabBarHeight = useBottomTabBarHeight();
+  const { headerPaddingTop, tabBarHeight, bottomPad } = useScreenInsets();
 
   useEffect(() => {
     // attempt daily login reward on mount
@@ -68,10 +67,10 @@ export default function HomeScreen() {
       <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: tabBarHeight + 32, paddingHorizontal: spacing.lg }}
+          contentContainerStyle={{ paddingBottom: bottomPad + 8, paddingHorizontal: spacing.lg }}
         >
           {/* Top bar */}
-          <View style={[styles.topBar, { paddingTop: Math.max(insets.top, StatusBar.currentHeight ?? 0, 64) + 16 }]}>
+          <View style={[styles.topBar, { paddingTop: headerPaddingTop }]}>
             <View style={{ flex: 1, paddingRight: 12 }}>
               <Text style={styles.dim}>{dynamicGreeting.greeting}</Text>
               <Text style={styles.userName}>{firstName} {dynamicGreeting.emoji}</Text>
