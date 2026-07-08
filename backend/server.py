@@ -84,6 +84,7 @@ api_router.include_router(system_router)
 SPEAKMATE_ROOT = Path("/app/SpeakMateAI")
 FIX_FILES = {
     "app.json":                   SPEAKMATE_ROOT / "app.json",
+    "withAndroidBuildFixes.js":   SPEAKMATE_ROOT / "plugins/withAndroidBuildFixes.js",
     "useScreenInsets.ts":         SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
     "ScreenContainer.tsx":        SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
     "HomeScreen.tsx":             SPEAKMATE_ROOT / "src/screens/home/HomeScreen.tsx",

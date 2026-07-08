@@ -21,9 +21,10 @@ $ErrorActionPreference = "Stop"
 
 $CloudBase = "https://gift-hub-sync.preview.emergentagent.com/api/fix-files"
 
-# All 13 UI-fix files
+# All UI-fix files (15 total: app.json + native plugin + hook + 12 screens)
 $Files = @(
     @{ Url = "$CloudBase/app.json";                   Dest = "app.json" }
+    @{ Url = "$CloudBase/withAndroidBuildFixes.js";   Dest = "plugins\withAndroidBuildFixes.js" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
@@ -47,7 +48,7 @@ if (-not (Test-Path "package.json")) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host ""
-Write-Host "==> Downloading 14 UI-fix files (incl. app.json) from cloud" -ForegroundColor Cyan
+Write-Host "==> Downloading 15 UI-fix files (incl. app.json + native cutout plugin) from cloud" -ForegroundColor Cyan
 $downloaded = 0
 foreach ($f in $Files) {
     $destDir = Split-Path -Parent $f.Dest
@@ -68,27 +69,72 @@ foreach ($f in $Files) {
 Write-Host ""
 if ($downloaded -eq $Files.Count) {
     Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "  ALL 14 FILES SYNCED (incl. app.json v1.0.4 versionCode 5)" -ForegroundColor Green
+    Write-Host "  ALL 15 FILES SYNCED (incl. app.json v1.0.5 versionCode 6 + native cutout plugin)" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
 } else {
     Write-Host "[WARN] Only $downloaded / $($Files.Count) files downloaded" -ForegroundColor Yellow
 }
 
+# ============================================================================
+# BONUS STEP: Directly patch android/app/src/main/res/values/styles.xml
+# to apply the universal cutout fix WITHOUT running expo prebuild.
+# This is the NATIVE guarantee that no content will draw under camera cutout
+# or curved-edge on ANY device.
+# ============================================================================
+$stylesXml = "android\app\src\main\res\values\styles.xml"
+if (Test-Path $stylesXml) {
+    Write-Host ""
+    Write-Host "==> Patching native styles.xml for universal cutout fix" -ForegroundColor Cyan
+    $content = Get-Content $stylesXml -Raw
+
+    # Attributes we need INSIDE the AppTheme style tag
+    $cutoutAttr    = '<item name="android:windowLayoutInDisplayCutoutMode">never</item>'
+    $translucent   = '<item name="android:windowTranslucentStatus">false</item>'
+    $navTranslucent= '<item name="android:windowTranslucentNavigation">false</item>'
+
+    $patched = $false
+
+    # 1) Remove any existing occurrences to prevent duplicates
+    foreach ($old in @($cutoutAttr, $translucent, $navTranslucent)) {
+        if ($content -match [regex]::Escape($old)) {
+            $content = $content -replace [regex]::Escape($old), ""
+        }
+    }
+
+    # 2) Inject fresh copies right before the AppTheme's closing </style>
+    if ($content -match '(<style name="AppTheme"[^>]*>)') {
+        $injectionBlock = "`r`n    " + $cutoutAttr + "`r`n    " + $translucent + "`r`n    " + $navTranslucent
+        $content = $content -replace '(<style name="AppTheme"[^>]*>)', ('$1' + $injectionBlock)
+        Set-Content $stylesXml -Value $content -Encoding UTF8 -NoNewline
+        Write-Host "    [OK] styles.xml patched with cutout+opaque status/nav bar" -ForegroundColor Green
+        $patched = $true
+    }
+
+    if (-not $patched) {
+        Write-Host "    [WARN] AppTheme not found in styles.xml - skipping native patch" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host ""
+    Write-Host "[WARN] styles.xml not found - run 'expo prebuild --clean' first, or Android Studio will complain" -ForegroundColor Yellow
+    Write-Host "        Native cutout fix will still apply next time you rebuild via prebuild." -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "  NEXT STEPS (in Android Studio):" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. app.json ALREADY updated to version 1.0.4 / versionCode 5" -ForegroundColor Green
+Write-Host "  1. app.json ALREADY updated to version 1.0.5 / versionCode 6" -ForegroundColor Green
+Write-Host "  2. Native styles.xml patched for universal cutout fix (all devices)" -ForegroundColor Green
 Write-Host ""
-Write-Host "  2. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
+Write-Host "  3. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
 Write-Host ""
-Write-Host "  3. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
+Write-Host "  4. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
 Write-Host "     -> Choose speakmateai-release.jks" -ForegroundColor White
 Write-Host "     -> Enter keystore password" -ForegroundColor White
 Write-Host "     -> Variant: release" -ForegroundColor White
 Write-Host "     -> Click Create" -ForegroundColor White
 Write-Host ""
-Write-Host "  4. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
+Write-Host "  5. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
 Write-Host ""
-Write-Host "  5. Upload to Play Console:" -ForegroundColor White
+Write-Host "  6. Upload to Play Console:" -ForegroundColor White
 Write-Host "     Internal testing  ->  Create new release  ->  Upload AAB" -ForegroundColor White
 Write-Host ""
