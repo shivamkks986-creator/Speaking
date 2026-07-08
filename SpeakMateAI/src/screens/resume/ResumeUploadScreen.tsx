@@ -109,7 +109,7 @@ export default function ResumeUploadScreen() {
               <Ionicons name="chevron-back" size={20} color="#F2EEFF" />
             </Pressable>
             <View style={{ flex: 1, marginLeft: spacing.md }}>
-              <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>Resume → Custom Interview</Text>
+              <Text style={styles.title} numberOfLines={1}>Resume → Custom Interview</Text>
               <Text style={styles.subtitle} numberOfLines={2}>AI parses your PDF · generates personalised questions</Text>
             </View>
           </View>
@@ -305,7 +305,7 @@ function diffColor(diff: string) {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.md },
   iconBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' },
-  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', marginBottom: 4 },
+  title: { color: '#F2EEFF', fontSize: 18, fontWeight: '800', marginBottom: 4, lineHeight: 26, includeFontPadding: true },
   subtitle: { color: '#A992FF', fontSize: 12, fontWeight: '700', marginTop: 4, lineHeight: 16 },
 
   errorBox: { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: spacing.lg, marginTop: spacing.sm, padding: spacing.sm, borderRadius: radius.md, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' },
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
 
   uploadCard: { marginHorizontal: spacing.lg, marginTop: spacing.xl, borderRadius: radius.xl, overflow: 'hidden' },
   uploadInner: { alignItems: 'center', padding: spacing.xl, gap: 8 },
-  uploadTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 4 },
+  uploadTitle: { color: '#FFFFFF', fontSize: 16, fontWeight: '800', marginTop: 4, lineHeight: 24, includeFontPadding: true },
   uploadSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, textAlign: 'center' },
 
   section: { paddingHorizontal: spacing.lg, marginTop: spacing.xl },
