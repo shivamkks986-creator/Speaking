@@ -98,6 +98,7 @@ FIX_FILES = {
     "FlashcardsScreen.tsx":       SPEAKMATE_ROOT / "src/screens/vocabulary/FlashcardsScreen.tsx",
     "fix-overlap-and-build.ps1":  SPEAKMATE_ROOT / "fix-overlap-and-build.ps1",
     "push-ota-update.ps1":        SPEAKMATE_ROOT / "push-ota-update.ps1",
+    "sync-ui-fix.ps1":            SPEAKMATE_ROOT / "sync-ui-fix.ps1",
 }
 
 
