@@ -1,5 +1,5 @@
 # =============================================================================
-# SpeakMate AI - Sync UI Fix Files from Cloud (NO gradle patching, NO build)
+# SpeakMate AI - Sync UI Fix Files from Cloud (auto-patches build.gradle + styles.xml)
 # =============================================================================
 # Yeh script SIRF UI-fix files download karega. Iske baad aap Android Studio
 # se AAB build karke Play Store upload kar sakte ho - jaisa pichli baar kiya.
@@ -14,7 +14,7 @@
 #   4. Build variant: release
 #   5. AAB milega: android\app\release\app-release.aab
 #   6. Upload to Play Console -> Internal testing -> Create new release
-#      (BUMP versionCode in app.json to 4 before build!)
+#      (versionCode + versionName auto-synced from app.json into build.gradle)
 # =============================================================================
 
 $ErrorActionPreference = "Stop"
@@ -71,7 +71,7 @@ foreach ($f in $Files) {
 Write-Host ""
 if ($downloaded -eq $Files.Count) {
     Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "  ALL 15 FILES SYNCED (incl. app.json v1.0.5 versionCode 6 + native cutout plugin)" -ForegroundColor Green
+    Write-Host "  ALL FILES SYNCED (incl. app.json v1.0.7 versionCode 8 + native cutout plugin)" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
 } else {
     Write-Host "[WARN] Only $downloaded / $($Files.Count) files downloaded" -ForegroundColor Yellow
