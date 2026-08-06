@@ -638,7 +638,7 @@ class InterviewEvalResponse(BaseModel):
 
 @router.post("/interview/evaluate", response_model=InterviewEvalResponse)
 async def interview_evaluate(req: InterviewEvalRequest) -> InterviewEvalResponse:
-    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_EVAL_SYSTEM, "openai", "gpt-5.2")
+    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_EVAL_SYSTEM, "gemini", "gemini-3-flash-preview")
     prompt = (
         f"Track: {req.track or 'general'}\n"
         f"Question: {req.question}\n"
@@ -680,7 +680,7 @@ class InterviewFollowUpResponse(BaseModel):
 
 @router.post("/interview/followup", response_model=InterviewFollowUpResponse)
 async def interview_followup(req: InterviewFollowUpRequest) -> InterviewFollowUpResponse:
-    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_FOLLOWUP_SYSTEM, "openai", "gpt-5.2")
+    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_FOLLOWUP_SYSTEM, "gemini", "gemini-3-flash-preview")
     prompt = f"Track: {req.track or 'general'}\nCandidate said: \"{req.previous_answer}\"\nAsk your follow-up."
     raw = await chat.send_message(UserMessage(text=prompt))
     question = raw.strip().strip('"').strip()
@@ -717,7 +717,7 @@ class InterviewSessionResponse(BaseModel):
 
 @router.post("/interview/score-session", response_model=InterviewSessionResponse)
 async def interview_score_session(req: InterviewSessionRequest) -> InterviewSessionResponse:
-    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_SESSION_SYSTEM, "openai", "gpt-5.2")
+    chat = _new_chat(str(uuid.uuid4()), INTERVIEW_SESSION_SYSTEM, "gemini", "gemini-3-flash-preview")
     qa_text = "\n\n".join(
         f"Q{i+1}: {a.question}\nA{i+1}: {a.answer}\n(Score so far: {a.score})"
         for i, a in enumerate(req.answers)
@@ -958,7 +958,7 @@ async def interview_live(
         "advanced": "Difficulty: ADVANCED. Ask tough, probing questions including unexpected follow-ups. Be strict with scores (typically 40-80). Demand specificity.",
     }.get((req.difficulty or "intermediate").lower(), "")
     sys_msg = f"{sys_msg}\n\n{difficulty_note}"
-    chat = _new_chat(str(uuid.uuid4()), sys_msg, "openai", "gpt-5.2")
+    chat = _new_chat(str(uuid.uuid4()), sys_msg, "gemini", "gemini-3-flash-preview")
 
     # Build prompt with full conversation context
     qa_log = "\n".join(
@@ -1334,7 +1334,7 @@ async def resume_parse(
 
     # Truncate for LLM — most resumes fit easily under 12k chars
     snippet = raw_text[:12000]
-    chat = _new_chat(str(uuid.uuid4()), RESUME_PARSE_SYSTEM, "anthropic", "claude-sonnet-4-6")
+    chat = _new_chat(str(uuid.uuid4()), RESUME_PARSE_SYSTEM, "anthropic", "claude-haiku-4-5")
     prompt = f"Raw resume text:\n\"\"\"\n{snippet}\n\"\"\"\n\nNow return the structured JSON."
     raw = await chat.send_message(UserMessage(text=prompt))
     await _record("resume_parse", uid=x_user_id)
@@ -1444,7 +1444,7 @@ async def resume_interview_questions(
     is_premium = _is_premium_hdr(x_is_premium)
     await _guard("resume_interview_questions", uid=x_user_id, is_premium=is_premium)
     target = req.role_target or req.resume.role_target or "general fresher role"
-    chat = _new_chat(str(uuid.uuid4()), RESUME_QUESTIONS_SYSTEM, "anthropic", "claude-sonnet-4-6")
+    chat = _new_chat(str(uuid.uuid4()), RESUME_QUESTIONS_SYSTEM, "anthropic", "claude-haiku-4-5")
     resume_json = req.resume.model_dump_json(exclude={"raw_text_excerpt"})
     prompt = (
         f"Target role: {target}\nDifficulty: {req.difficulty or 'intermediate'}\n\n"
