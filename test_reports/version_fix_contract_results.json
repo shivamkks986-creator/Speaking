@@ -1,0 +1,60 @@
+{
+  "base_url": "https://gift-hub-sync.preview.emergentagent.com/api/fix-files",
+  "all_passed": true,
+  "checks": [
+    {
+      "name": "app.json HTTP 200",
+      "passed": true,
+      "detail": "status=200 error=None"
+    },
+    {
+      "name": "app.json parses as JSON",
+      "passed": true,
+      "detail": "parsed"
+    },
+    {
+      "name": "expo.version is 1.0.7",
+      "passed": true,
+      "detail": "expo.version='1.0.7'"
+    },
+    {
+      "name": "expo.android.versionCode is 8",
+      "passed": true,
+      "detail": "expo.android.versionCode=8"
+    },
+    {
+      "name": "sync-ui-fix.ps1 HTTP 200",
+      "passed": true,
+      "detail": "status=200 error=None"
+    },
+    {
+      "name": "sync-ui-fix.ps1 has build.gradle sync banner",
+      "passed": true,
+      "detail": "required banner string present"
+    },
+    {
+      "name": "sync-ui-fix.ps1 has versionCode regex patch",
+      "passed": true,
+      "detail": "found regex substring for versionCode"
+    },
+    {
+      "name": "sync-ui-fix.ps1 has versionName regex patch",
+      "passed": true,
+      "detail": "found regex substring for versionName"
+    },
+    {
+      "name": "sync-ui-fix.ps1 ASCII after optional UTF-8 BOM stripped",
+      "passed": true,
+      "detail": "non_ascii_byte_count=0 bom_present=True"
+    }
+  ],
+  "observed": {
+    "app_status": 200,
+    "app_expo_version": "1.0.7",
+    "app_android_versionCode": 8,
+    "ps1_status": 200,
+    "ps1_bom_present": true,
+    "ps1_non_ascii_after_bom_count": 0,
+    "ps1_length_bytes": 10011
+  }
+}

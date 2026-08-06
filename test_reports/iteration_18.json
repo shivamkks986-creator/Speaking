@@ -1,0 +1,44 @@
+{
+  "verdict": "fixed",
+  "user_reported_bug": "version code change krne k bd bhi same version code aa rha hai version code 8 krna hai version 1.0.7",
+  "summary": "No relevant testing skill found. Focused backend/cloud contract verification passed: cloud-served app.json is version 1.0.7 with android.versionCode 8, and cloud-served sync-ui-fix.ps1 contains the build.gradle versionCode/versionName sync patch logic and is ASCII after stripping the UTF-8 BOM. Non-blocking stale script text still mentions older versions but does not affect the actual version patch.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {
+        "endpoint": "/api/fix-files/sync-ui-fix.ps1",
+        "issue": "Non-blocking stale informational text remains in the script: header says NO gradle patching, one comment says BUMP versionCode to 4, and an ALL FILES SYNCED banner mentions app.json v1.0.5/versionCode 6. Later runtime next-steps and patch logic correctly use 1.0.7/versionCode 8."
+      }
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/test_version_fix_contract.py",
+    "/app/test_reports/version_fix_contract_results.json",
+    "/app/test_reports/bug_verification_18.json",
+    "/app/test_reports/iteration_18.json"
+  ],
+  "action_items": [
+    "Optional cleanup: update stale sync-ui-fix.ps1 informational/comment strings so all user-visible text consistently says version 1.0.7 / versionCode 8."
+  ],
+  "critical_code_review_comments": [],
+  "updated_files": [
+    "/app/test_reports/test_version_fix_contract.py",
+    "/app/test_reports/version_fix_contract_results.json",
+    "/app/test_reports/bug_verification_18.json",
+    "/app/test_reports/iteration_18.json"
+  ],
+  "success_rate": {
+    "backend": "100%",
+    "frontend": "N/A"
+  },
+  "seed_data_creation": "No seed data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Focused test only covered the user-reported Android versionCode/versionName cloud fix-files flow. Verified GET https://gift-hub-sync.preview.emergentagent.com/api/fix-files/app.json and /sync-ui-fix.ps1. Did not run the PowerShell script or build an AAB because this Linux environment cannot run the user's Windows/Android Studio flow and the request explicitly said not to run the script. Note: sync-ui-fix.ps1 still has non-blocking stale informational text mentioning older versions, but functional version sync checks passed.",
+  "rca_of_the_issue": "Root cause was app.json version changes alone did not affect Android Studio builds because android/app/build.gradle can retain hardcoded versionCode/versionName. The served sync-ui-fix.ps1 now reads app.json and regex-replaces versionCode and versionName in android/app/build.gradle before the user builds. Test evidence: app.json HTTP 200 with expo.version=1.0.7 and expo.android.versionCode=8; sync-ui-fix.ps1 HTTP 200 with build.gradle sync banner, versionCode regex substring, versionName regex substring, and 0 non-ASCII bytes after optional BOM stripped. MOCKED APIs: none."
+}

@@ -121,22 +121,60 @@ if (Test-Path $stylesXml) {
     Write-Host "        Native cutout fix will still apply next time you rebuild via prebuild." -ForegroundColor Yellow
 }
 
+# ============================================================================
+# CRITICAL: Patch android/app/build.gradle to sync versionCode + versionName
+# from app.json. Android Studio uses build.gradle DIRECTLY (not app.json), so
+# without this step versionCode changes made in app.json are ignored.
+# ============================================================================
+$appGradle = "android\app\build.gradle"
+if (Test-Path $appGradle) {
+    Write-Host ""
+    Write-Host "==> Syncing versionCode + versionName from app.json into build.gradle" -ForegroundColor Cyan
+    try {
+        $appJson = Get-Content "app.json" -Raw | ConvertFrom-Json
+        $newVersionCode = [int]$appJson.expo.android.versionCode
+        $newVersionName = [string]$appJson.expo.version
+        Write-Host "    Target: versionCode $newVersionCode / versionName $newVersionName" -ForegroundColor White
+
+        $gradleContent = Get-Content $appGradle -Raw
+        # Replace versionCode line (e.g. `versionCode 1` -> `versionCode 8`)
+        $gradleContent = $gradleContent -replace '(versionCode\s+)\d+', ('${1}' + $newVersionCode)
+        # Replace versionName line (e.g. `versionName "1.0.0"` -> `versionName "1.0.7"`)
+        $gradleContent = $gradleContent -replace '(versionName\s+")[^"]+(")', ('${1}' + $newVersionName + '${2}')
+        Set-Content $appGradle -Value $gradleContent -NoNewline
+
+        # Verify
+        $verify = Get-Content $appGradle -Raw
+        if ($verify -match "versionCode\s+$newVersionCode" -and $verify -match "versionName `"$newVersionName`"") {
+            Write-Host "    [OK] build.gradle patched: versionCode $newVersionCode / versionName $newVersionName" -ForegroundColor Green
+        } else {
+            Write-Host "    [WARN] Patch applied but verification did not match" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host "    [ERR] Failed to patch build.gradle: $($_.Exception.Message)" -ForegroundColor Red
+    }
+} else {
+    Write-Host ""
+    Write-Host "[WARN] android/app/build.gradle not found - run 'expo prebuild' first" -ForegroundColor Yellow
+}
+
 Write-Host ""
 Write-Host "  NEXT STEPS (in Android Studio):" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. app.json ALREADY updated to version 1.0.5 / versionCode 6" -ForegroundColor Green
-Write-Host "  2. Native styles.xml patched for universal cutout fix (all devices)" -ForegroundColor Green
+Write-Host "  1. app.json ALREADY updated to version 1.0.7 / versionCode 8" -ForegroundColor Green
+Write-Host "  2. android/app/build.gradle ALSO patched to versionCode 8 / versionName 1.0.7" -ForegroundColor Green
+Write-Host "  3. Native styles.xml patched for universal cutout fix (all devices)" -ForegroundColor Green
 Write-Host ""
-Write-Host "  3. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
+Write-Host "  4. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
 Write-Host ""
-Write-Host "  4. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
+Write-Host "  5. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
 Write-Host "     -> Choose speakmateai-release.jks" -ForegroundColor White
 Write-Host "     -> Enter keystore password" -ForegroundColor White
 Write-Host "     -> Variant: release" -ForegroundColor White
 Write-Host "     -> Click Create" -ForegroundColor White
 Write-Host ""
-Write-Host "  5. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
+Write-Host "  6. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
 Write-Host ""
-Write-Host "  6. Upload to Play Console:" -ForegroundColor White
+Write-Host "  7. Upload to Play Console:" -ForegroundColor White
 Write-Host "     Internal testing  ->  Create new release  ->  Upload AAB" -ForegroundColor White
 Write-Host ""
