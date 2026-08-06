@@ -899,6 +899,7 @@ LIVE_INTERVIEW_SYSTEM = (
     '{"scores": {"communication": int, "fluency": int, "confidence": int, "grammar": int, "relevance": int, "professionalism": int}, '
     '"feedback": "1-2 sentence actionable feedback on the last answer", '
     '"filler_words": [string list of detected filler words like um/uh/like], '
+    '"strong_points": [list of 1-3 short bullets highlighting what the candidate did well], '
     '"weak_points": [list of 1-3 short bullets pointing what was weak], '
     '"better_version": "a 1-2 sentence improved version of their answer", '
     '"next_question": "the next interview question", '
@@ -933,6 +934,7 @@ class LiveInterviewResponse(BaseModel):
     scores: Optional[LiveScores] = None
     feedback: Optional[str] = None
     filler_words: List[str] = Field(default_factory=list)
+    strong_points: List[str] = Field(default_factory=list)
     weak_points: List[str] = Field(default_factory=list)
     better_version: Optional[str] = None
     next_question: str
@@ -1000,6 +1002,7 @@ async def interview_live(
         scores=scores_model,
         feedback=str(data.get("feedback") or "").strip() or None,
         filler_words=[str(w) for w in (data.get("filler_words") or [])][:6],
+        strong_points=[str(w) for w in (data.get("strong_points") or [])][:3],
         weak_points=[str(w) for w in (data.get("weak_points") or [])][:3],
         better_version=str(data.get("better_version") or "").strip() or None,
         next_question=str(data.get("next_question") or "Tell me about yourself.").strip(),

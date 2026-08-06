@@ -92,6 +92,7 @@ FIX_FILES = {
     "AITutorScreen.tsx":          SPEAKMATE_ROOT / "src/screens/tutor/AITutorScreen.tsx",
     "SpeakingPracticeScreen.tsx": SPEAKMATE_ROOT / "src/screens/speaking/SpeakingPracticeScreen.tsx",
     "InterviewCoachScreen.tsx":   SPEAKMATE_ROOT / "src/screens/interview/InterviewCoachScreen.tsx",
+    "LiveInterviewScreen.tsx":    SPEAKMATE_ROOT / "src/screens/interview/LiveInterviewScreen.tsx",
     "PremiumScreen.tsx":          SPEAKMATE_ROOT / "src/screens/premium/PremiumScreen.tsx",
     "ResumeUploadScreen.tsx":     SPEAKMATE_ROOT / "src/screens/resume/ResumeUploadScreen.tsx",
     "ResumeInterviewScreen.tsx":  SPEAKMATE_ROOT / "src/screens/resume/ResumeInterviewScreen.tsx",

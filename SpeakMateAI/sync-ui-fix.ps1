@@ -32,6 +32,7 @@ $Files = @(
     @{ Url = "$CloudBase/AITutorScreen.tsx";          Dest = "src\screens\tutor\AITutorScreen.tsx" }
     @{ Url = "$CloudBase/SpeakingPracticeScreen.tsx"; Dest = "src\screens\speaking\SpeakingPracticeScreen.tsx" }
     @{ Url = "$CloudBase/InterviewCoachScreen.tsx";   Dest = "src\screens\interview\InterviewCoachScreen.tsx" }
+    @{ Url = "$CloudBase/LiveInterviewScreen.tsx";    Dest = "src\screens\interview\LiveInterviewScreen.tsx" }
     @{ Url = "$CloudBase/PremiumScreen.tsx";          Dest = "src\screens\premium\PremiumScreen.tsx" }
     @{ Url = "$CloudBase/ResumeUploadScreen.tsx";     Dest = "src\screens\resume\ResumeUploadScreen.tsx" }
     @{ Url = "$CloudBase/ResumeInterviewScreen.tsx";  Dest = "src\screens\resume\ResumeInterviewScreen.tsx" }
@@ -49,7 +50,7 @@ if (-not (Test-Path "package.json")) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host ""
-Write-Host "==> Downloading 16 files (incl. app.json + native plugin + aiService) from cloud" -ForegroundColor Cyan
+Write-Host "==> Downloading 17 files (incl. app.json + native plugin + aiService + Live/Resume Interview) from cloud" -ForegroundColor Cyan
 $downloaded = 0
 foreach ($f in $Files) {
     $destDir = Split-Path -Parent $f.Dest

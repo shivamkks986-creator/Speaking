@@ -40,6 +40,7 @@ interface LiveResponse {
   scores: LiveScores | null;
   feedback: string | null;
   filler_words: string[];
+  strong_points: string[];
   weak_points: string[];
   better_version: string | null;
   next_question: string;
@@ -53,6 +54,7 @@ interface QA {
   scores: LiveScores;
   feedback: string;
   fillers: string[];
+  strongPoints: string[];
   weakPoints: string[];
   betterVersion: string;
 }
@@ -164,6 +166,7 @@ export default function LiveInterviewScreen() {
         scores: data.scores || { communication: 0, fluency: 0, confidence: 0, grammar: 0, relevance: 0, professionalism: 0 },
         feedback: data.feedback || '',
         fillers: data.filler_words,
+        strongPoints: data.strong_points || [],
         weakPoints: data.weak_points,
         betterVersion: data.better_version || '',
       };
@@ -273,7 +276,7 @@ export default function LiveInterviewScreen() {
         </View>
 
         {latestFeedback?.scores ? (
-          <ScrollView style={{ maxHeight: 180 }} contentContainerStyle={{ paddingHorizontal: spacing.lg }}>
+          <ScrollView style={{ maxHeight: 260 }} contentContainerStyle={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
             <Text style={styles.fbHead}>Last answer scored:</Text>
             <View style={styles.scoreGrid}>
               <MiniScore label="Comm" v={latestFeedback.scores.communication} />
@@ -288,9 +291,46 @@ export default function LiveInterviewScreen() {
                 Filler words: {latestFeedback.filler_words.map((f) => `"${f}"`).join(', ')}
               </Text>
             )}
-            {latestFeedback.feedback && (
-              <Text style={styles.fbText}>{latestFeedback.feedback}</Text>
+            {latestFeedback.feedback ? (
+              <View style={styles.fbBlock}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="bulb" size={13} color="#FACC15" />
+                  <Text style={styles.fbBlockLabel}>Overall</Text>
+                </View>
+                <Text style={styles.fbBlockBody}>{latestFeedback.feedback}</Text>
+              </View>
+            ) : null}
+            {latestFeedback.strong_points.length > 0 && (
+              <View style={styles.fbBlock}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="thumbs-up" size={13} color="#34D399" />
+                  <Text style={[styles.fbBlockLabel, { color: '#34D399' }]}>What went well</Text>
+                </View>
+                {latestFeedback.strong_points.map((s, i) => (
+                  <Text key={i} style={styles.fbBulletText}>• {s}</Text>
+                ))}
+              </View>
             )}
+            {latestFeedback.weak_points.length > 0 && (
+              <View style={styles.fbBlock}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="trending-up" size={13} color="#22D3EE" />
+                  <Text style={[styles.fbBlockLabel, { color: '#22D3EE' }]}>How to improve</Text>
+                </View>
+                {latestFeedback.weak_points.map((s, i) => (
+                  <Text key={i} style={styles.fbBulletText}>• {s}</Text>
+                ))}
+              </View>
+            )}
+            {latestFeedback.better_version ? (
+              <View style={[styles.fbBlock, { backgroundColor: 'rgba(124,92,255,0.08)', borderColor: 'rgba(124,92,255,0.25)' }]}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="sparkles" size={13} color="#A992FF" />
+                  <Text style={[styles.fbBlockLabel, { color: '#A992FF' }]}>Stronger example</Text>
+                </View>
+                <Text style={[styles.fbBlockBody, { fontStyle: 'italic' }]}>“{latestFeedback.better_version}”</Text>
+              </View>
+            ) : null}
           </ScrollView>
         ) : null}
 
@@ -337,5 +377,10 @@ const styles = StyleSheet.create({
   miniLbl: { color: 'rgba(242,238,255,0.6)', fontSize: 10, marginTop: 2 },
   fillerText: { color: '#FACC15', fontSize: 11, marginTop: 4 },
   fbText: { color: '#F2EEFF', fontSize: 12, lineHeight: 18, marginTop: 4 },
+  fbBlock: { marginTop: spacing.sm, padding: 10, borderRadius: radius.md, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  fbLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 4 },
+  fbBlockLabel: { color: '#F2EEFF', fontSize: 10, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
+  fbBlockBody: { color: '#F2EEFF', fontSize: 12, lineHeight: 17 },
+  fbBulletText: { color: '#F2EEFF', fontSize: 12, lineHeight: 17, marginTop: 2 },
   bottom: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingBottom: spacing.md, marginTop: 'auto' },
 });
