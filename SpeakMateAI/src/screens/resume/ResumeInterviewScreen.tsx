@@ -31,13 +31,16 @@ import { ResumeInterviewQuestion } from '@/types';
 import { radius, spacing } from '@/config/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-type Phase = 'reading' | 'recording' | 'transcribing' | 'evaluating' | 'done';
+type Phase = 'reading' | 'recording' | 'transcribing' | 'evaluating' | 'feedback' | 'done';
 
 interface AnswerLog {
   question: string;
   answer: string;
   score: number;
   feedback: string;
+  strengths: string[];
+  improvements: string[];
+  example: string;
 }
 
 export default function ResumeInterviewScreen() {
@@ -105,25 +108,37 @@ export default function ResumeInterviewScreen() {
     if (!ans) { setError('Type or speak an answer first'); return; }
     setError(null); setPhase('evaluating');
     try {
-      const { score, feedback } = await aiService.evaluateInterviewAnswer(
+      const evalResult = await aiService.evaluateInterviewAnswer(
         { id: `${idx}`, question: current.question, category: 'behavioural', difficulty: 'medium' },
         ans,
       );
-      const log: AnswerLog = { question: current.question, answer: ans, score, feedback };
-      const updated = [...answers, log];
-      setAnswers(updated);
-      setTranscript('');
-      if (idx + 1 >= questions.length) {
-        setPhase('done');
-      } else {
-        setIdx(idx + 1);
-        setPhase('reading');
-      }
+      const log: AnswerLog = {
+        question: current.question,
+        answer: ans,
+        score: evalResult.score,
+        feedback: evalResult.feedback,
+        strengths: evalResult.strengths,
+        improvements: evalResult.improvements,
+        example: evalResult.example,
+      };
+      setAnswers([...answers, log]);
+      setPhase('feedback'); // NEW: show inline feedback before next question
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Evaluation failed');
       setPhase('reading');
     }
-  }, [transcript, idx, current, answers, questions.length]);
+  }, [transcript, idx, current, answers]);
+
+  // Called from inline feedback screen when user taps "Next question"
+  const goToNextFromFeedback = useCallback(() => {
+    setTranscript('');
+    if (idx + 1 >= questions.length) {
+      setPhase('done');
+    } else {
+      setIdx(idx + 1);
+      setPhase('reading');
+    }
+  }, [idx, questions.length]);
 
   const skipQuestion = useCallback(() => {
     if (idx + 1 >= questions.length) {
@@ -137,7 +152,110 @@ export default function ResumeInterviewScreen() {
     ? Math.round(answers.reduce((s, a) => s + a.score, 0) / answers.length)
     : 0;
 
-  // ------- RENDER -------
+  // Latest answer log (for the inline feedback screen)
+  const lastAnswer = answers.length > 0 ? answers[answers.length - 1] : null;
+  const isLastQuestion = idx + 1 >= questions.length;
+
+  // ------- INLINE FEEDBACK SCREEN (after each answer) -------
+  if (phase === 'feedback' && lastAnswer) {
+    const scoreColor = lastAnswer.score >= 70 ? '#34D399' : lastAnswer.score >= 50 ? '#FACC15' : '#FCA5A5';
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
+        <LinearGradient colors={['#1F0E3D', '#0A0418', '#150828']} style={StyleSheet.absoluteFillObject} />
+        <SafeAreaView style={{ flex: 1 }} edges={['left', 'right']}>
+          <ScrollView contentContainerStyle={{ paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
+            <View style={[styles.header, { paddingTop: headerPaddingTop }]}>
+              <View style={styles.iconBtn}>
+                <Ionicons name="checkmark-circle" size={20} color="#34D399" />
+              </View>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text style={styles.title} numberOfLines={1}>Feedback</Text>
+                <Text style={styles.subtitle} numberOfLines={1}>Question {idx + 1} of {questions.length}</Text>
+              </View>
+            </View>
+
+            {/* Big score card */}
+            <LinearGradient
+              colors={lastAnswer.score >= 70 ? ['#34D399', '#22D3EE'] : lastAnswer.score >= 50 ? ['#FACC15', '#FF6B9D'] : ['#FCA5A5', '#F87171']}
+              start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+              style={styles.scoreCard}
+            >
+              <Text style={styles.scoreBig}>{lastAnswer.score}</Text>
+              <Text style={styles.scoreLabel}>YOUR SCORE / 100</Text>
+              <Text style={styles.scoreSub}>
+                {lastAnswer.score >= 80 ? 'Excellent!' : lastAnswer.score >= 70 ? 'Great job' : lastAnswer.score >= 50 ? 'Good effort — can improve' : 'Needs more depth'}
+              </Text>
+            </LinearGradient>
+
+            {/* Overall feedback */}
+            <View style={styles.fbBlock}>
+              <View style={styles.fbLabelRow}>
+                <Ionicons name="bulb" size={16} color="#FACC15" />
+                <Text style={styles.fbLabel}>Overall</Text>
+              </View>
+              <Text style={styles.fbBody}>{lastAnswer.feedback}</Text>
+            </View>
+
+            {/* Strengths */}
+            {lastAnswer.strengths.length > 0 && (
+              <View style={styles.fbBlock}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="thumbs-up" size={16} color="#34D399" />
+                  <Text style={[styles.fbLabel, { color: '#34D399' }]}>What went well</Text>
+                </View>
+                {lastAnswer.strengths.map((s, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Text style={[styles.bulletDot, { color: '#34D399' }]}>•</Text>
+                    <Text style={styles.bulletText}>{s}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Improvements */}
+            {lastAnswer.improvements.length > 0 && (
+              <View style={styles.fbBlock}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="trending-up" size={16} color="#22D3EE" />
+                  <Text style={[styles.fbLabel, { color: '#22D3EE' }]}>How to improve</Text>
+                </View>
+                {lastAnswer.improvements.map((s, i) => (
+                  <View key={i} style={styles.bulletRow}>
+                    <Text style={[styles.bulletDot, { color: '#22D3EE' }]}>•</Text>
+                    <Text style={styles.bulletText}>{s}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Example */}
+            {lastAnswer.example ? (
+              <View style={[styles.fbBlock, styles.exampleBlock]}>
+                <View style={styles.fbLabelRow}>
+                  <Ionicons name="sparkles" size={16} color="#A992FF" />
+                  <Text style={[styles.fbLabel, { color: '#A992FF' }]}>Stronger example</Text>
+                </View>
+                <Text style={styles.exampleText}>“{lastAnswer.example}”</Text>
+              </View>
+            ) : null}
+
+            <Pressable
+              onPress={goToNextFromFeedback}
+              style={[styles.doneBtn, { marginTop: spacing.xl }]}
+              testID="resume-int-next-feedback-btn"
+            >
+              <LinearGradient colors={['#7C5CFF', '#A992FF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.doneInner}>
+                <Ionicons name={isLastQuestion ? 'trophy' : 'arrow-forward'} size={18} color="#FFFFFF" />
+                <Text style={styles.doneText}>{isLastQuestion ? 'See final report' : 'Next question'}</Text>
+              </LinearGradient>
+            </Pressable>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  // ------- DONE SCREEN -------
   if (phase === 'done') {
     return (
       <View style={{ flex: 1, backgroundColor: '#0A0418' }}>
@@ -299,7 +417,7 @@ export default function ResumeInterviewScreen() {
                 ) : (
                   <>
                     <Ionicons name="send" size={14} color="#FFFFFF" />
-                    <Text style={styles.submitText}>Submit & next</Text>
+                    <Text style={styles.submitText}>Get feedback</Text>
                   </>
                 )}
               </LinearGradient>
@@ -381,4 +499,15 @@ const styles = StyleSheet.create({
   doneBtn: { marginHorizontal: spacing.lg, marginTop: spacing.lg, borderRadius: radius.pill, overflow: 'hidden' },
   doneInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14 },
   doneText: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+
+  // Inline feedback screen (after each answer)
+  fbBlock: { marginHorizontal: spacing.lg, marginTop: spacing.md, padding: spacing.md, borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
+  fbLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: spacing.sm },
+  fbLabel: { color: '#F2EEFF', fontSize: 12, fontWeight: '800', letterSpacing: 0.5, textTransform: 'uppercase' },
+  fbBody: { color: '#F2EEFF', fontSize: 13, lineHeight: 19 },
+  bulletRow: { flexDirection: 'row', marginTop: 4 },
+  bulletDot: { fontSize: 15, marginRight: 8, lineHeight: 20 },
+  bulletText: { color: '#F2EEFF', fontSize: 13, flex: 1, lineHeight: 19 },
+  exampleBlock: { backgroundColor: 'rgba(124,92,255,0.08)', borderColor: 'rgba(124,92,255,0.25)' },
+  exampleText: { color: '#F2EEFF', fontSize: 13, fontStyle: 'italic', lineHeight: 19 },
 });

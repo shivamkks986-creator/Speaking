@@ -614,7 +614,11 @@ INTERVIEW_EVAL_SYSTEM = (
     "You are a senior interviewer evaluating an interview answer. "
     "Score on a 0-100 scale considering structure (STAR), clarity, content depth, and English fluency. "
     "Return ONLY a JSON object — no prose, no code fences — in this shape: "
-    '{"score": int(0-100), "feedback": "1-2 sentence actionable feedback"}'
+    '{"score": int(0-100), '
+    '"feedback": "1-2 sentence overall assessment", '
+    '"strengths": ["2-3 short bullets of what the candidate did well"], '
+    '"improvements": ["2-3 short bullets of specific things to improve"], '
+    '"example": "1-2 sentence example of a stronger phrasing/structure the candidate could use"}'
 )
 
 
@@ -627,6 +631,9 @@ class InterviewEvalRequest(BaseModel):
 class InterviewEvalResponse(BaseModel):
     score: int
     feedback: str
+    strengths: List[str] = []
+    improvements: List[str] = []
+    example: str = ""
 
 
 @router.post("/interview/evaluate", response_model=InterviewEvalResponse)
@@ -640,9 +647,19 @@ async def interview_evaluate(req: InterviewEvalRequest) -> InterviewEvalResponse
     )
     raw = await chat.send_message(UserMessage(text=prompt))
     data = _extract_json(raw)
+    # Defensive coercion of list fields (LLM may occasionally return string)
+    def _as_list(v):
+        if isinstance(v, list):
+            return [str(x).strip() for x in v if str(x).strip()]
+        if isinstance(v, str) and v.strip():
+            return [v.strip()]
+        return []
     return InterviewEvalResponse(
         score=int(data.get("score", 0)),
         feedback=str(data.get("feedback", "Try to add more detail.")),
+        strengths=_as_list(data.get("strengths"))[:4],
+        improvements=_as_list(data.get("improvements"))[:4],
+        example=str(data.get("example", "")).strip(),
     )
 
 

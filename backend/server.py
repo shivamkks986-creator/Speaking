@@ -86,6 +86,7 @@ FIX_FILES = {
     "app.json":                   SPEAKMATE_ROOT / "app.json",
     "withAndroidBuildFixes.js":   SPEAKMATE_ROOT / "plugins/withAndroidBuildFixes.js",
     "useScreenInsets.ts":         SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
+    "aiService.ts":               SPEAKMATE_ROOT / "src/services/aiService.ts",
     "ScreenContainer.tsx":        SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
     "HomeScreen.tsx":             SPEAKMATE_ROOT / "src/screens/home/HomeScreen.tsx",
     "AITutorScreen.tsx":          SPEAKMATE_ROOT / "src/screens/tutor/AITutorScreen.tsx",

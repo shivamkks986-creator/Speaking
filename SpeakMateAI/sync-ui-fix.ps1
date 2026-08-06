@@ -26,6 +26,7 @@ $Files = @(
     @{ Url = "$CloudBase/app.json";                   Dest = "app.json" }
     @{ Url = "$CloudBase/withAndroidBuildFixes.js";   Dest = "plugins\withAndroidBuildFixes.js" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
+    @{ Url = "$CloudBase/aiService.ts";               Dest = "src\services\aiService.ts" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
     @{ Url = "$CloudBase/AITutorScreen.tsx";          Dest = "src\screens\tutor\AITutorScreen.tsx" }
@@ -48,7 +49,7 @@ if (-not (Test-Path "package.json")) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host ""
-Write-Host "==> Downloading 15 UI-fix files (incl. app.json + native cutout plugin) from cloud" -ForegroundColor Cyan
+Write-Host "==> Downloading 16 files (incl. app.json + native plugin + aiService) from cloud" -ForegroundColor Cyan
 $downloaded = 0
 foreach ($f in $Files) {
     $destDir = Split-Path -Parent $f.Dest

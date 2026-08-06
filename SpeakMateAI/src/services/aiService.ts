@@ -181,19 +181,34 @@ export const aiService = {
   async evaluateInterviewAnswer(
     q: InterviewQuestion,
     answer: string
-  ): Promise<{ score: number; feedback: string }> {
+  ): Promise<{ score: number; feedback: string; strengths: string[]; improvements: string[]; example: string }> {
     try {
-      const data = await postJson<{ score: number; feedback: string }>(
-        '/interview/evaluate',
-        { question: q.question, answer, track: q.track }
-      );
-      return data;
+      const data = await postJson<{
+        score: number;
+        feedback: string;
+        strengths?: string[];
+        improvements?: string[];
+        example?: string;
+      }>('/interview/evaluate', { question: q.question, answer, track: q.track });
+      return {
+        score: data.score,
+        feedback: data.feedback,
+        strengths: data.strengths || [],
+        improvements: data.improvements || [],
+        example: data.example || '',
+      };
     } catch (err) {
       console.warn('[aiService.evaluateInterviewAnswer] backend failed, using mock:', err);
       await delay(400);
       const words = answer.trim().split(/\s+/).filter(Boolean).length;
       const score = Math.max(40, Math.min(90, 50 + Math.min(40, words / 2)));
-      return { score: Math.round(score), feedback: 'Backend offline — expand your answer with examples.' };
+      return {
+        score: Math.round(score),
+        feedback: 'Backend offline — expand your answer with examples.',
+        strengths: [],
+        improvements: [],
+        example: '',
+      };
     }
   },
 
