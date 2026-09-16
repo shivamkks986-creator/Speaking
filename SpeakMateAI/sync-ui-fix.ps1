@@ -27,6 +27,11 @@ $Files = @(
     @{ Url = "$CloudBase/withAndroidBuildFixes.js";   Dest = "plugins\withAndroidBuildFixes.js" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
     @{ Url = "$CloudBase/aiService.ts";               Dest = "src\services\aiService.ts" }
+    @{ Url = "$CloudBase/billingService.ts";          Dest = "src\services\billingService.ts" }
+    @{ Url = "$CloudBase/usageService.ts";            Dest = "src\services\usageService.ts" }
+    @{ Url = "$CloudBase/UsageIndicator.tsx";         Dest = "src\components\common\UsageIndicator.tsx" }
+    @{ Url = "$CloudBase/AdBanner.tsx";               Dest = "src\components\common\AdBanner.tsx" }
+    @{ Url = "$CloudBase/LimitReachedModal.tsx";      Dest = "src\components\common\LimitReachedModal.tsx" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
     @{ Url = "$CloudBase/AITutorScreen.tsx";          Dest = "src\screens\tutor\AITutorScreen.tsx" }
@@ -71,7 +76,7 @@ foreach ($f in $Files) {
 Write-Host ""
 if ($downloaded -eq $Files.Count) {
     Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "  ALL FILES SYNCED (incl. app.json v1.0.7 versionCode 8 + native cutout plugin)" -ForegroundColor Green
+    Write-Host "  ALL FILES SYNCED (incl. app.json v1.0.8 versionCode 9 + subscription/ads services)" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
 } else {
     Write-Host "[WARN] Only $downloaded / $($Files.Count) files downloaded" -ForegroundColor Yellow
@@ -161,8 +166,8 @@ if (Test-Path $appGradle) {
 Write-Host ""
 Write-Host "  NEXT STEPS (in Android Studio):" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. app.json ALREADY updated to version 1.0.7 / versionCode 8" -ForegroundColor Green
-Write-Host "  2. android/app/build.gradle ALSO patched to versionCode 8 / versionName 1.0.7" -ForegroundColor Green
+Write-Host "  1. app.json ALREADY updated to version 1.0.8 / versionCode 9" -ForegroundColor Green
+Write-Host "  2. android/app/build.gradle ALSO patched to versionCode 9 / versionName 1.0.8" -ForegroundColor Green
 Write-Host "  3. Native styles.xml patched for universal cutout fix (all devices)" -ForegroundColor Green
 Write-Host ""
 Write-Host "  4. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White

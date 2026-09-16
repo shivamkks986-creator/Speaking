@@ -30,7 +30,7 @@ const TESTIMONIALS = [
   {
     name: 'Priya S.',
     role: 'IELTS 7.5 Achiever',
-    quote: 'In 6 weeks I jumped from 6.0 to 7.5 in speaking. Best ₹249 spent.',
+    quote: 'In 6 weeks I jumped from 6.0 to 7.5 in speaking. Best money spent this year.',
     rating: 5,
   },
   {
@@ -53,9 +53,10 @@ export default function PremiumScreen() {
   const { headerPaddingTop } = useScreenInsets();
   const { user, updateProfile } = useAuth();
   const [products, setProducts] = useState<PremiumProduct[]>([]);
-  const [selected, setSelected] = useState<string>('speakmate_quarterly');
+  const [selected, setSelected] = useState<string>('speakmate_yearly_799');
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   useEffect(() => {
     billingService
@@ -64,6 +65,7 @@ export default function PremiumScreen() {
         setProducts(p);
         const popular = p.find((x) => x.popular);
         if (popular) setSelected(popular.id);
+        else if (p.length > 0) setSelected(p[0].id);
       })
       .finally(() => setLoading(false));
   }, []);
@@ -78,6 +80,23 @@ export default function PremiumScreen() {
       navigation.goBack();
     } else {
       Alert.alert('Coming Soon', res.error || 'Google Play Billing will be enabled in the next release.');
+    }
+  };
+
+  const onRestore = async () => {
+    setRestoring(true);
+    try {
+      const status = await billingService.restorePurchases();
+      if (status.is_premium) {
+        await updateProfile({ isPremium: true });
+        Alert.alert('Restored ✅', `Your ${status.plan} subscription is active${status.expires_at ? ` till ${new Date(status.expires_at).toLocaleDateString()}` : ''}.`);
+      } else {
+        Alert.alert('No active subscription', 'We could not find a paid subscription linked to this account.');
+      }
+    } catch (e: any) {
+      Alert.alert('Restore failed', e?.message || 'Please try again in a moment.');
+    } finally {
+      setRestoring(false);
     }
   };
 
@@ -266,10 +285,27 @@ export default function PremiumScreen() {
               style={styles.cta}
             >
               <Text style={styles.ctaText}>
-                {user?.isPremium ? "You're Premium 🎉" : purchasing ? 'Processing…' : 'Start 7-day Free Trial'}
+                {user?.isPremium ? "You're Premium 🎉" : purchasing ? 'Processing…' : 'Subscribe'}
               </Text>
             </LinearGradient>
           </Pressable>
+          <View style={styles.footerLinks}>
+            <Pressable onPress={onRestore} disabled={restoring} testID="premium-restore-btn">
+              <Text style={styles.footerLink}>
+                {restoring ? 'Restoring…' : 'Restore Purchases'}
+              </Text>
+            </Pressable>
+            <Text style={styles.footerDivider}>·</Text>
+            <Pressable
+              onPress={() => Alert.alert(
+                'Terms & Privacy',
+                'Subscriptions auto-renew until cancelled. Manage in Play Store → Subscriptions.\n\nPrivacy: gift-hub-sync.emergent.host/privacy\nTerms: gift-hub-sync.emergent.host/terms'
+              )}
+              testID="premium-terms-btn"
+            >
+              <Text style={styles.footerLink}>Terms & Privacy</Text>
+            </Pressable>
+          </View>
         </View>
       </SafeAreaView>
     </View>
@@ -301,6 +337,9 @@ const styles = StyleSheet.create({
   benefitSub: { color: 'rgba(242,238,255,0.6)', fontSize: 11, marginTop: 2 },
   cta: { paddingVertical: 16, borderRadius: radius.pill, alignItems: 'center', shadowColor: '#7C5CFF', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.6, shadowRadius: 16, elevation: 10 },
   ctaText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 },
+  footerLinks: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 10, gap: 10 },
+  footerLink: { color: 'rgba(242,238,255,0.55)', fontSize: 12, textDecorationLine: 'underline' },
+  footerDivider: { color: 'rgba(242,238,255,0.3)', fontSize: 12 },
   legal: { color: 'rgba(242,238,255,0.45)', fontSize: 11, textAlign: 'center', marginTop: spacing.md, paddingHorizontal: spacing.md, lineHeight: 16 },
   compareWrap: {
     marginHorizontal: spacing.lg,

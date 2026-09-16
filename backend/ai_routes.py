@@ -41,7 +41,7 @@ _stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
 async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = False) -> None:
     """Two-layer kill switch:
     1. Global budget/maintenance (affects everyone).
-    2. Per-user free-tier daily quota (premium users bypass).
+    2. Per-user free-tier daily quota (per-endpoint + global, premium bypasses).
     Raises 503 for global outages, 429 for personal quota exceeded.
     """
     reason = await ut.check_budget(endpoint)
@@ -50,7 +50,7 @@ async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = Fa
             status_code=503,
             detail={"code": "service_disabled", "reason": reason},
         )
-    user_reason = await ut.check_user_quota(uid, is_premium)
+    user_reason = await ut.check_user_quota(uid, is_premium, endpoint=endpoint)
     if user_reason:
         raise HTTPException(
             status_code=429,
@@ -59,10 +59,10 @@ async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = Fa
 
 
 async def _record(endpoint: str, uid: Optional[str] = None) -> None:
-    """Records both the global endpoint usage and the per-user counter."""
+    """Records both the global endpoint usage and the per-user counter (with per-endpoint sub-count)."""
     try:
         await ut.record_call(endpoint)
-        await ut.record_user_call(uid)
+        await ut.record_user_call(uid, endpoint=endpoint)
     except Exception:
         # Never let usage tracking failure break a user-facing call.
         pass
