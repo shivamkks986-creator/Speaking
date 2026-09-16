@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { billingService } from '@/services/billingService';
+import { showRewarded, isRewardedReady, preloadRewarded, adsAvailable } from '@/services/adsService';
 
 interface Props {
   visible: boolean;
@@ -22,8 +23,23 @@ export default function LimitReachedModal({ visible, endpoint, onClose, onBonusG
 
   const onWatchAd = async () => {
     setClaiming(true);
-    // Phase 2 TODO: replace with real RewardedAd.load() -> show() -> onEarned
-    // For Phase 1 we hit the backend directly to grant bonus.
+
+    // 1. Show real rewarded ad. In Expo Go (no native module) this
+    //    resolves true immediately so the dev flow keeps working.
+    if (adsAvailable() && !isRewardedReady()) {
+      preloadRewarded();
+      setClaiming(false);
+      Alert.alert('Ad not ready', 'Please wait a few seconds and try again.');
+      return;
+    }
+    const earned = await showRewarded();
+    if (!earned) {
+      setClaiming(false);
+      Alert.alert('Reward not earned', 'Please watch the full ad to unlock bonus practice.');
+      return;
+    }
+
+    // 2. Only after Google confirmed reward → hit backend to grant quota.
     const res = await billingService.claimRewardedAd(endpoint);
     setClaiming(false);
     if (res.ok && res.bonus_granted) {

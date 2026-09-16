@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, HTMLResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -84,9 +84,12 @@ api_router.include_router(system_router)
 SPEAKMATE_ROOT = Path("/app/SpeakMateAI")
 FIX_FILES = {
     "app.json":                   SPEAKMATE_ROOT / "app.json",
+    "package.json":               SPEAKMATE_ROOT / "package.json",
+    "App.tsx":                    SPEAKMATE_ROOT / "App.tsx",
     "withAndroidBuildFixes.js":   SPEAKMATE_ROOT / "plugins/withAndroidBuildFixes.js",
     "useScreenInsets.ts":         SPEAKMATE_ROOT / "src/hooks/useScreenInsets.ts",
     "aiService.ts":               SPEAKMATE_ROOT / "src/services/aiService.ts",
+    "adsService.ts":              SPEAKMATE_ROOT / "src/services/adsService.ts",
     "billingService.ts":          SPEAKMATE_ROOT / "src/services/billingService.ts",
     "usageService.ts":            SPEAKMATE_ROOT / "src/services/usageService.ts",
     "UsageIndicator.tsx":         SPEAKMATE_ROOT / "src/components/common/UsageIndicator.tsx",
@@ -134,6 +137,31 @@ async def get_fix_file(name: str):
 async def list_fix_files():
     """List all available fix files (handy debug endpoint)."""
     return {"files": sorted(FIX_FILES.keys())}
+
+
+# ---------------------------------------------------------------------------
+# Legal pages (Play Store compliance): Privacy Policy + Data Deletion
+# Served as HTML at stable URLs so Play Console can reference them.
+# ---------------------------------------------------------------------------
+LEGAL_DIR = Path(__file__).parent / "legal"
+
+
+@api_router.get("/legal/privacy", response_class=HTMLResponse)
+@api_router.get("/legal/privacy-policy", response_class=HTMLResponse)
+async def privacy_policy():
+    path = LEGAL_DIR / "privacy-policy.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="privacy_policy_missing")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
+
+
+@api_router.get("/legal/data-deletion", response_class=HTMLResponse)
+@api_router.get("/legal/delete-account", response_class=HTMLResponse)
+async def data_deletion():
+    path = LEGAL_DIR / "data-deletion.html"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="data_deletion_missing")
+    return HTMLResponse(path.read_text(encoding="utf-8"))
 
 
 # Include the router in the main app

@@ -24,9 +24,12 @@ $CloudBase = "https://gift-hub-sync.preview.emergentagent.com/api/fix-files"
 # All UI-fix files (15 total: app.json + native plugin + hook + 12 screens)
 $Files = @(
     @{ Url = "$CloudBase/app.json";                   Dest = "app.json" }
+    @{ Url = "$CloudBase/package.json";               Dest = "package.json" }
+    @{ Url = "$CloudBase/App.tsx";                    Dest = "App.tsx" }
     @{ Url = "$CloudBase/withAndroidBuildFixes.js";   Dest = "plugins\withAndroidBuildFixes.js" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
     @{ Url = "$CloudBase/aiService.ts";               Dest = "src\services\aiService.ts" }
+    @{ Url = "$CloudBase/adsService.ts";              Dest = "src\services\adsService.ts" }
     @{ Url = "$CloudBase/billingService.ts";          Dest = "src\services\billingService.ts" }
     @{ Url = "$CloudBase/usageService.ts";            Dest = "src\services\usageService.ts" }
     @{ Url = "$CloudBase/UsageIndicator.tsx";         Dest = "src\components\common\UsageIndicator.tsx" }
@@ -55,7 +58,7 @@ if (-not (Test-Path "package.json")) {
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 Write-Host ""
-Write-Host "==> Downloading 17 files (incl. app.json + native plugin + aiService + Live/Resume Interview) from cloud" -ForegroundColor Cyan
+Write-Host "==> Downloading files (incl. app.json v1.0.9 + package.json + adsService + billingService for AdMob/IAP Phase 2)" -ForegroundColor Cyan
 $downloaded = 0
 foreach ($f in $Files) {
     $destDir = Split-Path -Parent $f.Dest
@@ -76,7 +79,7 @@ foreach ($f in $Files) {
 Write-Host ""
 if ($downloaded -eq $Files.Count) {
     Write-Host "================================================================" -ForegroundColor Green
-    Write-Host "  ALL FILES SYNCED (incl. app.json v1.0.8 versionCode 9 + subscription/ads services)" -ForegroundColor Green
+    Write-Host "  ALL FILES SYNCED (v1.0.9 versionCode 10 + AdMob native + IAP native)" -ForegroundColor Green
     Write-Host "================================================================" -ForegroundColor Green
 } else {
     Write-Host "[WARN] Only $downloaded / $($Files.Count) files downloaded" -ForegroundColor Yellow
@@ -166,20 +169,27 @@ if (Test-Path $appGradle) {
 Write-Host ""
 Write-Host "  NEXT STEPS (in Android Studio):" -ForegroundColor Cyan
 Write-Host ""
-Write-Host "  1. app.json ALREADY updated to version 1.0.8 / versionCode 9" -ForegroundColor Green
-Write-Host "  2. android/app/build.gradle ALSO patched to versionCode 9 / versionName 1.0.8" -ForegroundColor Green
+Write-Host "  1. app.json ALREADY updated to version 1.0.9 / versionCode 10" -ForegroundColor Green
+Write-Host "  2. android/app/build.gradle ALSO patched to versionCode 10 / versionName 1.0.9" -ForegroundColor Green
 Write-Host "  3. Native styles.xml patched for universal cutout fix (all devices)" -ForegroundColor Green
 Write-Host ""
-Write-Host "  4. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
+Write-Host "  4. IMPORTANT: run 'yarn install' to pull the two new native modules:" -ForegroundColor Yellow
+Write-Host "        react-native-google-mobile-ads (14.7.2)  and  react-native-iap (12.16.4)" -ForegroundColor Yellow
+Write-Host "  5. Then run:  npx expo prebuild --clean" -ForegroundColor Yellow
+Write-Host "        This regenerates android/ so AdMob App ID + IAP get baked in." -ForegroundColor Yellow
+Write-Host "  6. Re-run this script (yes, the same one) to re-apply the styles.xml" -ForegroundColor Yellow
+Write-Host "        cutout patch + build.gradle version sync after prebuild rewrote them." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "  5. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
+Write-Host "  7. Open Android Studio -> File -> Sync Project with Gradle Files" -ForegroundColor White
+Write-Host ""
+Write-Host "  8. Build -> Generate Signed Bundle / APK  ->  Android App Bundle" -ForegroundColor White
 Write-Host "     -> Choose speakmateai-release.jks" -ForegroundColor White
 Write-Host "     -> Enter keystore password" -ForegroundColor White
 Write-Host "     -> Variant: release" -ForegroundColor White
 Write-Host "     -> Click Create" -ForegroundColor White
 Write-Host ""
-Write-Host "  6. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
+Write-Host "  9. AAB will be at: android\app\release\app-release.aab" -ForegroundColor White
 Write-Host ""
-Write-Host "  7. Upload to Play Console:" -ForegroundColor White
-Write-Host "     Internal testing  ->  Create new release  ->  Upload AAB" -ForegroundColor White
+Write-Host "  10. Upload to Play Console:" -ForegroundColor White
+Write-Host "      Internal testing  ->  Create new release  ->  Upload AAB" -ForegroundColor White
 Write-Host ""

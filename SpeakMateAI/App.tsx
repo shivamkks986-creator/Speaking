@@ -20,6 +20,7 @@ import { RemoteConfigProvider } from '@/contexts/RemoteConfigContext';
 import RootNavigator from '@/navigation/RootNavigator';
 import RewardModal from '@/components/feature/RewardModal';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
+import { initAds } from '@/services/adsService';
 
 // Silently check for an EAS Update on every cold start. If a new bundle is
 // available, download it in the background and apply it on the NEXT app launch
@@ -64,6 +65,9 @@ function ThemedApp() {
 export default function App() {
   useEffect(() => {
     checkForOTAUpdate();
+    // Warm up AdMob (banner + interstitial + rewarded) in the background.
+    // Silent no-op in Expo Go where the native module is absent.
+    initAds();
   }, []);
   return (
     <ErrorBoundary>

@@ -76,10 +76,11 @@ export default function PremiumScreen() {
     setPurchasing(false);
     if (res.ok) {
       await updateProfile({ isPremium: true });
-      Alert.alert('Welcome to Premium 🎉', 'Enjoy unlimited AI conversations!');
+      const planLabel = res.status?.plan ? ` (${res.status.plan})` : '';
+      Alert.alert('Welcome to Premium 🎉', `Enjoy unlimited AI conversations${planLabel}!`);
       navigation.goBack();
     } else {
-      Alert.alert('Coming Soon', res.error || 'Google Play Billing will be enabled in the next release.');
+      Alert.alert('Purchase failed', res.error || 'Please try again. If the issue persists, contact support.');
     }
   };
 
@@ -299,7 +300,7 @@ export default function PremiumScreen() {
             <Pressable
               onPress={() => Alert.alert(
                 'Terms & Privacy',
-                'Subscriptions auto-renew until cancelled. Manage in Play Store → Subscriptions.\n\nPrivacy: gift-hub-sync.emergent.host/privacy\nTerms: gift-hub-sync.emergent.host/terms'
+                'Subscriptions auto-renew until cancelled. Manage in Play Store → Subscriptions.\n\nPrivacy: gift-hub-sync.emergent.host/api/legal/privacy\nData Deletion: gift-hub-sync.emergent.host/api/legal/data-deletion'
               )}
               testID="premium-terms-btn"
             >
