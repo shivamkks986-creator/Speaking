@@ -38,6 +38,30 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] TypeScript compile: clean (`tsc --noEmit -p tsconfig.json` passes).
 - **Why permanent**: future screens just import `useScreenInsets()` (or use `ScreenContainer`) — cannot regress via git reset on individual screens because logic lives in 1 hook.
 
+### Backend Speed & AI Model Swap (Feb 2026) ✅ DONE
+- [x] Swapped GPT-5.2 → `gemini-3-flash-preview` + `claude-haiku-4-5` in `ai_routes.py` (latency ~15s → ~4s)
+- [x] `sync-ui-fix.ps1` now auto-patches `android/app/build.gradle` versionCode + versionName from `app.json` (fixes versionCode mismatch)
+
+### Phase 1 — Premium Subscription + AdMob (Feb 2026) ✅ DONE
+- [x] Backend `usage_tracker.py`: per-endpoint quotas, rewarded-ad bonus grants, daily budget kill-switch
+- [x] `system_routes.py`: `/pricing`, `/quota`, `/subscription/verify`, `/subscription/restore`, `/rewarded/claim`, admin-pricing
+- [x] Frontend `usageService.ts` + `billingService.ts` (Phase 1 stub) + `UsageIndicator` + `LimitReachedModal` + `AdBanner` placeholder + redesigned `PremiumScreen`
+- [x] Backend tested — 100% pass (iteration_19.json)
+
+### Phase 2 — Native AdMob + Google Play Billing (Feb 2026) ✅ DONE
+- [x] Added `react-native-google-mobile-ads@14.7.2` + `react-native-iap@12.16.4` to `package.json`
+- [x] `app.json` v1.0.9 / versionCode 10 with AdMob plugin (App ID `ca-app-pub-3735972538807236~1561583938`) + `react-native-iap` plugin
+- [x] `src/services/adsService.ts` — central init, banner unit ID, interstitial + rewarded lifecycle (Test IDs in `__DEV__`, production IDs baked in). Uses dynamic `require()` so Expo Go doesn't crash.
+- [x] `AdBanner.tsx` — renders real `BannerAd` in release AAB, placeholder in Expo Go
+- [x] `billingService.ts` — real `react-native-iap` flow: `initConnection`, `getSubscriptions` (offer token for subs), `requestPurchase`/`requestSubscription`, server-verify via `/api/system/subscription/verify`, then `finishTransaction`. Restore uses `getAvailablePurchases()` and re-verifies each.
+- [x] `LimitReachedModal.tsx` — real rewarded ad → only after Google reward callback fires do we hit `/rewarded/claim`
+- [x] `App.tsx` — calls `initAds()` on cold start (silent no-op if native module missing)
+- [x] Play Store legal pages served by backend: `/api/legal/privacy`, `/api/legal/data-deletion` (HTML)
+- [x] `sync-ui-fix.ps1` extended to pull `package.json`, `App.tsx`, `adsService.ts`
+- [x] Backend tested — 16/16 pass (iteration_20.json), no regressions
+- [x] Ad Unit IDs (Interstitial 9256241120, Rewarded 4056332447, Banner 9248949370)
+- [x] Play Console SKUs: `speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`
+
 ## Critical Build Config
 
 ### Files that MUST exist locally (and in repo)
@@ -64,11 +88,13 @@ cd android
 APK: `android/app/build/outputs/apk/release/app-release.apk`
 
 ## P1 — Pending (Backlog)
-- [ ] Generate AAB (`gradlew bundleRelease`) for Play Store upload (only APK done locally)
-- [ ] Play Store legal pages: Privacy Policy, Data Deletion URL (hostable on GitHub Pages)
+- [ ] Generate AAB (`gradlew bundleRelease`) for Play Store upload with v1.0.9 (versionCode 10) — includes AdMob + IAP
+- [x] Play Store legal pages (Privacy Policy, Data Deletion URL) — served at `/api/legal/privacy` and `/api/legal/data-deletion`
 - [ ] Play Store assets: Feature graphic 1024x500, screenshots, store description
-- [ ] Data Safety form + Content Rating questionnaire in Play Console
-- [ ] Real Google Play Billing integration (currently MOCKED in app)
+- [ ] Data Safety form + Content Rating questionnaire in Play Console (declare app contains ads + IAPs)
+- [ ] Create 3 Play Console SKUs (`speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`) — activate base plans/offers
+- [ ] **Harden `/api/system/subscription/verify`** with Google Play Developer API v3 (currently trusts client token)
+- [ ] **Harden `/api/system/rewarded/claim`** with AdMob SSV signature (currently trusts client claim)
 - [ ] Performance: 30-Day Roadmap backend API speed optimization
 
 ## P2 — Future Tasks
