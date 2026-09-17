@@ -116,6 +116,7 @@ FIX_FILES = {
     "sync-ui-fix.ps1":            SPEAKMATE_ROOT / "sync-ui-fix.ps1",
     "auto-sync.ps1":              SPEAKMATE_ROOT / "auto-sync.ps1",
     "build-aab.ps1":              SPEAKMATE_ROOT / "build-aab.ps1",
+    "SpeakMate-Sync.cmd":         SPEAKMATE_ROOT / "SpeakMate-Sync.cmd",
 }
 
 
