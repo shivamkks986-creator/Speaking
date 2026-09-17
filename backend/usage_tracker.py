@@ -71,10 +71,12 @@ async def _get_state() -> dict:
             "plans": {
                 "monthly": {
                     "title": "Monthly Premium",
-                    "cta": "Subscribe for \u20b9149/month",
-                    "billing_period": "Renews monthly",
-                    "badge": None,
+                    "cta": "Start 3-day free trial",
+                    "billing_period": "Free 3 days, then \u20b9149/month. Cancel anytime.",
+                    "badge": "3-Day Free Trial",
+                    "trial_days": 3,
                     "features": [
+                        {"label": "3-day free trial", "included": True, "note": "New subscribers only"},
                         {"label": "Ad-free experience", "included": True},
                         {"label": "AI speaking practice", "included": True, "note": "Limited"},
                         {"label": "AI companion access", "included": True, "note": "Expanded"},
@@ -162,6 +164,13 @@ async def _get_state() -> dict:
             if k not in pricing or not pricing[k]:
                 pricing[k] = defaults["pricing"][k]
                 pricing_migrated = True
+        # Force-refresh the plans subconfig if any plan is missing new keys
+        # (e.g. trial_days added later). Cheap way: check monthly.trial_days.
+        expected_plans = defaults["pricing"]["plans"]
+        current_plans = pricing.get("plans") or {}
+        if (current_plans.get("monthly") or {}).get("trial_days") != expected_plans["monthly"].get("trial_days"):
+            pricing["plans"] = expected_plans
+            pricing_migrated = True
         if pricing_migrated:
             patch["pricing"] = pricing
         if patch:
@@ -232,15 +241,60 @@ async def get_user_today(uid: str) -> int:
     return int((doc or {}).get("calls", 0))
 
 
-async def check_user_quota(uid: Optional[str], is_premium: bool, endpoint: Optional[str] = None) -> Optional[str]:
-    """Returns None if user has quota left, else a reason string.
-    Premium users are unlimited. Anonymous (no uid) requests fall back to
-    a single shared anonymous bucket so curl/preview clients don't abuse.
-    Free users also have per-endpoint sub-limits; rewarded ad bonus adds to allowance.
+async def get_user_active_plan(uid: Optional[str]) -> Optional[str]:
+    """Returns the user's active subscription plan ('monthly'|'yearly'|'lifetime')
+    or None if no active subscription. Reads from the `subscriptions` collection
+    written by /api/system/subscription/verify. Cheapest possible query: pk on uid,
+    only fetches the `plan` and `expires_at` fields.
     """
-    if is_premium:
+    if not uid:
         return None
+    now_iso = datetime.now(timezone.utc).isoformat()
+    doc = await _db.subscriptions.find_one(
+        {"uid": uid, "active": True, "expires_at": {"$gte": now_iso}},
+        {"_id": 0, "plan": 1},
+        sort=[("granted_at", -1)],
+    )
+    if not doc:
+        return None
+    plan = doc.get("plan")
+    return plan if plan in {"monthly", "yearly", "lifetime"} else None
+
+
+async def check_user_quota(
+    uid: Optional[str],
+    is_premium: bool,
+    endpoint: Optional[str] = None,
+    plan: Optional[str] = None,
+) -> Optional[str]:
+    """Returns None if user has quota left, else a reason string.
+
+    - Free users: `free_endpoint_limits` per endpoint + `user_daily_free_limit` global.
+    - Premium users: `per_plan_daily_limits[plan]` per endpoint. Global unlimited.
+      If plan is not provided or is missing from the config, premium falls back to
+      "unlimited" (backwards-compatible with prior behaviour).
+
+    Rewarded-ad bonuses stack on top of any limit.
+    """
     state = await _get_state()
+
+    if is_premium:
+        # Resolve plan if not explicitly passed by the caller.
+        resolved_plan = plan or await get_user_active_plan(uid)
+        if not resolved_plan or not endpoint:
+            return None  # No plan lookup possible → unlimited (safe default).
+        pricing = state.get("pricing", {})
+        limits = (pricing.get("per_plan_daily_limits") or {}).get(resolved_plan) or {}
+        cap = limits.get(endpoint)
+        if cap is None:
+            return None  # Endpoint not capped for this plan → unlimited.
+        ep_used = await get_user_endpoint_today(uid or "anonymous", endpoint)
+        bonus = await get_user_bonus_today(uid or "anonymous", endpoint)
+        if ep_used >= (int(cap) + bonus):
+            return f"plan_quota_exceeded:{resolved_plan}:{endpoint}:{ep_used}/{int(cap) + bonus}"
+        return None
+
+    # ----- Free tier (unchanged) -----
     global_limit = int(state.get("user_daily_free_limit", DEFAULT_USER_DAILY_LIMIT))
 
     # Per-endpoint quota (tighter than global; premium ignores)
@@ -347,7 +401,8 @@ async def record_user_call(uid: Optional[str], endpoint: Optional[str] = None) -
 
 
 async def get_user_quota_status(uid: Optional[str], is_premium: bool) -> dict:
-    """Public view of a user's quota for the frontend status bar."""
+    """Public view of a user's quota for the frontend status bar.
+    Premium users now surface their per-plan caps (was -1 unlimited before)."""
     state = await _get_state()
     global_limit = int(state.get("user_daily_free_limit", DEFAULT_USER_DAILY_LIMIT))
     used = await get_user_today(uid or "anonymous")
@@ -358,22 +413,38 @@ async def get_user_quota_status(uid: Optional[str], is_premium: bool) -> dict:
         "resume_interview_questions": 1, "sales_session": 2,
         "roadmap_generate": 1, "vocabulary_lookup": 20,
     }
+
+    # Premium users: look up their plan and swap free_limits with plan-specific caps
+    plan_limits: dict = {}
+    active_plan: Optional[str] = None
+    if is_premium:
+        active_plan = await get_user_active_plan(uid)
+        if active_plan:
+            plan_limits = (state.get("pricing", {}).get("per_plan_daily_limits") or {}).get(active_plan) or {}
+
     # Per-endpoint used + bonus
     key = uid or "anonymous"
     per_endpoint: dict = {}
     for ep, lim in endpoint_limits.items():
         ep_used = await get_user_endpoint_today(key, ep)
         ep_bonus = await get_user_bonus_today(key, ep)
+        # Effective limit: premium uses plan cap (or unlimited if plan unknown), free uses free cap.
+        if is_premium:
+            effective = plan_limits.get(ep, -1)  # -1 = unlimited if not capped
+        else:
+            effective = int(lim)
+        remaining = -1 if effective == -1 else max(0, effective + ep_bonus - ep_used)
         per_endpoint[ep] = {
             "used": ep_used,
-            "limit": -1 if is_premium else int(lim),
+            "limit": effective,
             "bonus": ep_bonus,
-            "remaining": -1 if is_premium else max(0, int(lim) + ep_bonus - ep_used),
+            "remaining": remaining,
         }
     total_bonus = await get_user_bonus_today(key, None)
     return {
         "uid": key,
         "is_premium": is_premium,
+        "plan": active_plan,
         "used": used,
         "limit": -1 if is_premium else global_limit,
         "bonus": total_bonus,

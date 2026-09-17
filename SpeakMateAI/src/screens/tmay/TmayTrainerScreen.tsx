@@ -30,6 +30,8 @@ import { TmayEvaluation } from '@/types';
 import { useProgress } from '@/contexts/ProgressContext';
 import { radius, spacing } from '@/config/theme';
 import EvaluatingProgress from '@/components/common/EvaluatingProgress';
+import { recordPracticeCompleted } from '@/services/interstitialTrigger';
+import { useAuth } from '@/contexts/AuthContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Phase = 'idle' | 'recording' | 'transcribing' | 'evaluating' | 'result';
@@ -48,6 +50,7 @@ export default function TmayTrainerScreen() {
   const navigation = useNavigation<Nav>();
   const { headerPaddingTop } = useScreenInsets();
   const { recordActivity } = useProgress();
+  const { user } = useAuth();
 
   const [phase, setPhase] = useState<Phase>('idle');
   const [transcript, setTranscript] = useState('');
@@ -121,6 +124,7 @@ export default function TmayTrainerScreen() {
       setEvaluation(result);
       setPhase('result');
       recordActivity(Math.max(1, Math.round(sec / 60)), 'speaking').catch(() => {});
+      recordPracticeCompleted(!!user?.isPremium).catch(() => {});
     } catch (e) {
       if (e instanceof QuotaExceededError) {
         setError(`Daily free limit reached (${e.used}/${e.limit}). Upgrade to Premium for unlimited TMAY practice.`);
@@ -129,7 +133,7 @@ export default function TmayTrainerScreen() {
       }
       setPhase('idle');
     }
-  }, [transcript, roleTarget, recordActivity]);
+  }, [transcript, roleTarget, recordActivity, user?.isPremium]);
 
   const evaluateTyped = useCallback(async () => {
     setError(null);
@@ -142,6 +146,7 @@ export default function TmayTrainerScreen() {
       const result = await aiService.evaluateTmay(transcript.trim(), duration || 45, roleTarget, 'fresher');
       setEvaluation(result);
       setPhase('result');
+      recordPracticeCompleted(!!user?.isPremium).catch(() => {});
     } catch (e) {
       if (e instanceof QuotaExceededError) {
         setError(`Daily free limit reached (${e.used}/${e.limit}). Upgrade for unlimited.`);
@@ -150,7 +155,7 @@ export default function TmayTrainerScreen() {
       }
       setPhase('idle');
     }
-  }, [transcript, duration, roleTarget]);
+  }, [transcript, duration, roleTarget, user?.isPremium]);
 
   const targetProgress = Math.min(1, duration / TARGET_SECONDS);
 

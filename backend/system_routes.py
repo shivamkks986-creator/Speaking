@@ -123,6 +123,7 @@ class PlanConfig(BaseModel):
     cta: str
     billing_period: str
     badge: Optional[str] = None
+    trial_days: Optional[int] = None
     features: list[PlanFeature]
 
 
@@ -151,6 +152,7 @@ async def pricing():
             cta=str(plan.get("cta", "Subscribe")),
             billing_period=str(plan.get("billing_period", "")),
             badge=plan.get("badge"),
+            trial_days=plan.get("trial_days"),
             features=[PlanFeature(**f) for f in plan.get("features", [])],
         )
     return PricingResponse(

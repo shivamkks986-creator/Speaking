@@ -25,6 +25,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '@/navigation/types';
 import { speechService } from '@/services/speechService';
 import { aiService, QuotaExceededError } from '@/services/aiService';
+import { recordPracticeCompleted } from '@/services/interstitialTrigger';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -210,6 +211,7 @@ export default function SpeakingPracticeScreen() {
         bestSpeakingScore: Math.max(stats.bestSpeakingScore, result.overall),
         streak: stats.streak,
       }).catch(() => {});
+      recordPracticeCompleted(!!user?.isPremium).catch(() => {});
     } catch (e: unknown) {
       if (e instanceof QuotaExceededError) {
         setError(`Daily free limit reached (${e.used}/${e.limit}). Upgrade to Premium for unlimited speaking practice.`);
@@ -218,7 +220,7 @@ export default function SpeakingPracticeScreen() {
       }
       setPhase('idle');
     }
-  }, [transcript, challenge, recordActivity, recordSpeakingScore, awardAction, checkBadges, stats]);
+  }, [transcript, challenge, recordActivity, recordSpeakingScore, awardAction, checkBadges, stats, user?.isPremium]);
 
   const wordCount = transcript.trim().split(/\s+/).filter(Boolean).length;
 

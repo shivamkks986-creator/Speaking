@@ -12,10 +12,12 @@ import { getTrackQuestions } from '@/data/interviewTracks';
 import { aiService } from '@/services/aiService';
 import { speechService } from '@/services/speechService';
 import { useProgress } from '@/contexts/ProgressContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { InterviewAnswer } from '@/types';
 import Card from '@/components/common/Card';
 import EvaluatingProgress from '@/components/common/EvaluatingProgress';
+import { recordPracticeCompleted } from '@/services/interstitialTrigger';
 
 type Route = RouteProp<RootStackParamList, 'InterviewSession'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -25,6 +27,7 @@ export default function InterviewSessionScreen() {
   const navigation = useNavigation<Nav>();
   const theme = useTheme();
   const { recordActivity, recordInterviewScore } = useProgress();
+  const { user } = useAuth();
   const { awardAction, checkBadges } = useGamification();
 
   const questions = useMemo(() => {
@@ -67,10 +70,12 @@ export default function InterviewSessionScreen() {
       ]);
       setPhase('reviewing');
       awardAction('INTERVIEW_QUESTION').catch(() => {});
+      // Free-tier ad rotation — throttled + no-op for premium.
+      recordPracticeCompleted(!!user?.isPremium).catch(() => {});
     } finally {
       setThinking(false);
     }
-  }, [answer, current]);
+  }, [answer, current, user?.isPremium]);
 
   const next = useCallback(async () => {
     if (index + 1 < questions.length) {
