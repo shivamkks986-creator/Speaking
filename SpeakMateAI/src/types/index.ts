@@ -257,6 +257,12 @@ export interface ProgressStats {
   dailyChallengeStreak: number;
 }
 
+export interface PremiumFeature {
+  label: string;
+  included: boolean;
+  note?: string;
+}
+
 export interface PremiumProduct {
   id: string;
   title: string;
@@ -264,4 +270,9 @@ export interface PremiumProduct {
   durationMonths: number;
   savings?: string;
   popular?: boolean;
+  planKey: 'monthly' | 'yearly' | 'lifetime';
+  billingPeriod: string;
+  cta: string;
+  badge?: string;
+  features: PremiumFeature[];
 }

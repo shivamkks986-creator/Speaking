@@ -112,6 +112,20 @@ async def admin_toggle(
 # Subscription & Pricing
 # =============================================================================
 
+class PlanFeature(BaseModel):
+    label: str
+    included: bool
+    note: Optional[str] = None
+
+
+class PlanConfig(BaseModel):
+    title: str
+    cta: str
+    billing_period: str
+    badge: Optional[str] = None
+    features: list[PlanFeature]
+
+
 class PricingResponse(BaseModel):
     monthly_inr: int
     yearly_inr: int
@@ -120,21 +134,34 @@ class PricingResponse(BaseModel):
     monthly_sku: str
     yearly_sku: str
     lifetime_sku: str
+    plans: dict[str, PlanConfig]
 
 
 @router.get("/pricing", response_model=PricingResponse)
 async def pricing():
-    """Public: subscription prices + SKUs. Frontend PremiumScreen calls this."""
+    """Public: subscription prices + SKUs + per-plan features + CTAs. Used by PremiumScreen."""
     state = await ut.get_state()
     p = state.get("pricing", {})
+    plans_raw = p.get("plans", {})
+    plans: dict[str, PlanConfig] = {}
+    for key in ("monthly", "yearly", "lifetime"):
+        plan = plans_raw.get(key) or {}
+        plans[key] = PlanConfig(
+            title=str(plan.get("title", key.title() + " Premium")),
+            cta=str(plan.get("cta", "Subscribe")),
+            billing_period=str(plan.get("billing_period", "")),
+            badge=plan.get("badge"),
+            features=[PlanFeature(**f) for f in plan.get("features", [])],
+        )
     return PricingResponse(
         monthly_inr=int(p.get("monthly_inr", 149)),
         yearly_inr=int(p.get("yearly_inr", 799)),
         lifetime_inr=int(p.get("lifetime_inr", 1499)),
         lifetime_enabled=bool(p.get("lifetime_enabled", True)),
-        monthly_sku=str(p.get("monthly_sku", "speakmate_monthly_149")),
-        yearly_sku=str(p.get("yearly_sku", "speakmate_yearly_799")),
-        lifetime_sku=str(p.get("lifetime_sku", "speakmate_lifetime_1499")),
+        monthly_sku=str(p.get("monthly_sku", "premium_monthly")),
+        yearly_sku=str(p.get("yearly_sku", "premium_yearly")),
+        lifetime_sku=str(p.get("lifetime_sku", "premium_lifetime")),
+        plans=plans,
     )
 
 

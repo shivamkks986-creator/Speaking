@@ -50,6 +50,19 @@ export interface PricingConfig {
   monthly_sku: string;
   yearly_sku: string;
   lifetime_sku: string;
+  plans: {
+    monthly: PlanConfigDto;
+    yearly: PlanConfigDto;
+    lifetime: PlanConfigDto;
+  };
+}
+
+interface PlanConfigDto {
+  title: string;
+  cta: string;
+  billing_period: string;
+  badge?: string | null;
+  features: Array<{ label: string; included: boolean; note?: string }>;
 }
 
 export interface SubscriptionStatus {
@@ -85,12 +98,22 @@ async function fetchPricing(): Promise<PricingConfig> {
     cachedPricing = await res.json();
     return cachedPricing!;
   } catch {
+    // Fallback if backend unreachable — offline / first-launch scenario.
+    const fallbackPlans = {
+      title: 'Premium', cta: 'Subscribe', billing_period: '', badge: null,
+      features: [{ label: 'Ad-free experience', included: true }],
+    };
     cachedPricing = {
       monthly_inr: 149, yearly_inr: 799, lifetime_inr: 1499,
       lifetime_enabled: true,
-      monthly_sku: 'speakmate_monthly_149',
-      yearly_sku: 'speakmate_yearly_799',
-      lifetime_sku: 'speakmate_lifetime_1499',
+      monthly_sku: 'premium_monthly',
+      yearly_sku: 'premium_yearly',
+      lifetime_sku: 'premium_lifetime',
+      plans: {
+        monthly: { ...fallbackPlans, title: 'Monthly Premium', cta: 'Subscribe for \u20b9149/month' },
+        yearly: { ...fallbackPlans, title: 'Yearly Premium', cta: 'Subscribe for \u20b9799/year', badge: 'Best Value' },
+        lifetime: { ...fallbackPlans, title: 'Lifetime Premium', cta: 'Get Lifetime Access for \u20b91499' },
+      },
     };
     return cachedPricing;
   }
@@ -104,12 +127,46 @@ export const billingService = {
 
   async getProducts(): Promise<PremiumProduct[]> {
     const p = await fetchPricing();
+    const monthlyTotal = p.monthly_inr * 12;
+    const savingsPct = Math.round(100 - (p.yearly_inr / monthlyTotal) * 100);
     const list: PremiumProduct[] = [
-      { id: p.monthly_sku, title: 'Monthly',  price: `₹${p.monthly_inr}`,  durationMonths: 1 },
-      { id: p.yearly_sku,  title: 'Yearly',   price: `₹${p.yearly_inr}`,   durationMonths: 12, popular: true, savings: `Save ${Math.round(100 - (p.yearly_inr / (p.monthly_inr * 12)) * 100)}%` },
+      {
+        id: p.monthly_sku,
+        title: p.plans.monthly.title,
+        price: `\u20b9${p.monthly_inr}`,
+        durationMonths: 1,
+        planKey: 'monthly',
+        billingPeriod: p.plans.monthly.billing_period,
+        cta: p.plans.monthly.cta,
+        badge: p.plans.monthly.badge ?? undefined,
+        features: p.plans.monthly.features,
+      },
+      {
+        id: p.yearly_sku,
+        title: p.plans.yearly.title,
+        price: `\u20b9${p.yearly_inr}`,
+        durationMonths: 12,
+        popular: true,
+        savings: `Save ${savingsPct}%`,
+        planKey: 'yearly',
+        billingPeriod: p.plans.yearly.billing_period,
+        cta: p.plans.yearly.cta,
+        badge: p.plans.yearly.badge ?? undefined,
+        features: p.plans.yearly.features,
+      },
     ];
     if (p.lifetime_enabled) {
-      list.push({ id: p.lifetime_sku, title: 'Lifetime', price: `₹${p.lifetime_inr}`, durationMonths: 999 });
+      list.push({
+        id: p.lifetime_sku,
+        title: p.plans.lifetime.title,
+        price: `\u20b9${p.lifetime_inr}`,
+        durationMonths: 999,
+        planKey: 'lifetime',
+        billingPeriod: p.plans.lifetime.billing_period,
+        cta: p.plans.lifetime.cta,
+        badge: p.plans.lifetime.badge ?? undefined,
+        features: p.plans.lifetime.features,
+      });
     }
     return list;
   },

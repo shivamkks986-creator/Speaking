@@ -65,9 +65,66 @@ async def _get_state() -> dict:
             "yearly_inr": 799,
             "lifetime_inr": 1499,
             "lifetime_enabled": True,
-            "monthly_sku": "speakmate_monthly_149",
-            "yearly_sku": "speakmate_yearly_799",
-            "lifetime_sku": "speakmate_lifetime_1499",
+            "monthly_sku": "premium_monthly",
+            "yearly_sku": "premium_yearly",
+            "lifetime_sku": "premium_lifetime",
+            "plans": {
+                "monthly": {
+                    "title": "Monthly Premium",
+                    "cta": "Subscribe for \u20b9149/month",
+                    "billing_period": "Renews monthly",
+                    "badge": None,
+                    "features": [
+                        {"label": "Ad-free experience", "included": True},
+                        {"label": "AI speaking practice", "included": True, "note": "Limited"},
+                        {"label": "AI companion access", "included": True, "note": "Expanded"},
+                        {"label": "AI Mock Interview", "included": True},
+                        {"label": "TMAY Trainer", "included": True},
+                        {"label": "Sales & Counselling Roleplay", "included": True},
+                        {"label": "Resume-based interviews", "included": True},
+                        {"label": "30-Day Job Ready Roadmap", "included": False, "note": "Yearly & Lifetime only"},
+                        {"label": "Advanced progress reports", "included": False},
+                        {"label": "Priority access to new features", "included": False},
+                    ],
+                },
+                "yearly": {
+                    "title": "Yearly Premium",
+                    "cta": "Subscribe for \u20b9799/year",
+                    "billing_period": "Renews yearly \u00b7 save 55%",
+                    "badge": "Best Value",
+                    "features": [
+                        {"label": "Ad-free experience", "included": True},
+                        {"label": "AI speaking practice", "included": True, "note": "Higher limits"},
+                        {"label": "AI companion access", "included": True, "note": "All companions"},
+                        {"label": "AI Mock Interview", "included": True},
+                        {"label": "TMAY Trainer", "included": True},
+                        {"label": "Sales & Counselling Roleplay", "included": True},
+                        {"label": "Resume-based interviews", "included": True},
+                        {"label": "30-Day Job Ready Roadmap", "included": True},
+                        {"label": "Advanced progress reports", "included": True},
+                        {"label": "Priority access to new features", "included": True},
+                    ],
+                },
+                "lifetime": {
+                    "title": "Lifetime Premium",
+                    "cta": "Get Lifetime Access for \u20b91499",
+                    "billing_period": "One-time payment \u00b7 no renewals",
+                    "badge": "Save Forever",
+                    "features": [
+                        {"label": "All Premium features", "included": True},
+                        {"label": "Ad-free forever", "included": True},
+                        {"label": "One-time payment", "included": True, "note": "No recurring charges"},
+                        {"label": "Lifetime access to current features", "included": True},
+                        {"label": "AI usage limits", "included": True, "note": "Same as Yearly"},
+                        {"label": "Future features may be added", "included": True, "note": "Subject to change"},
+                    ],
+                },
+            },
+            "per_plan_daily_limits": {
+                "monthly": {"tutor_chat": 30, "speaking_score": 15, "interview_live": 5, "interview_evaluate": 15, "tmay_evaluate": 10, "resume_parse": 3, "resume_interview_questions": 3, "sales_session": 5, "roadmap_generate": 2, "vocabulary_lookup": 100},
+                "yearly": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 20, "interview_evaluate": 50, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
+                "lifetime": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 20, "interview_evaluate": 50, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
+            },
         },
         "free_endpoint_limits": {
             "tutor_chat": 10, "speaking_score": 5, "interview_live": 2,
@@ -87,6 +144,24 @@ async def _get_state() -> dict:
         for k, v in defaults.items():
             if doc.get(k) is None:
                 patch[k] = v
+        # Force-migrate pricing subkeys (legacy SKUs → premium_* + plans + per_plan_daily_limits)
+        pricing = doc.get("pricing") or {}
+        expected_skus = {
+            "monthly_sku": defaults["pricing"]["monthly_sku"],
+            "yearly_sku": defaults["pricing"]["yearly_sku"],
+            "lifetime_sku": defaults["pricing"]["lifetime_sku"],
+        }
+        pricing_migrated = False
+        for k, v in expected_skus.items():
+            if pricing.get(k) != v:
+                pricing[k] = v
+                pricing_migrated = True
+        for k in ("plans", "per_plan_daily_limits"):
+            if k not in pricing:
+                pricing[k] = defaults["pricing"][k]
+                pricing_migrated = True
+        if pricing_migrated:
+            patch["pricing"] = pricing
         if patch:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()
             await _db.system_state.update_one({"_id": "config"}, {"$set": patch}, upsert=True)
