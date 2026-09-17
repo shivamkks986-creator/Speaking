@@ -114,6 +114,7 @@ FIX_FILES = {
     "fix-overlap-and-build.ps1":  SPEAKMATE_ROOT / "fix-overlap-and-build.ps1",
     "push-ota-update.ps1":        SPEAKMATE_ROOT / "push-ota-update.ps1",
     "sync-ui-fix.ps1":            SPEAKMATE_ROOT / "sync-ui-fix.ps1",
+    "auto-sync.ps1":              SPEAKMATE_ROOT / "auto-sync.ps1",
 }
 
 
