@@ -115,6 +115,7 @@ FIX_FILES = {
     "push-ota-update.ps1":        SPEAKMATE_ROOT / "push-ota-update.ps1",
     "sync-ui-fix.ps1":            SPEAKMATE_ROOT / "sync-ui-fix.ps1",
     "auto-sync.ps1":              SPEAKMATE_ROOT / "auto-sync.ps1",
+    "build-aab.ps1":              SPEAKMATE_ROOT / "build-aab.ps1",
 }
 
 
