@@ -32,7 +32,7 @@ export default function LimitReachedModal({ visible, endpoint, onClose, onBonusG
       Alert.alert('Ad not ready', 'Please wait a few seconds and try again.');
       return;
     }
-    const earned = await showRewarded();
+    const earned = await showRewarded(endpoint);
     if (!earned) {
       setClaiming(false);
       Alert.alert('Reward not earned', 'Please watch the full ad to unlock bonus practice.');

@@ -39,6 +39,12 @@ try {
 
 export const adsAvailable = () => Platform.OS === 'android' && ads !== null;
 
+// ---- SSV context (uid + endpoint carried into custom_data) ---------------
+let ssvUid: string | null = null;
+export function setAdsAuthContext(uid: string | null) {
+  ssvUid = uid;
+}
+
 // Public unit-ID getters (Banner is a React component so exported from here).
 export function bannerAdUnitId(): string {
   if (!ads) return PROD_BANNER;
@@ -151,8 +157,12 @@ export function isRewardedReady(): boolean {
  * Show rewarded ad. Resolves to `true` ONLY if the user earned the reward.
  * If ad is not ready, tries to load it and returns false immediately.
  * If native module not present (Expo Go), returns `true` so dev flow works.
+ *
+ * When SSV is configured in AdMob console, we tag the request with
+ * user_id + custom_data so the backend callback can attribute the reward
+ * to the right user.
  */
-export function showRewarded(): Promise<boolean> {
+export function showRewarded(endpoint?: string): Promise<boolean> {
   return new Promise((resolve) => {
     // Expo Go / non-Android: pretend the reward was earned so dev flow works.
     if (!adsAvailable() || !rewarded) {
@@ -163,6 +173,16 @@ export function showRewarded(): Promise<boolean> {
       try { rewarded.load(); } catch {}
       resolve(false);
       return;
+    }
+    // Tag with SSV custom data so Google's server callback reaches our
+    // backend with { uid, endpoint }. No-op when the API isn't available.
+    if (ssvUid && typeof rewarded.setServerSideVerificationOptions === 'function') {
+      try {
+        rewarded.setServerSideVerificationOptions({
+          userId: ssvUid,
+          customData: `uid:${ssvUid}${endpoint ? `|endpoint:${endpoint}` : ''}`,
+        });
+      } catch {}
     }
     let earned = false;
     const offReward = rewarded.addAdEventListener(

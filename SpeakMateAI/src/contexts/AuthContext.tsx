@@ -2,6 +2,9 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { AppUser } from '@/types';
 import { authService } from '@/services/authService';
 import { setAiAuthContext } from '@/services/aiService';
+import { setBillingAuthContext } from '@/services/billingService';
+import { setUsageAuthContext } from '@/services/usageService';
+import { setAdsAuthContext } from '@/services/adsService';
 
 interface AuthCtx {
   user: AppUser | null;
@@ -24,8 +27,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsub = authService.onAuthStateChanged((u) => {
       setUser(u);
       setInitializing(false);
-      // Keep aiService headers in sync — backend uses these for per-user quota.
-      setAiAuthContext(u?.uid ?? null, !!u?.isPremium);
+      // Keep every service that hits our backend or ad SDK in sync with the
+      // current user so per-user quotas, purchases, and rewarded-ad SSV
+      // attribution all use the right uid.
+      const uid = u?.uid ?? null;
+      const premium = !!u?.isPremium;
+      setAiAuthContext(uid, premium);
+      setBillingAuthContext(uid);
+      setUsageAuthContext(uid, premium);
+      setAdsAuthContext(uid);
     });
     return unsub;
   }, []);

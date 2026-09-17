@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import json
+import logging
 import os
 import re
 import tempfile
@@ -29,6 +30,8 @@ from pypdf import PdfReader
 import usage_tracker as ut
 
 EMERGENT_LLM_KEY = os.environ["EMERGENT_LLM_KEY"]
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai")
 
@@ -482,9 +485,12 @@ async def tmay_evaluate(
 # ==================== 30-DAY JOB-READY ROADMAP (Gemini 3 Flash, parallel chunked) ====================
 
 ROADMAP_PHASES = [
-    (1, 10, "fundamentals — build basics in self-intro, vocabulary, grammar, listening"),
-    (11, 20, "applied practice — TMAY, interview answers, resume bullets, real scenarios"),
-    (21, 30, "mock interviews & polish — full mocks, LinkedIn, body language, weakness handling"),
+    (1, 5,   "fundamentals part 1 — self-intro basics + core vocabulary"),
+    (6, 10,  "fundamentals part 2 — grammar, listening habit, first mock intros"),
+    (11, 15, "applied practice part 1 — TMAY drills, interview answer frameworks"),
+    (16, 20, "applied practice part 2 — resume bullets, roleplay, situational answers"),
+    (21, 25, "polish part 1 — full mock interviews, weakness handling"),
+    (26, 30, "polish part 2 — LinkedIn, body language, final confidence sprint"),
 ]
 
 ROADMAP_CHUNK_SYSTEM = (
@@ -493,6 +499,7 @@ ROADMAP_CHUNK_SYSTEM = (
     "confidence, TMAY, mock interviews, soft skills, resume/LinkedIn. "
     "Each day: ONE focus + 3 short tasks (≤15 min total) + a daily tip. "
     "Vary themes day-to-day (never two consecutive same focus). "
+    "Keep every string SHORT — titles ≤50 chars, tasks ≤60 chars, tips ≤80 chars. "
     "Return ONLY a JSON object — no prose, no fences — exact shape: "
     '{"days":[{"day":N,"title":"...","focus":"speaking|vocabulary|tmay|interview|resume|grammar|confidence|listening",'
     '"tasks":["t1 (5 min)","t2 (5 min)","t3 (5 min)"],"tip":"motivational tip"}]}'
@@ -539,7 +546,9 @@ async def _gen_roadmap_chunk(start: int, end: int, phase_desc: str, ctx: str) ->
 
 
 async def _gen_roadmap_meta(ctx: str) -> Dict[str, str]:
-    chat = _new_chat(str(uuid.uuid4()), ROADMAP_META_SYSTEM, "gemini", "gemini-3-flash-preview")
+    # Claude Haiku here so the meta call doesn't compete with the 6 Gemini
+    # roadmap chunks for the same provider queue — extra parallelism.
+    chat = _new_chat(str(uuid.uuid4()), ROADMAP_META_SYSTEM, "anthropic", "claude-haiku-4-5")
     raw = await chat.send_message(UserMessage(text=ctx + "\n\nReturn summary + goal_title only."))
     data = _extract_json(raw)
     return {
@@ -565,15 +574,21 @@ async def roadmap_generate(
         f"Self-reported weak areas: {weak_str}"
     )
 
-    # Fire 3 chunks + 1 meta call in parallel — ~3-5x faster than sequential 30-day generation
+    # Fire 6 chunks (5 days each) + meta call in parallel. Chunks use
+    # return_exceptions=True so one Gemini timeout doesn't tank the whole
+    # request — we backfill missing days below.
     chunk_tasks = [_gen_roadmap_chunk(s, e, desc, ctx) for s, e, desc in ROADMAP_PHASES]
+    chunks_gather = asyncio.gather(*chunk_tasks, return_exceptions=True)
     meta_task = _gen_roadmap_meta(ctx)
-    chunks, meta = await asyncio.gather(asyncio.gather(*chunk_tasks), meta_task)
+    chunks_or_errs, meta = await asyncio.gather(chunks_gather, meta_task)
 
     await _record("roadmap_generate", uid=x_user_id)
 
     raw_days: List[Dict[str, Any]] = []
-    for chunk in chunks:
+    for chunk in chunks_or_errs:
+        if isinstance(chunk, Exception):
+            logger.warning("[roadmap] chunk failed: %s", chunk)
+            continue
         if isinstance(chunk, list):
             raw_days.extend(chunk)
 

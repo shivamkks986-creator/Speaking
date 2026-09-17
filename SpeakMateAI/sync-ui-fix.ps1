@@ -26,6 +26,7 @@ $Files = @(
     @{ Url = "$CloudBase/app.json";                   Dest = "app.json" }
     @{ Url = "$CloudBase/package.json";               Dest = "package.json" }
     @{ Url = "$CloudBase/App.tsx";                    Dest = "App.tsx" }
+    @{ Url = "$CloudBase/AuthContext.tsx";            Dest = "src\contexts\AuthContext.tsx" }
     @{ Url = "$CloudBase/withAndroidBuildFixes.js";   Dest = "plugins\withAndroidBuildFixes.js" }
     @{ Url = "$CloudBase/useScreenInsets.ts";         Dest = "src\hooks\useScreenInsets.ts" }
     @{ Url = "$CloudBase/aiService.ts";               Dest = "src\services\aiService.ts" }

@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 import usage_tracker as ut
 import play_verifier as pv
+import admob_ssv as ssv
 
 logger = logging.getLogger(__name__)
 
@@ -274,10 +275,10 @@ async def rewarded_claim(
 ):
     """Called by app after a rewarded ad completes.
 
-    IMPORTANT: This trusts the client for now. Before launch, verify SSV
-    (Server-Side Verification) signature from AdMob via
-    https://developers.google.com/admob/android/rewarded-ssv.
-    Premium users get no bonus (they're already unlimited).
+    PREFERRED path: AdMob calls `/api/system/rewarded/ssv` directly (Google →
+    us, cryptographically signed). This endpoint remains as a fallback for
+    dev/preview builds where SSV isn't configured yet — it's rate-limited by
+    the cooldown/daily-cap in `usage_tracker.grant_rewarded_bonus`.
     """
     if not x_user_id:
         raise HTTPException(status_code=401, detail="user_id_required")
@@ -286,6 +287,60 @@ async def rewarded_claim(
         return RewardedResponse(ok=False, reason="premium_no_bonus_needed")
     result = await ut.grant_rewarded_bonus(x_user_id, endpoint=payload.endpoint)
     return RewardedResponse(**result)
+
+
+# --- AdMob Server-Side Verification (signed callback from Google) ----------
+from fastapi import Request
+
+
+@router.get("/rewarded/ssv")
+async def rewarded_ssv(request: Request):
+    """AdMob SSV callback — receives a GET from Google's servers when a
+    rewarded ad completes. Verifies the ECDSA signature against Google's
+    published verifier keys, then atomically grants the reward (dedupe on
+    transaction_id).
+
+    Set this URL in AdMob console per ad unit:
+        https://<backend>/api/system/rewarded/ssv
+    """
+    q = dict(request.query_params)
+    signature = q.get("signature")
+    key_id = q.get("key_id")
+    txn = q.get("transaction_id")
+    custom_data = q.get("custom_data", "")
+
+    if not signature or not key_id or not txn:
+        raise HTTPException(status_code=400, detail="ssv_missing_params")
+
+    raw_qs = request.url.query
+    ok = await ssv.verify_ssv(raw_qs, signature, key_id)
+    if not ok:
+        # Return 400 so Google retries; 200 would be interpreted as accepted.
+        raise HTTPException(status_code=400, detail="ssv_signature_invalid")
+
+    # Idempotent dedupe on transaction_id.
+    already = await _db.rewarded_ssv.find_one({"transaction_id": txn}, {"_id": 1})
+    if already:
+        return {"ok": True, "reason": "already_processed"}
+
+    parsed = ssv.parse_custom_data(custom_data)
+    uid = parsed.get("uid") or q.get("user_id")
+    endpoint = parsed.get("endpoint")
+    if not uid:
+        raise HTTPException(status_code=400, detail="ssv_missing_uid")
+
+    result = await ut.grant_rewarded_bonus(uid, endpoint=endpoint)
+    await _db.rewarded_ssv.insert_one({
+        "transaction_id": txn,
+        "uid": uid,
+        "endpoint": endpoint,
+        "key_id": key_id,
+        "reward_amount": q.get("reward_amount"),
+        "reward_item": q.get("reward_item"),
+        "granted_at": datetime.now(timezone.utc).isoformat(),
+        "result": result,
+    })
+    return {"ok": True, "result": result}
 
 
 # =============================================================================
