@@ -78,6 +78,7 @@
             "targetSdkVersion": 36,
             "buildToolsVersion": "36.0.0",
             "gradleVersion": "8.13",
+            "kotlinVersion": "1.9.25",
             "enableProguardInReleaseBuilds": false,
             "enableShrinkResourcesInReleaseBuilds": false,
             "newArchEnabled": false
