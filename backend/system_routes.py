@@ -167,7 +167,7 @@ async def pricing():
 
 class SubscriptionVerifyPayload(BaseModel):
     """Payload sent by app after a successful Google Play purchase."""
-    product_id: str      # e.g. "speakmate_monthly_149"
+    product_id: str      # e.g. "premium_monthly"
     purchase_token: str  # opaque token returned by Play Billing
     order_id: Optional[str] = None
 

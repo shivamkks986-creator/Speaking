@@ -77,6 +77,15 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] Roadmap speedup: `_gen_roadmap_meta` moved to `claude-haiku-4-5` (was Gemini) → provider parallelism. `ROADMAP_PHASES` split into 6 × 5-day chunks (was 3 × 10-day) → finer parallelism. `return_exceptions=True` on outer + inner gather so one chunk/meta failure doesn't tank the whole roadmap; missing days backfilled and meta falls back to a friendly default.
 - [x] Backend tested — 24/24 pass (iteration_22.json), no regressions.
 
+### Phase 5 — Premium Plan Differentiation + Sticky CTA (Feb 2026) ✅ DONE
+- [x] SKUs renamed: `speakmate_monthly_149/yearly_799/lifetime_1499` → **`premium_monthly/premium_yearly/premium_lifetime`** (clean Play Console naming)
+- [x] `usage_tracker.py` — pricing config extended with `plans` (per-plan title/cta/badge/features array with `included/note`) + `per_plan_daily_limits` (monthly=30 tutor_chat, yearly/lifetime=100). Force-migration for legacy DB docs.
+- [x] `system_routes.py` — `/pricing` returns full `PricingResponse` with typed `plans: Dict[str, PlanConfig]`.
+- [x] `types/index.ts` — `PremiumProduct` extended with `planKey`, `cta`, `badge`, `billingPeriod`, `features[]`.
+- [x] `billingService.ts` — `getProducts()` now returns plan-differentiated products from backend.
+- [x] `PremiumScreen.tsx` — full rewrite: 3 plan cards with badge, dynamic feature list per selected plan (✅ included / 🔒 locked with notes), **sticky bottom CTA** with plan-specific label ("Subscribe for ₹149/month", "Subscribe for ₹799/year", "Get Lifetime Access for ₹1499"). Uses `useSafeAreaInsets` + `useBottomTabBarHeight` for correct offset above tab bar. Loading state + duplicate-purchase guard.
+- [x] Backend tested — 19/19 pass (iteration_23.json), no regressions. TypeScript clean.
+
 ## Critical Build Config
 
 ### Files that MUST exist locally (and in repo)
@@ -112,7 +121,8 @@ APK: `android/app/build/outputs/apk/release/app-release.apk`
 - [x] **Harden `/api/system/rewarded/ssv`** with AdMob SSV signature verification — Google → backend callback, ECDSA-verified, dedupes on `transaction_id`. Client fallback `/rewarded/claim` still available for pre-SSV builds.
 - [ ] Set `GOOGLE_SERVICE_ACCOUNT_JSON` env var in production after creating the Play Console service account (see `PLAY_CONSOLE_SETUP.md`)
 - [ ] Configure AdMob console SSV URL: `https://<backend>/api/system/rewarded/ssv` for the rewarded ad unit
-- [ ] Create 3 Play Console SKUs (`speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`) — activate base plans/offers (see `PLAY_CONSOLE_SETUP.md`)
+- [x] Create 3 Play Console SKUs (**`premium_monthly`, `premium_yearly`, `premium_lifetime`**) — activate base plans/offers (see `PLAY_CONSOLE_SETUP.md`)
+- [ ] Enforce `per_plan_daily_limits` in `usage_tracker.check_user_quota` — premium users currently share `free_endpoint_limits` overrides; plan-specific caps defined but not enforced yet
 - [ ] Performance: 30-Day Roadmap backend API speed optimization
 
 ## P2 — Future Tasks

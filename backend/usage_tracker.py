@@ -153,11 +153,13 @@ async def _get_state() -> dict:
         }
         pricing_migrated = False
         for k, v in expected_skus.items():
-            if pricing.get(k) != v:
+            # Also treat None / empty as "needs migration" — guards against
+            # corrupted docs where a SKU was explicitly nulled.
+            if not pricing.get(k) or pricing.get(k) != v:
                 pricing[k] = v
                 pricing_migrated = True
         for k in ("plans", "per_plan_daily_limits"):
-            if k not in pricing:
+            if k not in pricing or not pricing[k]:
                 pricing[k] = defaults["pricing"][k]
                 pricing_migrated = True
         if pricing_migrated:

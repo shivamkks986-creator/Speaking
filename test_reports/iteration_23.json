@@ -1,0 +1,26 @@
+{
+  "summary": "Iteration 23 backend testing for SpeakMateAI Premium Plan Differentiation — 19/19 tests passed (100%). Verified GET /api/system/pricing returns new SKUs (premium_monthly/yearly/lifetime), full plans config with exactly 3 keys (monthly/yearly/lifetime), each with title/cta/billing_period/badge/features. Monthly plan has exactly 3 locked features (30-Day Job Ready Roadmap, Advanced progress reports, Priority access to new features). Yearly plan has all 10 features included with badge 'Best Value'. Lifetime plan carries badge 'Save Forever'. CTA strings match exactly (₹149/month, ₹799/year, ₹1499 lifetime). POST /api/system/subscription/verify: premium_monthly→plan:monthly, premium_yearly→plan:yearly, premium_lifetime→plan:lifetime with expires_at >50 years out. Old SKU 'speakmate_monthly_149' now correctly returns 400 unknown_product. Legacy DB migration test: after manually setting stale SKUs in MongoDB system_state.config and unsetting plans/per_plan_daily_limits, the next /pricing call force-migrated the doc back to new SKUs and repopulated plans/per_plan_daily_limits (verified both API response and DB state). Regression pass on /api/system/quota, /api/system/rewarded/claim (401/premium_no_bonus_needed), /api/system/rewarded/ssv (400 missing params), /api/legal/privacy, /api/legal/data-deletion, and /api/ai/tutor/chat smoke.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter23_premium_plans.py",
+    "/app/test_reports/pytest/iter23.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "system_routes.SubscriptionVerifyPayload docstring example still references old SKU 'speakmate_monthly_149' (line 171) — misleading after this rename. Cosmetic; update to premium_monthly.",
+    "usage_tracker._get_state has a subtle risk: the plan_map in system_routes builds keys from p.get('monthly_sku') etc — if any of those are None (e.g., DB corrupted with explicit None), plan_map becomes {None: (...)} and any product_id=None would match. Currently guarded by the migration branch, but a defensive `if not p.get('monthly_sku'): pricing_migrated=True` would be safer.",
+    "per_plan_daily_limits is defined but not yet enforced anywhere in check_user_quota/check_budget — currently only free_endpoint_limits is used. If premium users are meant to have plan-specific caps (monthly=30 tutor_chat vs yearly=100), the enforcement path is missing. Confirm with product before shipping.",
+    "PlanConfig.badge is Optional[str] but frontend TypeScript type may expect null vs undefined — pydantic will emit `badge: null` for monthly which is correct; verify RN JSON parsing handles null (should)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter23_premium_plans.py"
+  ],
+  "success_rate": {"backend": "100% (19/19)", "frontend": "N/A (backend-only)"},
+  "test_credentials": "None — per-test UUIDs for X-User-Id.",
+  "seed_data_creation": "MongoDB system_state.config was temporarily corrupted with legacy SKUs during TestLegacyMigration to prove migration works; the same /pricing call restored the correct new-SKU state. Subscriptions collection: qa-iter23-* uids inserted for verify tests. No cleanup needed (idempotent per-test uids).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration 23 premium plan differentiation is fully green. If future iterations modify /pricing schema, update TestPricing assertions in test_iter23_premium_plans.py. TestLegacyMigration mutates the system_state doc directly via pymongo — safe because the migration branch restores it on the same call. Note that per_plan_daily_limits is defined in usage_tracker but NOT enforced yet — if E1 wires enforcement, add tests for premium-user plan-based quota limits.",
+  "rca of the issue": "N/A — no failures."
+}
