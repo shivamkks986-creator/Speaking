@@ -1,8 +1,8 @@
-// Google Play Billing service (Phase 2 — real IAP).
+// Google Play Billing service (Phase 2 — expo-iap).
 //
-// Uses `react-native-iap` when the native module is present (release AAB /
-// custom dev client). In Expo Go the module is absent, so purchase() returns
-// a clear error and everything else falls back to server-verified state.
+// Uses `expo-iap` (Expo-native, RN 0.81 + SDK 54 compatible). When the native
+// module isn't present (Expo Go / web), purchase() returns a clear error and
+// restore falls back to the backend-known subscription state.
 //
 // Flow:
 //   1. UI calls billingService.getProducts() → server pricing + local SKUs.
@@ -20,7 +20,7 @@ import { PremiumProduct } from '@/types';
 let iap: any = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  iap = require('react-native-iap');
+  iap = require('expo-iap');
 } catch {
   iap = null;
 }
@@ -67,9 +67,6 @@ async function ensureConnected(): Promise<boolean> {
   try {
     await iap.initConnection();
     connected = true;
-    // Best-effort: drain leftover unfinished android purchases so we
-    // don't get stuck with "already owned" errors on next purchase.
-    try { await iap.flushFailedPurchasesCachedAsPendingAndroid?.(); } catch {}
     return true;
   } catch (e) {
     console.warn('[iap] initConnection failed', e);
@@ -119,9 +116,10 @@ export const billingService = {
 
   /**
    * Trigger a Play Billing purchase for the given SKU.
-   * Subscription SKUs (monthly/yearly) use `requestSubscription`;
-   * lifetime uses `requestPurchase`. After Play returns a token we verify
-   * it server-side, then finishTransaction so Play releases the receipt.
+   * Subscription SKUs (monthly/yearly) use requestPurchase({request:{ios,android},type:'subs'});
+   * lifetime uses requestPurchase({request:{ios,android},type:'inapp'}). After
+   * Play returns a token we verify it server-side, then finishTransaction so
+   * Play releases the receipt.
    */
   async purchase(productId: string): Promise<{ ok: boolean; error?: string; status?: SubscriptionStatus }> {
     if (!currentUid) return { ok: false, error: 'Please sign in first to subscribe.' };
@@ -135,32 +133,40 @@ export const billingService = {
     const isSubscription = productId === pricing.monthly_sku || productId === pricing.yearly_sku;
 
     try {
-      let purchase: any = null;
+      // Fetch product details first so Play has them cached before purchase.
+      let offerToken: string | undefined;
       if (isSubscription) {
-        // Fetch subscription details to get the offer token (mandatory on Android).
-        const subs = await iap.getSubscriptions({ skus: [productId] });
+        const subs = await iap.fetchProducts({ skus: [productId], type: 'subs' });
         const sub = subs?.[0];
-        const offerToken = sub?.subscriptionOfferDetails?.[0]?.offerToken;
+        offerToken = sub?.subscriptionOfferDetails?.[0]?.offerToken;
         if (!offerToken) {
           return { ok: false, error: 'This subscription is not active in Play Console yet. Please try again in a few hours.' };
         }
-        purchase = await iap.requestSubscription({
-          sku: productId,
-          subscriptionOffers: [{ sku: productId, offerToken }],
-        });
       } else {
-        await iap.getProducts({ skus: [productId] });
-        purchase = await iap.requestPurchase({ sku: productId });
+        await iap.fetchProducts({ skus: [productId], type: 'inapp' });
       }
 
-      // On Android, requestPurchase/requestSubscription may return an array.
+      // Kick off the purchase. expo-iap resolves with the purchase object
+      // directly (older react-native-iap returned an array).
+      const purchase = await iap.requestPurchase({
+        request: {
+          android: {
+            skus: [productId],
+            ...(isSubscription && offerToken
+              ? { subscriptionOffers: [{ sku: productId, offerToken }] }
+              : {}),
+          },
+        },
+        type: isSubscription ? 'subs' : 'inapp',
+      });
+
       const p = Array.isArray(purchase) ? purchase[0] : purchase;
       const purchaseToken: string | undefined =
         p?.purchaseTokenAndroid ?? p?.purchaseToken ?? p?.transactionReceipt;
       if (!purchaseToken) return { ok: false, error: 'Play did not return a purchase token.' };
 
       // Server-verify + activate premium.
-      const status = await this.verifyPurchase(productId, purchaseToken, p?.transactionId);
+      const status = await this.verifyPurchase(productId, purchaseToken, p?.transactionId ?? p?.id);
 
       // Only finish the transaction AFTER backend confirms entitlement.
       try {
