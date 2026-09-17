@@ -28,6 +28,7 @@ import { RootStackParamList } from '@/navigation/types';
 import { speechService } from '@/services/speechService';
 import { aiService } from '@/services/aiService';
 import { ResumeInterviewQuestion } from '@/types';
+import EvaluatingProgress from '@/components/common/EvaluatingProgress';
 import { radius, spacing } from '@/config/theme';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -423,6 +424,10 @@ export default function ResumeInterviewScreen() {
               </LinearGradient>
             </Pressable>
           </View>
+
+          {phase === 'evaluating' && (
+            <EvaluatingProgress durationMs={5000} testID="resume-int-eval-progress" />
+          )}
 
           {focusAreas.length > 0 && (
             <View style={styles.focusCard}>

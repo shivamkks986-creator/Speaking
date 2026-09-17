@@ -5,7 +5,7 @@ Public:
 - GET  /api/system/pricing    — subscription plan prices + SKUs (used by PremiumScreen)
 - GET  /api/system/usage      — today's usage summary
 - GET  /api/system/quota      — per-user quota status
-- POST /api/system/subscription/verify — verify Play Store receipt & activate premium (stub)
+- POST /api/system/subscription/verify — verify Play Store receipt & activate premium
 - POST /api/system/subscription/restore — restore purchase (looks up premium from DB)
 - POST /api/system/rewarded/claim — grant rewarded-ad bonus quota
 
@@ -15,6 +15,7 @@ Admin-only (header X-Admin-Email must match env var ADMIN_EMAILS):
 """
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 from typing import Any, Optional
@@ -23,6 +24,9 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 
 import usage_tracker as ut
+import play_verifier as pv
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/system")
 
@@ -154,11 +158,11 @@ async def subscription_verify(
 ):
     """Verify a Play Store receipt server-side and mark user as premium.
 
-    IMPORTANT: This is currently a STUB that trusts the client-supplied token.
-    Before production launch, integrate Google Play Developer API v3 (see
-    https://developers.google.com/android-publisher/api-ref/rest/v3/purchases.subscriptions/get)
-    and validate `purchase_token` against the `product_id`. Reject expired,
-    revoked, or fraudulent tokens.
+    Uses Google Play Developer API v3 (androidpublisher) when
+    GOOGLE_SERVICE_ACCOUNT_JSON / GOOGLE_SERVICE_ACCOUNT_PATH is configured.
+    If credentials are absent (preview / early dev), falls back to trusting
+    the client — a warning is logged and the response carries `source=
+    play_billing_unverified` so we can audit later.
     """
     if not x_user_id:
         raise HTTPException(status_code=401, detail="user_id_required")
@@ -177,19 +181,43 @@ async def subscription_verify(
         raise HTTPException(status_code=400, detail=f"unknown_product:{payload.product_id}")
     plan, days = match
 
+    # --- Server-side verification via Google Play Developer API ------------
+    verified: Optional[pv.VerifiedPurchase]
+    try:
+        verified = pv.verify_purchase(payload.product_id, payload.purchase_token, p)
+    except ValueError as e:
+        # Genuine Play API error (400/404 from Google) — reject.
+        logger.warning("[verify] play api rejected token: %s", e)
+        raise HTTPException(status_code=400, detail=f"play_verification_failed:{e}")
+    except Exception as e:  # noqa: BLE001
+        logger.exception("[verify] unexpected play_verifier error")
+        raise HTTPException(status_code=500, detail="verify_internal_error") from e
+
     from datetime import timedelta
     now = datetime.now(timezone.utc)
-    expires = (now + timedelta(days=days)).isoformat()
+
+    if verified is not None:
+        # Real Play verification path — trust Google, not client.
+        if not verified.entitled:
+            raise HTTPException(status_code=400, detail=f"purchase_not_active:{verified.state}")
+        expires_iso = verified.expiry_iso or (now + timedelta(days=days)).isoformat()
+        source = "play_billing"
+        order_id = verified.order_id or payload.order_id
+    else:
+        # Credentials not configured — fall back to trust mode (dev only).
+        expires_iso = (now + timedelta(days=days)).isoformat()
+        source = "play_billing_unverified"
+        order_id = payload.order_id
 
     doc = {
         "uid": x_user_id,
         "product_id": payload.product_id,
         "purchase_token": payload.purchase_token,
-        "order_id": payload.order_id,
+        "order_id": order_id,
         "plan": plan,
         "granted_at": now.isoformat(),
-        "expires_at": expires,
-        "source": "play_billing",
+        "expires_at": expires_iso,
+        "source": source,
         "active": True,
     }
     await _db.subscriptions.update_one(
@@ -197,7 +225,7 @@ async def subscription_verify(
         {"$set": doc},
         upsert=True,
     )
-    return SubscriptionStatus(is_premium=True, plan=plan, expires_at=expires, source="play_billing")
+    return SubscriptionStatus(is_premium=True, plan=plan, expires_at=expires_iso, source=source)
 
 
 @router.post("/subscription/restore", response_model=SubscriptionStatus)

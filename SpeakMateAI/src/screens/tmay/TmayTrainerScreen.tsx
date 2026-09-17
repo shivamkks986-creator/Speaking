@@ -29,6 +29,7 @@ import { aiService, QuotaExceededError } from '@/services/aiService';
 import { TmayEvaluation } from '@/types';
 import { useProgress } from '@/contexts/ProgressContext';
 import { radius, spacing } from '@/config/theme';
+import EvaluatingProgress from '@/components/common/EvaluatingProgress';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Phase = 'idle' | 'recording' | 'transcribing' | 'evaluating' | 'result';
@@ -261,6 +262,9 @@ export default function TmayTrainerScreen() {
                   <Ionicons name="sparkles" size={14} color="#0A0418" />
                   <Text style={styles.evalBtnText}>Evaluate this intro</Text>
                 </Pressable>
+              )}
+              {phase === 'evaluating' && (
+                <EvaluatingProgress durationMs={5000} testID="tmay-eval-progress" />
               )}
             </View>
           )}

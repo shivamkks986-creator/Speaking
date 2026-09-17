@@ -35,11 +35,13 @@ $Files = @(
     @{ Url = "$CloudBase/UsageIndicator.tsx";         Dest = "src\components\common\UsageIndicator.tsx" }
     @{ Url = "$CloudBase/AdBanner.tsx";               Dest = "src\components\common\AdBanner.tsx" }
     @{ Url = "$CloudBase/LimitReachedModal.tsx";      Dest = "src\components\common\LimitReachedModal.tsx" }
+    @{ Url = "$CloudBase/EvaluatingProgress.tsx";     Dest = "src\components\common\EvaluatingProgress.tsx" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
     @{ Url = "$CloudBase/AITutorScreen.tsx";          Dest = "src\screens\tutor\AITutorScreen.tsx" }
     @{ Url = "$CloudBase/SpeakingPracticeScreen.tsx"; Dest = "src\screens\speaking\SpeakingPracticeScreen.tsx" }
     @{ Url = "$CloudBase/InterviewCoachScreen.tsx";   Dest = "src\screens\interview\InterviewCoachScreen.tsx" }
+    @{ Url = "$CloudBase/InterviewSessionScreen.tsx"; Dest = "src\screens\interview\InterviewSessionScreen.tsx" }
     @{ Url = "$CloudBase/LiveInterviewScreen.tsx";    Dest = "src\screens\interview\LiveInterviewScreen.tsx" }
     @{ Url = "$CloudBase/PremiumScreen.tsx";          Dest = "src\screens\premium\PremiumScreen.tsx" }
     @{ Url = "$CloudBase/ResumeUploadScreen.tsx";     Dest = "src\screens\resume\ResumeUploadScreen.tsx" }

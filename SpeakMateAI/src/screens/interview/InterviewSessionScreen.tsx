@@ -15,6 +15,7 @@ import { useProgress } from '@/contexts/ProgressContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { InterviewAnswer } from '@/types';
 import Card from '@/components/common/Card';
+import EvaluatingProgress from '@/components/common/EvaluatingProgress';
 
 type Route = RouteProp<RootStackParamList, 'InterviewSession'>;
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -197,12 +198,7 @@ export default function InterviewSessionScreen() {
           )}
 
           {thinking ? (
-            <View style={styles.thinking}>
-              <ActivityIndicator color={theme.colors.primary} />
-              <Text style={{ marginLeft: 8, color: theme.colors.onSurfaceVariant }}>
-                Analysing your answer…
-              </Text>
-            </View>
+            <EvaluatingProgress durationMs={5000} testID="interview-eval-progress" />
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
