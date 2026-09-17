@@ -68,6 +68,15 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] `EvaluatingProgress.tsx` — shimmering gradient progress bar with 4 rotating status messages ("Listening…", "Checking grammar…", "Scoring…", "Preparing feedback…"). Wired into `InterviewSessionScreen`, `ResumeInterviewScreen`, and `TmayTrainerScreen` to replace bare spinners on the ~5s evaluate wait.
 - [x] Backend tested — 19/19 pass (iteration_21.json), no regressions. TypeScript clean.
 
+### Phase 4 — AdMob SSV + Play Console Setup + Roadmap Speedup (Feb 2026) ✅ DONE
+- [x] `backend/admob_ssv.py` — Google's AdMob SSV signature verifier. Fetches Google's verifier keys (24h cache), reconstructs canonical signed message, ECDSA-verifies with `cryptography`.
+- [x] `GET /api/system/rewarded/ssv` — Google → backend callback. Validates signature, dedupes on `transaction_id`, grants reward atomically via `usage_tracker.grant_rewarded_bonus`. Falls back to `user_id` query param if `custom_data` empty.
+- [x] `adsService.ts` — `setAdsAuthContext(uid)` + `showRewarded(endpoint)` set `setServerSideVerificationOptions({userId, customData})` before showing rewarded ad so Google's SSV callback carries the uid.
+- [x] `AuthContext.tsx` — now propagates uid to all four services (aiService, billingService, usageService, adsService) on auth state change.
+- [x] `PLAY_CONSOLE_SETUP.md` — step-by-step SKU creation, License testing, Internal testing track, service account setup for real `subscription/verify` hardening.
+- [x] Roadmap speedup: `_gen_roadmap_meta` moved to `claude-haiku-4-5` (was Gemini) → provider parallelism. `ROADMAP_PHASES` split into 6 × 5-day chunks (was 3 × 10-day) → finer parallelism. `return_exceptions=True` on outer + inner gather so one chunk/meta failure doesn't tank the whole roadmap; missing days backfilled and meta falls back to a friendly default.
+- [x] Backend tested — 24/24 pass (iteration_22.json), no regressions.
+
 ## Critical Build Config
 
 ### Files that MUST exist locally (and in repo)
@@ -100,8 +109,10 @@ APK: `android/app/build/outputs/apk/release/app-release.apk`
 - [ ] Data Safety form + Content Rating questionnaire in Play Console (declare app contains ads + IAPs)
 - [ ] Create 3 Play Console SKUs (`speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`) — activate base plans/offers
 - [x] **Harden `/api/system/subscription/verify`** with Google Play Developer API v3 — validates purchase tokens server-side when `GOOGLE_SERVICE_ACCOUNT_JSON` is set; falls back to trust-mode flagged `play_billing_unverified` otherwise.
-- [ ] Set `GOOGLE_SERVICE_ACCOUNT_JSON` env var in production after creating the Play Console service account (see `play_verifier.py` header)
-- [ ] **Harden `/api/system/rewarded/claim`** with AdMob SSV signature (currently trusts client claim)
+- [x] **Harden `/api/system/rewarded/ssv`** with AdMob SSV signature verification — Google → backend callback, ECDSA-verified, dedupes on `transaction_id`. Client fallback `/rewarded/claim` still available for pre-SSV builds.
+- [ ] Set `GOOGLE_SERVICE_ACCOUNT_JSON` env var in production after creating the Play Console service account (see `PLAY_CONSOLE_SETUP.md`)
+- [ ] Configure AdMob console SSV URL: `https://<backend>/api/system/rewarded/ssv` for the rewarded ad unit
+- [ ] Create 3 Play Console SKUs (`speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`) — activate base plans/offers (see `PLAY_CONSOLE_SETUP.md`)
 - [ ] Performance: 30-Day Roadmap backend API speed optimization
 
 ## P2 — Future Tasks

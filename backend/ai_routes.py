@@ -574,13 +574,21 @@ async def roadmap_generate(
         f"Self-reported weak areas: {weak_str}"
     )
 
-    # Fire 6 chunks (5 days each) + meta call in parallel. Chunks use
-    # return_exceptions=True so one Gemini timeout doesn't tank the whole
-    # request — we backfill missing days below.
+    # Fire 6 chunks (5 days each) + meta call in parallel. Both use
+    # return_exceptions=True so one Gemini/Claude timeout doesn't tank the
+    # whole request — we backfill missing days + fallback meta strings.
     chunk_tasks = [_gen_roadmap_chunk(s, e, desc, ctx) for s, e, desc in ROADMAP_PHASES]
     chunks_gather = asyncio.gather(*chunk_tasks, return_exceptions=True)
     meta_task = _gen_roadmap_meta(ctx)
-    chunks_or_errs, meta = await asyncio.gather(chunks_gather, meta_task)
+    chunks_or_errs, meta_or_err = await asyncio.gather(
+        chunks_gather, meta_task, return_exceptions=True
+    )
+
+    if isinstance(meta_or_err, Exception):
+        logger.warning("[roadmap] meta failed: %s", meta_or_err)
+        meta = {"summary": "Your personalised 30-day job-ready roadmap.", "goal_title": "30-Day Job Ready Plan"}
+    else:
+        meta = meta_or_err
 
     await _record("roadmap_generate", uid=x_user_id)
 
