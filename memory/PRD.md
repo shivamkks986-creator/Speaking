@@ -83,8 +83,14 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] `system_routes.py` — `/pricing` returns full `PricingResponse` with typed `plans: Dict[str, PlanConfig]`.
 - [x] `types/index.ts` — `PremiumProduct` extended with `planKey`, `cta`, `badge`, `billingPeriod`, `features[]`.
 - [x] `billingService.ts` — `getProducts()` now returns plan-differentiated products from backend.
-- [x] `PremiumScreen.tsx` — full rewrite: 3 plan cards with badge, dynamic feature list per selected plan (✅ included / 🔒 locked with notes), **sticky bottom CTA** with plan-specific label ("Subscribe for ₹149/month", "Subscribe for ₹799/year", "Get Lifetime Access for ₹1499"). Uses `useSafeAreaInsets` + `useBottomTabBarHeight` for correct offset above tab bar. Loading state + duplicate-purchase guard.
+- [x] `PremiumScreen.tsx` — full rewrite: 3 plan cards with badge, dynamic feature list per selected plan (✅ included / 🔒 locked with notes), **sticky bottom CTA** with plan-specific label. Uses `useSafeAreaInsets` + `useBottomTabBarHeight` for correct offset above tab bar. Loading state + duplicate-purchase guard.
 - [x] Backend tested — 19/19 pass (iteration_23.json), no regressions. TypeScript clean.
+
+### Phase 6 — Interstitial Ads + Free Trial + Per-Plan Quotas (Feb 2026) ✅ DONE
+- [x] `src/services/interstitialTrigger.ts` — free-tier only, throttled (every 3rd practice completion, min 3 min gap, 24h counter reset). Wired into `InterviewSessionScreen`, `TmayTrainerScreen`, `SpeakingPracticeScreen`. Premium/Expo-Go no-op.
+- [x] Free trial on Monthly plan — backend `pricing.plans.monthly.trial_days=3`, CTA=`Start 3-day free trial`, badge=`3-Day Free Trial`, first feature=`3-day free trial (New subscribers only)`. Auto-migrated on legacy docs.
+- [x] Per-plan quota enforcement — `usage_tracker.get_user_active_plan(uid)` reads latest active subscription from DB. `check_user_quota` now takes optional `plan` param + auto-lookup; premium users get plan-specific caps (monthly 30/2, yearly/lifetime 100/5). `get_user_quota_status` surfaces `plan` field so frontend UsageIndicator shows correct limits.
+- [x] Backend tested — **19/19 pass** (iteration_24.json), no regressions. TypeScript clean.
 
 ## Critical Build Config
 
@@ -122,7 +128,8 @@ APK: `android/app/build/outputs/apk/release/app-release.apk`
 - [ ] Set `GOOGLE_SERVICE_ACCOUNT_JSON` env var in production after creating the Play Console service account (see `PLAY_CONSOLE_SETUP.md`)
 - [ ] Configure AdMob console SSV URL: `https://<backend>/api/system/rewarded/ssv` for the rewarded ad unit
 - [x] Create 3 Play Console SKUs (**`premium_monthly`, `premium_yearly`, `premium_lifetime`**) — activate base plans/offers (see `PLAY_CONSOLE_SETUP.md`)
-- [ ] Enforce `per_plan_daily_limits` in `usage_tracker.check_user_quota` — premium users currently share `free_endpoint_limits` overrides; plan-specific caps defined but not enforced yet
+- [x] Enforce `per_plan_daily_limits` in `usage_tracker.check_user_quota` — premium users now get plan-specific caps (monthly 30/2, yearly/lifetime 100/5)
+- [ ] Configure Google Play Console intro pricing: 3-day free trial on `premium_monthly` base plan (matches app's badge)
 - [ ] Performance: 30-Day Roadmap backend API speed optimization
 
 ## P2 — Future Tasks

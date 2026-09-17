@@ -97,6 +97,7 @@ FIX_FILES = {
     "AdBanner.tsx":               SPEAKMATE_ROOT / "src/components/common/AdBanner.tsx",
     "LimitReachedModal.tsx":      SPEAKMATE_ROOT / "src/components/common/LimitReachedModal.tsx",
     "EvaluatingProgress.tsx":     SPEAKMATE_ROOT / "src/components/common/EvaluatingProgress.tsx",
+    "interstitialTrigger.ts":     SPEAKMATE_ROOT / "src/services/interstitialTrigger.ts",
     "ScreenContainer.tsx":        SPEAKMATE_ROOT / "src/components/common/ScreenContainer.tsx",
     "HomeScreen.tsx":             SPEAKMATE_ROOT / "src/screens/home/HomeScreen.tsx",
     "AITutorScreen.tsx":          SPEAKMATE_ROOT / "src/screens/tutor/AITutorScreen.tsx",

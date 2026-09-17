@@ -62,6 +62,7 @@ interface PlanConfigDto {
   cta: string;
   billing_period: string;
   badge?: string | null;
+  trial_days?: number | null;
   features: Array<{ label: string; included: boolean; note?: string }>;
 }
 

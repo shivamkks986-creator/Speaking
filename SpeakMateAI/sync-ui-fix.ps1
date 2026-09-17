@@ -37,6 +37,7 @@ $Files = @(
     @{ Url = "$CloudBase/AdBanner.tsx";               Dest = "src\components\common\AdBanner.tsx" }
     @{ Url = "$CloudBase/LimitReachedModal.tsx";      Dest = "src\components\common\LimitReachedModal.tsx" }
     @{ Url = "$CloudBase/EvaluatingProgress.tsx";     Dest = "src\components\common\EvaluatingProgress.tsx" }
+    @{ Url = "$CloudBase/interstitialTrigger.ts";     Dest = "src\services\interstitialTrigger.ts" }
     @{ Url = "$CloudBase/ScreenContainer.tsx";        Dest = "src\components\common\ScreenContainer.tsx" }
     @{ Url = "$CloudBase/HomeScreen.tsx";             Dest = "src\screens\home\HomeScreen.tsx" }
     @{ Url = "$CloudBase/AITutorScreen.tsx";          Dest = "src\screens\tutor\AITutorScreen.tsx" }
