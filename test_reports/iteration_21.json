@@ -1,0 +1,25 @@
+{
+  "summary": "Iteration 21 backend testing complete — 19/19 tests passed (100%). Validated /api/system/subscription/verify hardening with the new play_verifier module. Fallback trust-mode confirmed: with no GOOGLE_SERVICE_ACCOUNT_JSON/PATH env, verify returns is_premium=true, correct plan mapping (monthly/yearly/lifetime), and source='play_billing_unverified'; MongoDB subscriptions collection persists with source='play_billing_unverified' and /subscription/restore returns the same source. Validation errors covered: 401 user_id_required (missing X-User-Id), 400 purchase_token_required (empty token), 400 unknown_product (bad SKU). play_verifier module tested directly: _build_client() returns None with a WARNING log when no env is set; verify_purchase() returns None (fallback). Malformed GOOGLE_SERVICE_ACCOUNT_JSON ('{not-valid-json') → _build_client() logs error, returns None on both first and cached second call, no crash; verify_purchase falls back to None gracefully. Configured mode simulated by monkeypatching _build_client to a fake androidpublisher client — subscriptionsv2 path returns VerifiedPurchase(entitled=True, state=SUBSCRIPTION_STATE_ACTIVE, expiry_iso preserved, order_id captured); products path auto-acknowledges (ack called exactly once) and returns state='PURCHASED'; HttpError from Play API is translated to ValueError('play_api_error:400') which system_routes wraps into HTTP 400. Regression on /api/system/pricing (all fields present), /api/system/quota, /api/system/rewarded/claim (grant + premium_no_bonus_needed), /api/legal/privacy, /api/legal/data-deletion — all 200 OK, identical behaviour to iteration_20.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_subscription_verify_hardening.py",
+    "/app/test_reports/pytest/iter21_verify_hardening.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "play_verifier._client_error latches on FIRST failure and prevents _build_client() from ever retrying, even after env vars are added at runtime. If ops rotates a service-account key without restarting, the process is stuck in fallback mode. Consider exposing a reset() helper or checking env-change on each call.",
+    "system_routes.subscription_verify catches broad Exception and returns 500 'verify_internal_error'. Because pv._build_client() swallows its own failures and returns None, this path only fires for truly unexpected bugs — good, but consider logging the payload's product_id (never the purchase_token) to help ops triage.",
+    "verify_purchase() Auto-ack on subscriptions calls client.purchases().subscriptions().acknowledge(...) but the subscriptionsv2 GET is used elsewhere. The v1 acknowledge endpoint is still valid, but Google recommends using subscriptionsv2 uniformly — consider migrating for consistency.",
+    "In fallback (unverified) mode the server still writes purchase_token to Mongo. If purchase_token is ever considered PII/secret in your threat model, at least hash it before storing. Not blocking for launch.",
+    "Test regression noticed: older records from previous iterations still have source='play_billing' (pre-hardening). New writes correctly use 'play_billing_unverified'. Since restore sorts by granted_at desc, a user who verified twice (once pre-hardening, once post) will see 'play_billing' returned — not a bug, but worth mentioning in the audit dashboard docs."
+  ],
+  "updated_files": ["/app/backend/tests/test_subscription_verify_hardening.py"],
+  "success_rate": {"backend": "100%", "frontend": "N/A (backend-only run)"},
+  "test_credentials": "None — X-User-Id headers use unique UUIDs per test.",
+  "seed_data_creation": "MongoDB subscriptions collection: uids prefixed qa-verify-fallback-*, qa-verify-restore-*, qa-quota-*, qa-rw-*. Idempotent across re-runs (upsert by uid+purchase_token).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Subscription-verify hardening is production-safe for fallback mode. The Play API branch is exercised only through monkeypatched fake clients — end-to-end sandbox verification requires a real Google service account JSON in GOOGLE_SERVICE_ACCOUNT_JSON plus a sandbox purchase token from Play Console internal test track. If the next iteration wires that in, extend test_verify_purchase_uses_fake_client_* with real integration and add a status.expires_at parse test to ensure Play's RFC3339 expiryTime survives the round-trip.",
+  "rca of the issue": "N/A — no failures. Hardening behaves as spec'd."
+}

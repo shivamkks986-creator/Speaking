@@ -62,6 +62,12 @@ Transform English-learning app (SpeakMate AI) into a complete **Communication Sk
 - [x] Ad Unit IDs (Interstitial 9256241120, Rewarded 4056332447, Banner 9248949370)
 - [x] Play Console SKUs: `speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`
 
+### Phase 3 — Play API Hardening + Skeleton Loader (Feb 2026) ✅ DONE
+- [x] `backend/play_verifier.py` — Google Play Developer API v3 wrapper. Handles `subscriptionsv2.get` for monthly/yearly and `products.get` for lifetime. Auto-acknowledges purchases so Play doesn't refund after 3 days.
+- [x] `system_routes.py` `subscription/verify` — now calls `pv.verify_purchase()`. When `GOOGLE_SERVICE_ACCOUNT_JSON` (or `_PATH`) env is set → real Google verification (rejects fake/expired tokens with HTTP 400). When unset → trust-mode fallback flagged `source='play_billing_unverified'` (audit-friendly, dev-safe).
+- [x] `EvaluatingProgress.tsx` — shimmering gradient progress bar with 4 rotating status messages ("Listening…", "Checking grammar…", "Scoring…", "Preparing feedback…"). Wired into `InterviewSessionScreen`, `ResumeInterviewScreen`, and `TmayTrainerScreen` to replace bare spinners on the ~5s evaluate wait.
+- [x] Backend tested — 19/19 pass (iteration_21.json), no regressions. TypeScript clean.
+
 ## Critical Build Config
 
 ### Files that MUST exist locally (and in repo)
@@ -93,7 +99,8 @@ APK: `android/app/build/outputs/apk/release/app-release.apk`
 - [ ] Play Store assets: Feature graphic 1024x500, screenshots, store description
 - [ ] Data Safety form + Content Rating questionnaire in Play Console (declare app contains ads + IAPs)
 - [ ] Create 3 Play Console SKUs (`speakmate_monthly_149`, `speakmate_yearly_799`, `speakmate_lifetime_1499`) — activate base plans/offers
-- [ ] **Harden `/api/system/subscription/verify`** with Google Play Developer API v3 (currently trusts client token)
+- [x] **Harden `/api/system/subscription/verify`** with Google Play Developer API v3 — validates purchase tokens server-side when `GOOGLE_SERVICE_ACCOUNT_JSON` is set; falls back to trust-mode flagged `play_billing_unverified` otherwise.
+- [ ] Set `GOOGLE_SERVICE_ACCOUNT_JSON` env var in production after creating the Play Console service account (see `play_verifier.py` header)
 - [ ] **Harden `/api/system/rewarded/claim`** with AdMob SSV signature (currently trusts client claim)
 - [ ] Performance: 30-Day Roadmap backend API speed optimization
 
