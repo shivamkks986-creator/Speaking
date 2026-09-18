@@ -57,6 +57,9 @@ export default function PremiumScreen() {
         const popular = p.find((x) => x.popular) ?? p.find((x) => x.planKey === 'yearly') ?? p[0];
         if (popular) setSelectedSku(popular.id);
       })
+      .catch((e) => {
+        console.warn('[premium] getProducts failed', e);
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -157,7 +160,7 @@ export default function PremiumScreen() {
                   <Text style={styles.featuresBilling}>{selected.billingPeriod}</Text>
                 ) : null}
               </View>
-              {selected.features.map((f, idx) => (
+              {(selected.features || []).map((f, idx) => (
                 <View key={idx} style={styles.featureRow} testID={`feature-${idx}`}>
                   <Ionicons
                     name={f.included ? 'checkmark-circle' : 'lock-closed'}

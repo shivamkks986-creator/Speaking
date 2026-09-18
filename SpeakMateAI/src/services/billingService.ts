@@ -91,31 +91,110 @@ async function ensureConnected(): Promise<boolean> {
 // ---- Cached pricing ------------------------------------------------------
 let cachedPricing: PricingConfig | null = null;
 
+/** Build a fully-formed `plans` object from just the price numbers.
+ *  Used when the backend is on an older schema and returns pricing without plans. */
+function buildDefaultPlans(monthlyInr: number, yearlyInr: number, lifetimeInr: number): PricingConfig['plans'] {
+  return {
+    monthly: {
+      title: 'Monthly Premium',
+      cta: `Start 3-day free trial`,
+      billing_period: `Free 3 days, then \u20b9${monthlyInr}/month. Cancel anytime.`,
+      badge: '3-Day Free Trial',
+      trial_days: 3,
+      features: [
+        { label: '3-day free trial', included: true, note: 'New subscribers only' },
+        { label: 'Ad-free experience', included: true },
+        { label: 'AI speaking practice', included: true, note: 'Limited' },
+        { label: 'AI companion access', included: true, note: 'Expanded' },
+        { label: 'AI Mock Interview', included: true },
+        { label: 'TMAY Trainer', included: true },
+        { label: 'Sales & Counselling Roleplay', included: true },
+        { label: 'Resume-based interviews', included: true },
+        { label: '30-Day Job Ready Roadmap', included: false, note: 'Yearly & Lifetime only' },
+        { label: 'Advanced progress reports', included: false },
+        { label: 'Priority access to new features', included: false },
+      ],
+    },
+    yearly: {
+      title: 'Yearly Premium',
+      cta: `Subscribe for \u20b9${yearlyInr}/year`,
+      billing_period: 'Renews yearly \u00b7 save 55%',
+      badge: 'Best Value',
+      trial_days: null,
+      features: [
+        { label: 'Ad-free experience', included: true },
+        { label: 'AI speaking practice', included: true, note: 'Higher limits' },
+        { label: 'AI companion access', included: true, note: 'All companions' },
+        { label: 'AI Mock Interview', included: true },
+        { label: 'TMAY Trainer', included: true },
+        { label: 'Sales & Counselling Roleplay', included: true },
+        { label: 'Resume-based interviews', included: true },
+        { label: '30-Day Job Ready Roadmap', included: true },
+        { label: 'Advanced progress reports', included: true },
+        { label: 'Priority access to new features', included: true },
+      ],
+    },
+    lifetime: {
+      title: 'Lifetime Premium',
+      cta: `Get Lifetime Access for \u20b9${lifetimeInr}`,
+      billing_period: 'One-time payment \u00b7 no renewals',
+      badge: 'Save Forever',
+      trial_days: null,
+      features: [
+        { label: 'All Premium features', included: true },
+        { label: 'Ad-free forever', included: true },
+        { label: 'One-time payment', included: true, note: 'No recurring charges' },
+        { label: 'Lifetime access to current features', included: true },
+        { label: 'AI usage limits', included: true, note: 'Same as Yearly' },
+        { label: 'Future features may be added', included: true, note: 'Subject to change' },
+      ],
+    },
+  };
+}
+
+/** Fully-populated hard fallback when the backend is unreachable. */
+function hardFallback(): PricingConfig {
+  return {
+    monthly_inr: 149, yearly_inr: 799, lifetime_inr: 1499,
+    lifetime_enabled: true,
+    monthly_sku: 'premium_monthly',
+    yearly_sku: 'premium_yearly',
+    lifetime_sku: 'premium_lifetime',
+    plans: buildDefaultPlans(149, 799, 1499),
+  };
+}
+
 async function fetchPricing(): Promise<PricingConfig> {
   if (cachedPricing) return cachedPricing;
   try {
     const res = await fetch(`${API}/system/pricing`);
     if (!res.ok) throw new Error(String(res.status));
-    cachedPricing = await res.json();
-    return cachedPricing!;
-  } catch {
-    // Fallback if backend unreachable — offline / first-launch scenario.
-    const fallbackPlans = {
-      title: 'Premium', cta: 'Subscribe', billing_period: '', badge: null,
-      features: [{ label: 'Ad-free experience', included: true }],
-    };
+    const raw: any = await res.json();
+
+    // Backfill missing fields so older backend deployments still render fully.
+    const monthlyInr = Number(raw?.monthly_inr ?? 149);
+    const yearlyInr = Number(raw?.yearly_inr ?? 799);
+    const lifetimeInr = Number(raw?.lifetime_inr ?? 1499);
+    const built = buildDefaultPlans(monthlyInr, yearlyInr, lifetimeInr);
+
     cachedPricing = {
-      monthly_inr: 149, yearly_inr: 799, lifetime_inr: 1499,
-      lifetime_enabled: true,
-      monthly_sku: 'premium_monthly',
-      yearly_sku: 'premium_yearly',
-      lifetime_sku: 'premium_lifetime',
+      monthly_inr: monthlyInr,
+      yearly_inr: yearlyInr,
+      lifetime_inr: lifetimeInr,
+      lifetime_enabled: raw?.lifetime_enabled !== false,
+      monthly_sku: String(raw?.monthly_sku ?? 'premium_monthly'),
+      yearly_sku: String(raw?.yearly_sku ?? 'premium_yearly'),
+      lifetime_sku: String(raw?.lifetime_sku ?? 'premium_lifetime'),
       plans: {
-        monthly: { ...fallbackPlans, title: 'Monthly Premium', cta: 'Subscribe for \u20b9149/month' },
-        yearly: { ...fallbackPlans, title: 'Yearly Premium', cta: 'Subscribe for \u20b9799/year', badge: 'Best Value' },
-        lifetime: { ...fallbackPlans, title: 'Lifetime Premium', cta: 'Get Lifetime Access for \u20b91499' },
+        monthly: raw?.plans?.monthly ?? built.monthly,
+        yearly: raw?.plans?.yearly ?? built.yearly,
+        lifetime: raw?.plans?.lifetime ?? built.lifetime,
       },
     };
+    return cachedPricing;
+  } catch {
+    // Fallback if backend unreachable — offline / first-launch scenario.
+    cachedPricing = hardFallback();
     return cachedPricing;
   }
 }
