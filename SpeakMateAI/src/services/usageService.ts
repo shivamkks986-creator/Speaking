@@ -3,6 +3,8 @@
 //   • Detect when limit is hit and pop the upgrade / rewarded-ad modal
 //   • Grant bonus quota after a rewarded ad completes
 
+import { attachIdToken } from '@/services/tokenProvider';
+
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const API = `${BACKEND_URL}/api`;
 
@@ -31,18 +33,18 @@ export interface QuotaStatus {
   per_endpoint: Record<string, EndpointQuota>;
 }
 
-function headers(): Record<string, string> {
+async function headers(): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (currentUid) h['X-User-Id'] = currentUid;
   h['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';
-  return h;
+  return await attachIdToken(h);
 }
 
 export const usageService = {
   async getQuota(): Promise<QuotaStatus | null> {
     if (!currentUid) return null;
     try {
-      const res = await fetch(`${API}/system/quota`, { headers: headers() });
+      const res = await fetch(`${API}/system/quota`, { headers: await headers() });
       if (!res.ok) return null;
       return await res.json();
     } catch {

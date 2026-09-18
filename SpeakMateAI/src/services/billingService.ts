@@ -15,6 +15,7 @@
 
 import { Platform } from 'react-native';
 import { PremiumProduct } from '@/types';
+import { attachIdToken } from '@/services/tokenProvider';
 
 // ---- Dynamic native module load (Expo-Go safe) ---------------------------
 let iap: any = null;
@@ -35,10 +36,10 @@ export function setBillingAuthContext(uid: string | null) {
   currentUid = uid;
 }
 
-function authHeaders(): Record<string, string> {
+async function authHeaders(): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
-  if (currentUid) h['X-User-Id'] = currentUid;
-  return h;
+  if (currentUid) h['X-User-Id'] = currentUid;   // legacy trust-mode fallback
+  return await attachIdToken(h);                  // adds Bearer <firebase_id_token>
 }
 
 // ---- Types ---------------------------------------------------------------
@@ -326,7 +327,7 @@ export const billingService = {
   async verifyPurchase(productId: string, purchaseToken: string, orderId?: string): Promise<SubscriptionStatus> {
     const res = await fetch(`${API}/system/subscription/verify`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await authHeaders(),
       body: JSON.stringify({ product_id: productId, purchase_token: purchaseToken, order_id: orderId }),
     });
     if (!res.ok) {
@@ -334,6 +335,23 @@ export const billingService = {
       throw new Error(String(err.detail ?? 'verification_failed'));
     }
     return await res.json();
+  },
+
+  /**
+   * Fetch server-side entitlement WITHOUT any Play Store lookup — cheapest
+   * way to answer "is this user premium right now?". Called on every app
+   * launch by AuthContext so a device that lost/refreshed local state
+   * (Firestore, AsyncStorage) still sees the correct premium status.
+   */
+  async fetchStatus(): Promise<SubscriptionStatus> {
+    if (!currentUid) return { is_premium: false, plan: null, expires_at: null, source: null };
+    try {
+      const res = await fetch(`${API}/system/subscription/status`, { headers: await authHeaders() });
+      if (!res.ok) return { is_premium: false, plan: null, expires_at: null, source: null };
+      return await res.json();
+    } catch {
+      return { is_premium: false, plan: null, expires_at: null, source: null };
+    }
   },
 
   /**
@@ -366,7 +384,7 @@ export const billingService = {
 
     // Fallback: backend lookup (returns the DB row we already have).
     try {
-      const res = await fetch(`${API}/system/subscription/restore`, { method: 'POST', headers: authHeaders() });
+      const res = await fetch(`${API}/system/subscription/restore`, { method: 'POST', headers: await authHeaders() });
       if (!res.ok) return { is_premium: false, plan: null, expires_at: null, source: null };
       return await res.json();
     } catch {
@@ -383,7 +401,7 @@ export const billingService = {
     try {
       const res = await fetch(`${API}/system/rewarded/claim`, {
         method: 'POST',
-        headers: authHeaders(),
+        headers: await authHeaders(),
         body: JSON.stringify({ endpoint }),
       });
       if (!res.ok) return { ok: false, reason: `http_${res.status}` };

@@ -18,6 +18,7 @@ import {
   TmayEvaluation,
 } from '@/types';
 import { delay, randomId } from '@/utils/helpers';
+import { attachIdToken } from '@/services/tokenProvider';
 
 const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 const AI = BACKEND_URL ? `${BACKEND_URL.replace(/\/$/, '')}/api/ai` : '';
@@ -34,11 +35,11 @@ export function setAiAuthContext(uid: string | null, isPremium: boolean) {
   currentIsPremium = isPremium;
 }
 
-function authHeaders(): Record<string, string> {
+async function authHeaders(): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (currentUserId) h['X-User-Id'] = currentUserId;
-  h['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';
-  return h;
+  h['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';   // hint only; backend ignores
+  return await attachIdToken(h);
 }
 
 /** Thrown when the backend returns 429 user_quota_exceeded. Frontend should show paywall. */
@@ -55,7 +56,7 @@ async function postJson<T>(path: string, body: unknown, timeoutMs = 30000): Prom
   try {
     const res = await fetch(`${AI}${path}`, {
       method: 'POST',
-      headers: authHeaders(),
+      headers: await authHeaders(),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -332,7 +333,7 @@ export const aiService = {
   // -------- Sales / Counselling Trainer --------
   async listSalesScenarios(): Promise<SalesScenario[]> {
     if (!AI) throw new Error('EXPO_PUBLIC_BACKEND_URL not set');
-    const res = await fetch(`${AI}/sales/scenarios`, { headers: authHeaders() });
+    const res = await fetch(`${AI}/sales/scenarios`, { headers: await authHeaders() });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = (await res.json()) as { scenarios: SalesScenario[] };
     return data.scenarios || [];
@@ -380,6 +381,7 @@ export const aiService = {
     const headers: Record<string, string> = {};
     if (currentUserId) headers['X-User-Id'] = currentUserId;
     headers['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';
+    await attachIdToken(headers);
     const res = await fetch(`${AI}/resume/parse`, { method: 'POST', body: form, headers });
     if (res.status === 429) {
       const data = await res.json().catch(() => ({}));

@@ -18,10 +18,15 @@ import { AppUser } from '@/types';
 
 const mapUser = async (u: User | null): Promise<AppUser | null> => {
   if (!u) return null;
+  // isPremium starts false — the AuthContext immediately calls
+  // /api/system/subscription/status after this so the correct value hydrates
+  // from the backend (source of truth). We keep the Firestore lookup ONLY as
+  // an offline hint to avoid a "premium flicker" during cold-start.
   let isPremium = false;
   try {
     const snap = await getDoc(doc(db, 'users', u.uid));
     if (snap.exists()) {
+      // NOTE: Firestore `isPremium` is untrusted; used only for first paint.
       isPremium = !!snap.data().isPremium;
     }
   } catch {
@@ -119,11 +124,18 @@ export const authService = {
       await updateDoc(doc(db, 'users', u.uid), {
         ...(data.displayName !== undefined && { displayName: data.displayName }),
         ...(data.photoURL !== undefined && { photoURL: data.photoURL }),
-        ...(data.isPremium !== undefined && { isPremium: data.isPremium }),
+        // NOTE: `isPremium` is deliberately NOT written from the client anymore.
+        // Backend is the source of truth (subscriptions collection). We keep
+        // an in-memory copy for UI branching until AuthContext hydrates from
+        // /api/system/subscription/status.
       });
     } catch {
       // ignore offline writes
     }
-    return (await mapUser(u))!;
+    const mapped = (await mapUser(u))!;
+    // Preserve any in-memory isPremium overrides passed in (post-purchase)
+    // so UI reacts immediately without waiting for the next backend fetch.
+    if (data.isPremium !== undefined) mapped.isPremium = !!data.isPremium;
+    return mapped;
   },
 };

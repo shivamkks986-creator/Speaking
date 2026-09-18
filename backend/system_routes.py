@@ -15,17 +15,20 @@ Admin-only (header X-Admin-Email must match env var ADMIN_EMAILS):
 """
 from __future__ import annotations
 
+import base64
+import json
 import logging
 import os
 from datetime import datetime, timezone
 from typing import Any, Optional
-from fastapi import APIRouter, Header, HTTPException
+from fastapi import APIRouter, Header, HTTPException, Depends
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field
 
 import usage_tracker as ut
 import play_verifier as pv
 import admob_ssv as ssv
+from auth_deps import require_uid, optional_uid, is_secure_mode
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +36,24 @@ router = APIRouter(prefix="/system")
 
 ADMIN_EMAILS = {e.strip().lower() for e in os.environ.get("ADMIN_EMAILS", "").split(",") if e.strip()}
 _db = AsyncIOMotorClient(os.environ["MONGO_URL"])[os.environ["DB_NAME"]]
+
+# --- Ensure DB indexes for security & idempotency -------------------------
+_indexes_ready = False
+
+
+async def _ensure_indexes() -> None:
+    """Create unique index on purchase_token — prevents one token being used
+    to unlock premium on multiple accounts. Called lazily on first use."""
+    global _indexes_ready
+    if _indexes_ready:
+        return
+    try:
+        await _db.subscriptions.create_index("purchase_token", unique=True, sparse=True)
+        await _db.subscriptions.create_index([("uid", 1), ("active", 1), ("expires_at", -1)])
+        await _db.rtdn_events.create_index("event_id", unique=True, sparse=True)
+        _indexes_ready = True
+    except Exception:  # noqa: BLE001
+        logger.exception("[system] index creation failed (non-fatal)")
 
 
 def _require_admin(email: Optional[str]) -> str:
@@ -71,13 +92,16 @@ async def system_config() -> SystemConfigResponse:
 
 
 @router.get("/quota")
-async def user_quota(
-    x_user_id: Optional[str] = Header(default=None),
-    x_is_premium: Optional[str] = Header(default=None),
-):
-    """Returns the calling user's daily quota status (used/limit/remaining)."""
-    is_premium = (x_is_premium or "").lower() in {"1", "true", "yes"}
-    return await ut.get_user_quota_status(x_user_id, is_premium)
+async def user_quota(uid: str = Depends(require_uid)):
+    """Returns the calling user's daily quota status (used/limit/remaining).
+
+    is_premium is resolved server-side by looking up the `subscriptions`
+    collection — the client can NO LONGER lie about premium via a header.
+    """
+    await _ensure_indexes()
+    plan = await ut.get_user_active_plan(uid)
+    is_premium = plan is not None
+    return await ut.get_user_quota_status(uid, is_premium)
 
 
 @router.get("/usage")
@@ -184,18 +208,17 @@ class SubscriptionStatus(BaseModel):
 @router.post("/subscription/verify", response_model=SubscriptionStatus)
 async def subscription_verify(
     payload: SubscriptionVerifyPayload,
-    x_user_id: Optional[str] = Header(default=None),
+    uid: str = Depends(require_uid),
 ):
     """Verify a Play Store receipt server-side and mark user as premium.
 
-    Uses Google Play Developer API v3 (androidpublisher) when
-    GOOGLE_SERVICE_ACCOUNT_JSON / GOOGLE_SERVICE_ACCOUNT_PATH is configured.
-    If credentials are absent (preview / early dev), falls back to trusting
-    the client — a warning is logged and the response carries `source=
-    play_billing_unverified` so we can audit later.
+    Uses Google Play Developer API v3 (androidpublisher). If credentials are
+    missing:
+      - SECURE_BILLING=true (production): returns 503 verification_unavailable.
+      - SECURE_BILLING=false (dev/preview): logs a warning and grants premium
+        with source="play_billing_unverified". This flag must be ON in prod.
     """
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="user_id_required")
+    await _ensure_indexes()
     if not payload.purchase_token:
         raise HTTPException(status_code=400, detail="purchase_token_required")
 
@@ -210,6 +233,16 @@ async def subscription_verify(
     if not match:
         raise HTTPException(status_code=400, detail=f"unknown_product:{payload.product_id}")
     plan, days = match
+
+    # --- Guard: same purchase_token already bound to a different uid? -------
+    existing = await _db.subscriptions.find_one(
+        {"purchase_token": payload.purchase_token},
+        {"uid": 1, "active": 1},
+    )
+    if existing and existing.get("uid") and existing["uid"] != uid:
+        logger.warning("[verify] cross-user token replay blocked: token bound to %s, requester=%s",
+                       existing["uid"], uid)
+        raise HTTPException(status_code=403, detail="purchase_token_bound_to_other_user")
 
     # --- Server-side verification via Google Play Developer API ------------
     verified: Optional[pv.VerifiedPurchase]
@@ -234,13 +267,16 @@ async def subscription_verify(
         source = "play_billing"
         order_id = verified.order_id or payload.order_id
     else:
-        # Credentials not configured — fall back to trust mode (dev only).
+        # Credentials not configured. In production (SECURE_BILLING=true) refuse.
+        if is_secure_mode():
+            raise HTTPException(status_code=503, detail="verification_unavailable")
+        logger.warning("[verify] running in TRUST MODE — GOOGLE_SERVICE_ACCOUNT_JSON missing")
         expires_iso = (now + timedelta(days=days)).isoformat()
         source = "play_billing_unverified"
         order_id = payload.order_id
 
     doc = {
-        "uid": x_user_id,
+        "uid": uid,
         "product_id": payload.product_id,
         "purchase_token": payload.purchase_token,
         "order_id": order_id,
@@ -250,22 +286,36 @@ async def subscription_verify(
         "source": source,
         "active": True,
     }
-    await _db.subscriptions.update_one(
-        {"uid": x_user_id, "purchase_token": payload.purchase_token},
-        {"$set": doc},
-        upsert=True,
-    )
+    try:
+        await _db.subscriptions.update_one(
+            {"purchase_token": payload.purchase_token},
+            {"$set": doc},
+            upsert=True,
+        )
+    except Exception as e:  # noqa: BLE001
+        # DuplicateKey shouldn't fire (upsert on unique index), but log anyway.
+        logger.exception("[verify] db upsert failed")
+        raise HTTPException(status_code=500, detail="verify_persist_failed") from e
     return SubscriptionStatus(is_premium=True, plan=plan, expires_at=expires_iso, source=source)
 
 
 @router.post("/subscription/restore", response_model=SubscriptionStatus)
-async def subscription_restore(x_user_id: Optional[str] = Header(default=None)):
+async def subscription_restore(uid: str = Depends(require_uid)):
     """Look up user's most recent active subscription (used by 'Restore Purchases')."""
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="user_id_required")
+    return await _resolve_current_subscription(uid)
+
+
+@router.get("/subscription/status", response_model=SubscriptionStatus)
+async def subscription_status(uid: str = Depends(require_uid)):
+    """Lightweight GET variant of restore — called by app on every launch so
+    the app never trusts a stale local `isPremium` flag."""
+    return await _resolve_current_subscription(uid)
+
+
+async def _resolve_current_subscription(uid: str) -> "SubscriptionStatus":
     now = datetime.now(timezone.utc).isoformat()
     sub = await _db.subscriptions.find_one(
-        {"uid": x_user_id, "active": True, "expires_at": {"$gte": now}},
+        {"uid": uid, "active": True, "expires_at": {"$gte": now}},
         sort=[("granted_at", -1)],
     )
     if not sub:
@@ -299,8 +349,7 @@ class RewardedResponse(BaseModel):
 @router.post("/rewarded/claim", response_model=RewardedResponse)
 async def rewarded_claim(
     payload: RewardedClaimPayload,
-    x_user_id: Optional[str] = Header(default=None),
-    x_is_premium: Optional[str] = Header(default=None),
+    uid: str = Depends(require_uid),
 ):
     """Called by app after a rewarded ad completes.
 
@@ -309,12 +358,11 @@ async def rewarded_claim(
     dev/preview builds where SSV isn't configured yet — it's rate-limited by
     the cooldown/daily-cap in `usage_tracker.grant_rewarded_bonus`.
     """
-    if not x_user_id:
-        raise HTTPException(status_code=401, detail="user_id_required")
-    is_premium = (x_is_premium or "").lower() in {"1", "true", "yes"}
-    if is_premium:
+    # Backend-resolved premium — client cannot lie via a header.
+    plan = await ut.get_user_active_plan(uid)
+    if plan is not None:
         return RewardedResponse(ok=False, reason="premium_no_bonus_needed")
-    result = await ut.grant_rewarded_bonus(x_user_id, endpoint=payload.endpoint)
+    result = await ut.grant_rewarded_bonus(uid, endpoint=payload.endpoint)
     return RewardedResponse(**result)
 
 
@@ -370,6 +418,157 @@ async def rewarded_ssv(request: Request):
         "result": result,
     })
     return {"ok": True, "result": result}
+
+
+# =============================================================================
+# Real-Time Developer Notifications (RTDN) — Google Play Pub/Sub push
+# =============================================================================
+# Google Play pushes JSON like:
+#   {"message":{"data":"<base64>","messageId":"...","publishTime":"..."},"subscription":"..."}
+# where data (b64-decoded) is:
+#   {"version":"1.0","packageName":"com.speakmate.ai","eventTimeMillis":"...",
+#    "subscriptionNotification":{"version":"1.0","notificationType":<int>,
+#       "purchaseToken":"...","subscriptionId":"premium_monthly"}}
+# or a `oneTimeProductNotification` for lifetime.
+#
+# Configure this endpoint in Play Console → Monetize setup → RTDN topic:
+#     https://<backend>/api/system/rtdn
+#
+# Then in Google Cloud Console → Pub/Sub → subscription → Push endpoint URL
+# same URL with `?token=<RTDN_PUSH_TOKEN>` (used as shared secret).
+#
+# Notification types (subscriptionNotificationType):
+#   1  RECOVERED         2  RENEWED       3  CANCELED     4  PURCHASED
+#   5  ON_HOLD           6  IN_GRACE      7  RESTARTED    8  PRICE_CHANGE_CONFIRMED
+#   9  DEFERRED         10  PAUSED       11  PAUSE_SCHEDULE_CHANGED
+#  12  REVOKED          13  EXPIRED
+# One-time productNotificationType:
+#   1  PURCHASED         2  CANCELED
+# Anything that revokes access: 3, 10, 12, 13 (subs) / 2 (product)
+RTDN_PUSH_TOKEN = os.environ.get("RTDN_PUSH_TOKEN", "").strip()
+
+_REVOKE_SUB_TYPES = {3, 10, 12, 13}   # canceled, paused, revoked, expired
+_REVOKE_PRODUCT_TYPES = {2}           # canceled
+_RENEW_SUB_TYPES = {1, 2, 4, 7}       # recovered, renewed, purchased, restarted
+
+
+@router.post("/rtdn")
+async def rtdn_webhook(request: Request):
+    """Google Play Real-Time Developer Notifications push endpoint.
+
+    Handles subscription state transitions (refund, cancel, expire, pause,
+    revoke, renew) atomically. Always returns 200 to prevent Pub/Sub retry
+    storms — errors are logged, not surfaced.
+
+    Auth: shared-secret via `?token=` matching env RTDN_PUSH_TOKEN.
+    """
+    await _ensure_indexes()
+
+    if RTDN_PUSH_TOKEN:
+        got = request.query_params.get("token", "")
+        if got != RTDN_PUSH_TOKEN:
+            logger.warning("[rtdn] rejected: bad token")
+            raise HTTPException(status_code=401, detail="bad_rtdn_token")
+
+    try:
+        body = await request.json()
+    except Exception:
+        logger.warning("[rtdn] non-JSON body ignored")
+        return {"ok": True}
+
+    message = (body or {}).get("message") or {}
+    message_id = message.get("messageId") or message.get("message_id") or ""
+    data_b64 = message.get("data")
+    if not data_b64:
+        logger.info("[rtdn] test ping (no data)")
+        return {"ok": True}
+
+    try:
+        payload = json.loads(base64.b64decode(data_b64))
+    except Exception:
+        logger.exception("[rtdn] base64/json decode failed")
+        return {"ok": True}
+
+    # Idempotency — dedupe on Pub/Sub messageId.
+    if message_id:
+        seen = await _db.rtdn_events.find_one({"event_id": message_id}, {"_id": 1})
+        if seen:
+            return {"ok": True, "reason": "duplicate"}
+
+    pkg = payload.get("packageName")
+    if pkg and pkg != pv.PACKAGE_NAME:
+        logger.warning("[rtdn] wrong package: %s", pkg)
+        return {"ok": True, "reason": "wrong_package"}
+
+    sub_notif = payload.get("subscriptionNotification")
+    prod_notif = payload.get("oneTimeProductNotification")
+
+    if sub_notif:
+        await _handle_sub_notification(sub_notif)
+    elif prod_notif:
+        await _handle_product_notification(prod_notif)
+    else:
+        # test-publish or unknown → just ack
+        pass
+
+    if message_id:
+        await _db.rtdn_events.insert_one({
+            "event_id": message_id,
+            "payload": payload,
+            "received_at": datetime.now(timezone.utc).isoformat(),
+        })
+    return {"ok": True}
+
+
+async def _handle_sub_notification(notif: dict) -> None:
+    token = notif.get("purchaseToken")
+    ntype = int(notif.get("notificationType") or 0)
+    sub_id = notif.get("subscriptionId")
+    if not token:
+        return
+
+    if ntype in _REVOKE_SUB_TYPES:
+        await _db.subscriptions.update_one(
+            {"purchase_token": token},
+            {"$set": {"active": False, "revoked_at": datetime.now(timezone.utc).isoformat(),
+                      "revoke_reason": f"rtdn_type_{ntype}"}},
+        )
+        logger.info("[rtdn] revoked sub token=%s reason=%s", token[:12], ntype)
+        return
+
+    if ntype in _RENEW_SUB_TYPES:
+        # Re-verify with Play so we get the fresh expiryTime.
+        state = await ut.get_state()
+        pricing = state.get("pricing", {})
+        try:
+            verified = pv.verify_purchase(sub_id, token, pricing)
+        except Exception:
+            logger.exception("[rtdn] re-verify failed for %s", token[:12])
+            return
+        if verified is None or not verified.entitled:
+            return
+        await _db.subscriptions.update_one(
+            {"purchase_token": token},
+            {"$set": {
+                "active": True,
+                "expires_at": verified.expiry_iso,
+                "state": verified.state,
+                "renewed_at": datetime.now(timezone.utc).isoformat(),
+            }},
+        )
+
+
+async def _handle_product_notification(notif: dict) -> None:
+    token = notif.get("purchaseToken")
+    ntype = int(notif.get("notificationType") or 0)
+    if not token:
+        return
+    if ntype in _REVOKE_PRODUCT_TYPES:
+        await _db.subscriptions.update_one(
+            {"purchase_token": token},
+            {"$set": {"active": False, "revoked_at": datetime.now(timezone.utc).isoformat(),
+                      "revoke_reason": f"rtdn_product_type_{ntype}"}},
+        )
 
 
 # =============================================================================

@@ -111,7 +111,13 @@ def _verify_subscription(client, product_id: str, purchase_token: str) -> Verifi
         raise ValueError(f"play_api_error:{e.status_code}") from e
 
     state = data.get("subscriptionState", "SUBSCRIPTION_STATE_UNSPECIFIED")
-    entitled = state in {"SUBSCRIPTION_STATE_ACTIVE", "SUBSCRIPTION_STATE_IN_GRACE_PERIOD"}
+    # Google's recommendation: keep entitlement during active, grace, and hold states.
+    # State reverts to inactive only for cancelled/paused/expired/on_hold_expired.
+    entitled = state in {
+        "SUBSCRIPTION_STATE_ACTIVE",
+        "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
+        "SUBSCRIPTION_STATE_ON_HOLD",
+    }
     line_items = data.get("lineItems") or []
     expiry_iso = line_items[0].get("expiryTime") if line_items else None
     ack_state = data.get("acknowledgementState")

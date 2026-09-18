@@ -41,10 +41,19 @@ _stt = OpenAISpeechToText(api_key=EMERGENT_LLM_KEY)
 
 # ---------------------- budget kill switch ----------------------
 
-async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = False) -> None:
+async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = False) -> bool:
     """Two-layer kill switch:
     1. Global budget/maintenance (affects everyone).
     2. Per-user free-tier daily quota (per-endpoint + global, premium bypasses).
+
+    IMPORTANT — the `is_premium` argument is IGNORED and re-resolved server-side
+    by looking up the `subscriptions` collection. The client used to pass this
+    via an `X-Is-Premium` header, which was trivially spoofable. Real answer
+    comes from Google Play verification receipts stored in Mongo.
+
+    Returns the *effective* is_premium flag so callers can branch on it
+    (e.g. model routing) without re-querying.
+
     Raises 503 for global outages, 429 for personal quota exceeded.
     """
     reason = await ut.check_budget(endpoint)
@@ -53,12 +62,17 @@ async def _guard(endpoint: str, uid: Optional[str] = None, is_premium: bool = Fa
             status_code=503,
             detail={"code": "service_disabled", "reason": reason},
         )
-    user_reason = await ut.check_user_quota(uid, is_premium, endpoint=endpoint)
+
+    plan = await ut.get_user_active_plan(uid) if uid else None
+    effective_premium = plan is not None
+
+    user_reason = await ut.check_user_quota(uid, effective_premium, endpoint=endpoint, plan=plan)
     if user_reason:
         raise HTTPException(
             status_code=429,
             detail={"code": "user_quota_exceeded", "reason": user_reason, "upgrade": True},
         )
+    return effective_premium
 
 
 async def _record(endpoint: str, uid: Optional[str] = None) -> None:
@@ -72,6 +86,8 @@ async def _record(endpoint: str, uid: Optional[str] = None) -> None:
 
 
 def _is_premium_hdr(val: Optional[str]) -> bool:
+    """DEPRECATED — kept only to avoid huge diff. The header is no longer
+    trusted; use the return value of `_guard()` for the effective flag."""
     return (val or "").strip().lower() in {"1", "true", "yes"}
 
 
