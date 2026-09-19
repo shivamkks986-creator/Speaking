@@ -10,6 +10,7 @@
 // invalidating our AdMob account by clicking live ads on our own device.
 
 import { Platform } from 'react-native';
+import { canRequestAds } from '@/services/consentService';
 
 // ---- Production Ad Unit IDs (Android) -------------------------------------
 const PROD_BANNER       = 'ca-app-pub-3735972538807236/9248949370';
@@ -83,7 +84,7 @@ let interstitial: any = null;
 let interstitialLoaded = false;
 
 export function preloadInterstitial() {
-  if (!adsAvailable()) return;
+  if (!adsAvailable() || !canRequestAds()) return;
   try {
     const unitId = __DEV__ ? ads!.TestIds.INTERSTITIAL : PROD_INTERSTITIAL;
     interstitial = ads!.InterstitialAd.createForAdRequest(unitId, {
@@ -127,7 +128,7 @@ let rewarded: any = null;
 let rewardedLoaded = false;
 
 export function preloadRewarded() {
-  if (!adsAvailable()) return;
+  if (!adsAvailable() || !canRequestAds()) return;
   try {
     const unitId = __DEV__ ? ads!.TestIds.REWARDED : PROD_REWARDED;
     rewarded = ads!.RewardedAd.createForAdRequest(unitId, {

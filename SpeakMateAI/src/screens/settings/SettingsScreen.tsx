@@ -11,6 +11,7 @@ import { useAppTheme } from '@/contexts/ThemeContext';
 import ScreenContainer from '@/components/common/ScreenContainer';
 import Card from '@/components/common/Card';
 import { ThemeMode } from '@/types';
+import { showPrivacyOptions } from '@/services/consentService';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -139,6 +140,20 @@ export default function SettingsScreen() {
           label="Privacy policy"
           onPress={() => navigation.navigate('PrivacyPolicy')}
           testID="settings-privacy-row"
+        />
+        <Divider />
+        <Row
+          icon="shield-checkmark-outline"
+          label="Manage ad preferences"
+          onPress={() => {
+            showPrivacyOptions().catch(() => {
+              Alert.alert(
+                'Not available',
+                'Ad preferences are only available in regions where consent is required (EEA/UK/Switzerland).',
+              );
+            });
+          }}
+          testID="settings-ad-consent-row"
         />
         <Divider />
         <Row

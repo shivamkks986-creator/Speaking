@@ -175,6 +175,17 @@ async def data_deletion():
 # Include the router in the main app
 app.include_router(api_router)
 
+
+# app-ads.txt MUST be served at the domain root per IAB spec, so we register
+# it on `app` (not `api_router`) so Google's crawler can fetch it at:
+#   https://<domain>/app-ads.txt
+@app.get("/app-ads.txt", response_class=PlainTextResponse)
+async def app_ads_txt():
+    path = LEGAL_DIR / "app-ads.txt"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="app_ads_missing")
+    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/plain")
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,

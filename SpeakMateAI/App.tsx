@@ -21,6 +21,7 @@ import RootNavigator from '@/navigation/RootNavigator';
 import RewardModal from '@/components/feature/RewardModal';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { initAds } from '@/services/adsService';
+import { initConsent } from '@/services/consentService';
 
 // Silently check for an EAS Update on every cold start. If a new bundle is
 // available, download it in the background and apply it on the NEXT app launch
@@ -65,9 +66,13 @@ function ThemedApp() {
 export default function App() {
   useEffect(() => {
     checkForOTAUpdate();
-    // Warm up AdMob (banner + interstitial + rewarded) in the background.
-    // Silent no-op in Expo Go where the native module is absent.
-    initAds();
+    // GDPR/UMP consent MUST resolve before we request ads. For non-EEA users
+    // this is a no-op and completes instantly; for EEA users it shows the
+    // Google-hosted consent form once. Ads only load after this resolves.
+    (async () => {
+      await initConsent();
+      initAds();
+    })();
   }, []);
   return (
     <ErrorBoundary>

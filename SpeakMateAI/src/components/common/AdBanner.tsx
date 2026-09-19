@@ -12,6 +12,7 @@ import React from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { adsAvailable, bannerAdUnitId, bannerAdSize, BannerAdComponent } from '@/services/adsService';
+import { canRequestAds } from '@/services/consentService';
 
 interface Props {
   placement: string;
@@ -32,6 +33,8 @@ export default function AdBanner({ placement, testID }: Props) {
   if (user?.isPremium) return null;
   if (NEVER_SHOW.has(placement)) return null;
   if (Platform.OS !== 'android') return null;
+  // GDPR: don't render until UMP consent flow has resolved for EEA users.
+  if (!canRequestAds()) return null;
 
   const BannerAd = BannerAdComponent();
   if (adsAvailable() && BannerAd) {
