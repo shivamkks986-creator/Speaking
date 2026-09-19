@@ -172,19 +172,16 @@ async def data_deletion():
     return HTMLResponse(path.read_text(encoding="utf-8"))
 
 
+# NOTE: app-ads.txt MUST be served at the domain root per IAB spec, e.g.
+#   https://<domain>/app-ads.txt
+# Our k8s ingress only routes `/api/*` to this backend — everything else
+# goes to the React frontend. So the source-of-truth file lives at
+# /app/frontend/public/app-ads.txt and gets baked into the frontend
+# build. `backend/legal/app-ads.txt` is kept only as a mirror for reference.
+
+
 # Include the router in the main app
 app.include_router(api_router)
-
-
-# app-ads.txt MUST be served at the domain root per IAB spec, so we register
-# it on `app` (not `api_router`) so Google's crawler can fetch it at:
-#   https://<domain>/app-ads.txt
-@app.get("/app-ads.txt", response_class=PlainTextResponse)
-async def app_ads_txt():
-    path = LEGAL_DIR / "app-ads.txt"
-    if not path.exists():
-        raise HTTPException(status_code=404, detail="app_ads_missing")
-    return PlainTextResponse(path.read_text(encoding="utf-8"), media_type="text/plain")
 
 app.add_middleware(
     CORSMiddleware,

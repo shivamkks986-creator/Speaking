@@ -1,0 +1,36 @@
+{
+  "summary": "Iter26: 14/15 backend tests pass. All billing security endpoints (pricing SKUs+plans, quota auth guards, X-Is-Premium header ignored, subscription/verify success, cross-user purchase_token replay 403, unknown_product 400, purchase_token_required 400, subscription/status, rewarded/claim auth guard, RTDN empty body ok, RTDN CANCELED flips is_premium true->false) verified against preview URL. app-ads.txt was NOT being served at domain root — FastAPI route defined at /app-ads.txt is unreachable via ingress (only /api/* proxies to backend). Fixed for preview by copying legal/app-ads.txt to /app/frontend/public/app-ads.txt so the frontend static handler serves it (verified: content-type=text/plain, body matches exactly). Prod domain https://gift-hub-sync.emergent.host still returns the React HTML at /app-ads.txt — needs a redeploy of the frontend build that includes the new public/app-ads.txt for it to take effect at the production hostname.",
+  "backend_issues": {
+    "critical": [
+      {"endpoint": "/app-ads.txt (prod domain https://gift-hub-sync.emergent.host)", "issue": "Returns index.html (text/html) instead of the ads.txt payload. Backend FastAPI route at /app-ads.txt is not reachable through ingress on any host (ingress only proxies /api/*). Fixed on preview by placing file in frontend/public/, but prod deploy still needs to be rebuilt/redeployed to pick up the new static asset.", "priority": "HIGH"}
+    ],
+    "minor": [
+      {"endpoint": "/api/system/rtdn", "issue": "Idempotency key is only the Pub/Sub messageId. Re-running the same audit fixture across iterations with the same messageId will be silently deduped as duplicate — tests must randomize messageId. Not a bug, but worth documenting."}
+    ]
+  },
+  "frontend_issues": {"ui_bugs": [], "integration_issues": [], "design_issues": []},
+  "test_report_links": [
+    "/app/backend/tests/test_iter26_billing_and_appads.py",
+    "/app/test_reports/pytest/iter26_results.xml"
+  ],
+  "action_items": [
+    "Redeploy frontend to https://gift-hub-sync.emergent.host so /app-ads.txt returns the AdSense line (fix already committed to /app/frontend/public/app-ads.txt).",
+    "OR: add an ingress rule to route /app-ads.txt (and /privacy-policy.html, /data-deletion.html served from backend legal dir) directly to backend port 8001 so the FastAPI PlainTextResponse route is reachable at domain root as originally intended."
+  ],
+  "critical_code_review_comments": [
+    "FastAPI route @app.get('/app-ads.txt') in server.py is dead code in the current ingress configuration — only /api/* reaches backend. Either the ingress needs an exception for the root-level legal endpoints, or the file should be served as a static asset from the frontend (which is what I did as the pragmatic fix).",
+    "system_routes.py RTDN idempotency dedupes only on messageId; if Google were to retry with a new messageId for the same underlying event we would double-process. Consider composite dedup (messageId OR (purchaseToken+notificationType+eventTimeMillis)).",
+    "system_routes.py is 628 lines — still over the soft split threshold called out in iter25."
+  ],
+  "updated_files": [
+    "/app/frontend/public/app-ads.txt (new — copy of backend/legal/app-ads.txt so it's reachable at domain root)",
+    "/app/backend/tests/test_iter26_billing_and_appads.py (new)"
+  ],
+  "success_rate": {"backend": "93% (14/15)", "frontend": "n/a"},
+  "test_credentials": "none — synthetic UIDs (freshuser_quota, user_audit_1..4)",
+  "seed_data_creation": "Created subscription docs for user_audit_1 (premium_monthly, purchase_token=audit_token_alpha) then revoked via RTDN CANCELED. rtdn_events entry with random messageId inserted.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The only remaining failure is /app-ads.txt at prod domain https://gift-hub-sync.emergent.host — preview URL now works after placing app-ads.txt in frontend/public. After main agent triggers a prod frontend deploy (or adds ingress rule for /app-ads.txt->backend), rerun `pytest /app/backend/tests/test_iter26_billing_and_appads.py::TestAppAdsTxt` to confirm. Also note: RTDN tests must use randomized messageId (already done in this test file) — the reused fixture 'audit_msg_001' from iter25 will silently no-op if reused.",
+  "rca of the issue": "Ingress rule only proxies /api/* to backend port 8001; all other paths (including /app-ads.txt) are served by the frontend static/express layer. The FastAPI PlainTextResponse route registered at /app-ads.txt was never reachable at the public hostname. Mitigation: place app-ads.txt in frontend/public/ so it is served as a static asset by the frontend layer at domain root — verified working on preview host. Prod host requires redeploy of frontend build."
+}
