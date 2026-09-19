@@ -18,6 +18,7 @@ import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import XPBar from '@/components/feature/XPBar';
 import GlassCard from '@/components/common/GlassCard';
 import WordOfTheDayCard from '@/components/feature/WordOfTheDayCard';
+import AdBanner from '@/components/common/AdBanner';
 import { computeDynamicGreeting } from '@/utils/greetings';
 import { radius, spacing } from '@/config/theme';
 
@@ -408,6 +409,9 @@ export default function HomeScreen() {
               </Pressable>
             </FadeInView>
           )}
+
+          {/* AdMob banner — only shown to non-premium users (component self-gates). */}
+          <AdBanner placement="home_bottom" testID="ad-banner-home" />
         </ScrollView>
       </SafeAreaView>
     </View>

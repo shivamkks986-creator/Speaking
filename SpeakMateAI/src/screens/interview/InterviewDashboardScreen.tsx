@@ -13,6 +13,7 @@ import { useGamification } from '@/contexts/GamificationContext';
 import { INTERVIEW_TRACKS } from '@/data/interviewTracks';
 import { RootStackParamList } from '@/navigation/types';
 import { radius, spacing } from '@/config/theme';
+import AdBanner from '@/components/common/AdBanner';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -83,6 +84,9 @@ export default function InterviewDashboardScreen() {
             <Tip icon="happy-outline" text="Smile while answering — voice carries warmth." />
             <Tip icon="repeat-outline" text="Practise the same question 3× before moving on." />
           </View>
+
+          {/* AdMob banner — free users only. */}
+          <AdBanner placement="interview_dashboard" testID="ad-banner-interview" />
         </ScrollView>
       </SafeAreaView>
     </View>
