@@ -129,7 +129,7 @@ async def _get_state() -> dict:
             },
         },
         "free_endpoint_limits": {
-            "tutor_chat": 10, "speaking_score": 5, "interview_live": 2,
+            "tutor_chat": 10, "speaking_score": 5, "interview_live": 3,
             "interview_evaluate": 5, "tmay_evaluate": 3, "resume_parse": 1,
             "resume_interview_questions": 1, "sales_session": 2,
             "roadmap_generate": 1, "vocabulary_lookup": 20,
@@ -173,6 +173,19 @@ async def _get_state() -> dict:
             pricing_migrated = True
         if pricing_migrated:
             patch["pricing"] = pricing
+
+        # Force-migrate free_endpoint_limits if any expected value has drifted
+        # (e.g. we raised interview_live from 2 → 3 to reduce paywall friction).
+        expected_free = defaults["free_endpoint_limits"]
+        current_free = doc.get("free_endpoint_limits") or {}
+        free_migrated = False
+        for k, v in expected_free.items():
+            if current_free.get(k) != v:
+                current_free[k] = v
+                free_migrated = True
+        if free_migrated:
+            patch["free_endpoint_limits"] = current_free
+
         if patch:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()
             await _db.system_state.update_one({"_id": "config"}, {"$set": patch}, upsert=True)
@@ -408,7 +421,7 @@ async def get_user_quota_status(uid: Optional[str], is_premium: bool) -> dict:
     used = await get_user_today(uid or "anonymous")
     # Defensive default so pre-migration DB docs still work
     endpoint_limits = state.get("free_endpoint_limits") or {
-        "tutor_chat": 10, "speaking_score": 5, "interview_live": 2,
+        "tutor_chat": 10, "speaking_score": 5, "interview_live": 3,
         "interview_evaluate": 5, "tmay_evaluate": 3, "resume_parse": 1,
         "resume_interview_questions": 1, "sales_session": 2,
         "roadmap_generate": 1, "vocabulary_lookup": 20,

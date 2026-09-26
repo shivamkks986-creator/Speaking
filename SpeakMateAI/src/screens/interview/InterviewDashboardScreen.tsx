@@ -84,6 +84,28 @@ export default function InterviewDashboardScreen() {
           </View>
 
           <Text style={styles.section}>Available tracks ({INTERVIEW_TRACKS.length})</Text>
+          <Pressable
+            onPress={() => navigation.navigate('CustomRole')}
+            style={styles.customRoleCard}
+            testID="dash-custom-role-btn"
+          >
+            <LinearGradient
+              colors={['#22D3EE', '#7C5CFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.customRoleGrad}
+            >
+              <View style={styles.customRoleIcon}>
+                <Ionicons name="sparkles" size={22} color="#FFFFFF" />
+              </View>
+              <View style={{ flex: 1, marginLeft: spacing.md }}>
+                <Text style={styles.customRoleTitle}>Custom role vocabulary</Text>
+                <Text style={styles.customRoleSub}>AI generates terms for any job — e.g. "React Native Dev"</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+            </LinearGradient>
+          </Pressable>
+
           <View style={styles.tracksGrid}>
             {INTERVIEW_TRACKS.map((t) => (
               <View key={t.id} style={styles.trackChipWrap}>
@@ -173,6 +195,22 @@ const styles = StyleSheet.create({
   countChipTextActive: { color: '#FFFFFF' },
   countChipHint: { color: 'rgba(242,238,255,0.5)', fontSize: 10, marginTop: 2 },
   tracksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  customRoleCard: { marginBottom: spacing.md, borderRadius: radius.xl, overflow: 'hidden' },
+  customRoleGrad: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  customRoleIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customRoleTitle: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
+  customRoleSub: { color: 'rgba(255,255,255,0.85)', fontSize: 11, marginTop: 2 },
   trackChipWrap: { width: '48%' },
   trackChip: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm, borderRadius: radius.lg },
   trackChipText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', flex: 1 },

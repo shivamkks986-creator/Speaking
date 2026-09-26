@@ -20,6 +20,7 @@ import { getTrackMeta } from '@/data/interviewTracks';
 import { InterviewResult } from '@/types';
 import { interviewProgressService } from '@/services/interviewProgressService';
 import { attachIdToken } from '@/services/tokenProvider';
+import { consumePrefetchedQuestion } from '@/services/interviewPrefetch';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import VoiceMicButton from '@/components/feature/VoiceMicButton';
 import { radius, spacing } from '@/config/theme';
@@ -140,6 +141,22 @@ export default function LiveInterviewScreen() {
 
   const startInterview = useCallback(async () => {
     setPhase('starting');
+
+    // Fast-path: if JobTermsScreen prefetched this track's Q1 in the last
+    // 3 minutes, use it directly and skip the network round-trip.
+    const prefetched = consumePrefetchedQuestion(user?.uid, track);
+    if (prefetched) {
+      setCurrentQuestion(prefetched.question);
+      setPhase('speaking');
+      try {
+        await speechService.speakWithAI(prefetched.question, { companionId: meta.interviewer, speed: 0.95 });
+      } catch {
+        // TTS failure is non-fatal — user can still see the question text.
+      }
+      setPhase('idle');
+      return;
+    }
+
     try {
       const res = await fetch(`${AI}/interview/live`, {
         method: 'POST',
@@ -174,7 +191,7 @@ export default function LiveInterviewScreen() {
         { text: 'OK', onPress: () => navigation.goBack() },
       ]);
     }
-  }, [track, targetQuestions, meta.interviewer, authHeaders, navigation, difficulty]);
+  }, [track, targetQuestions, meta.interviewer, authHeaders, navigation, difficulty, user?.uid]);
 
   const onMic = async () => {
     if (phase === 'speaking') {

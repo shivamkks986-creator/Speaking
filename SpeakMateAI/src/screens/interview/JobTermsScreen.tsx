@@ -2,7 +2,7 @@
 // for the selected track as flip-through cards. Learners land here from the
 // Interview Dashboard's "Study terms" button.
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,8 @@ import { RootStackParamList } from '@/navigation/types';
 import { getJobTerms } from '@/data/jobTerms';
 import { getTrackMeta } from '@/data/interviewTracks';
 import { radius, spacing } from '@/config/theme';
+import { useAuth } from '@/contexts/AuthContext';
+import { prefetchFirstQuestion } from '@/services/interviewPrefetch';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Rt = RouteProp<RootStackParamList, 'JobTerms'>;
@@ -25,8 +27,16 @@ export default function JobTermsScreen() {
   const track = route.params?.track || 'hr';
   const meta = getTrackMeta(track);
   const terms = useMemo(() => getJobTerms(track), [track]);
+  const { user } = useAuth();
 
   const [expanded, setExpanded] = useState<number | null>(0);
+
+  // Kick off a silent prefetch of the first interview question while the
+  // user is reading the vocabulary. By the time they tap "I'm ready", the
+  // question is already cached and LiveInterview opens instantly.
+  useEffect(() => {
+    prefetchFirstQuestion(user?.uid, track, 8, 'intermediate');
+  }, [user?.uid, track]);
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0A0418' }}>

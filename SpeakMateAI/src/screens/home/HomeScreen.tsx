@@ -166,6 +166,38 @@ export default function HomeScreen() {
             </LinearGradient>
           </FadeInView>
 
+          {/* Streak highlight — dedicated card showing current + longest streak.
+              Uses fire iconography and a clear "days" unit so users instantly
+              grasp their consistency at a glance. */}
+          <FadeInView delay={60} duration={500} direction="down">
+            <LinearGradient
+              colors={stats.streak > 0 ? ['#FF6B35', '#FF9500'] : ['#3A2456', '#2A1B44']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.streakCard}
+            >
+              <View style={styles.streakLeft}>
+                <Ionicons name="flame" size={44} color={stats.streak > 0 ? '#FFFFFF' : '#FF6B35'} />
+                <View style={{ marginLeft: spacing.md }}>
+                  <Text style={styles.streakBig}>{stats.streak}</Text>
+                  <Text style={styles.streakLabel}>
+                    {stats.streak === 1 ? 'day streak' : 'day streak'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.streakRight}>
+                <Text style={styles.streakBestLabel}>Longest</Text>
+                <Text style={styles.streakBest}>{stats.longestStreak}d</Text>
+                {stats.streak === 0 && (
+                  <Text style={styles.streakHint}>Practise today to start!</Text>
+                )}
+                {stats.streak > 0 && stats.streak === stats.longestStreak && (
+                  <Text style={styles.streakHint}>Personal best 🎉</Text>
+                )}
+              </View>
+            </LinearGradient>
+          </FadeInView>
+
           {/* Progression card */}
           <FadeInView delay={80} duration={500} direction="down">
             <GlassCard style={{ marginTop: spacing.lg }}>
@@ -576,6 +608,21 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
     gap: spacing.sm,
   },
+  streakCard: {
+    marginTop: spacing.lg,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  streakLeft: { flexDirection: 'row', alignItems: 'center' },
+  streakBig: { color: '#FFFFFF', fontSize: 44, fontWeight: '900', lineHeight: 46 },
+  streakLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 12, fontWeight: '700', marginTop: 2 },
+  streakRight: { alignItems: 'flex-end' },
+  streakBestLabel: { color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: '700', letterSpacing: 0.6 },
+  streakBest: { color: '#FFFFFF', fontSize: 22, fontWeight: '800' },
+  streakHint: { color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '600', marginTop: 4 },
   progStat: {
     flex: 1,
     alignItems: 'center',

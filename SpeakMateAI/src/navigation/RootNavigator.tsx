@@ -29,6 +29,7 @@ import FlashcardsScreen from '@/screens/vocabulary/FlashcardsScreen';
 import LiveInterviewScreen from '@/screens/interview/LiveInterviewScreen';
 import InterviewDashboardScreen from '@/screens/interview/InterviewDashboardScreen';
 import JobTermsScreen from '@/screens/interview/JobTermsScreen';
+import CustomRoleScreen from '@/screens/interview/CustomRoleScreen';
 import LeaderboardScreen from '@/screens/gamification/LeaderboardScreen';
 import InviteFriendsScreen from '@/screens/gamification/InviteFriendsScreen';
 import AdminConfigScreen from '@/screens/admin/AdminConfigScreen';
@@ -161,6 +162,11 @@ export default function RootNavigator() {
           <Stack.Screen
             name="JobTerms"
             component={JobTermsScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="CustomRole"
+            component={CustomRoleScreen}
             options={{ headerShown: false }}
           />
           <Stack.Screen

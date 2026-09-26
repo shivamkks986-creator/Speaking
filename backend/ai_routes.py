@@ -1512,3 +1512,78 @@ async def resume_interview_questions(
         focus_areas=[str(f) for f in focus_raw][:6],
         target_role=target,
     )
+
+
+# =============================================================================
+# Custom Job Terms — AI-generated glossary for any role the user types
+# =============================================================================
+CUSTOM_TERMS_SYSTEM = (
+    "You are an expert career coach. Given a job role, return the 10-12 most "
+    "important vocabulary/jargon terms a candidate MUST know to crack an "
+    "interview for that role in India. Each term must be genuinely used in "
+    "real interviews (not marketing fluff). Return STRICT JSON only:\n"
+    '{"terms": [{"term": "...", "definition": "one line, plain English", '
+    '"example": "one-line interview-usage example"}]}'
+)
+
+
+class CustomTermsRequest(BaseModel):
+    role: str = Field(min_length=2, max_length=80)
+
+
+class CustomTerm(BaseModel):
+    term: str
+    definition: str
+    example: str
+
+
+class CustomTermsResponse(BaseModel):
+    role: str
+    terms: List[CustomTerm]
+
+
+@router.post("/custom-terms", response_model=CustomTermsResponse)
+async def custom_terms(
+    req: CustomTermsRequest,
+    x_user_id: Optional[str] = Header(default=None),
+    x_is_premium: Optional[str] = Header(default=None),
+):
+    """Generate a curated glossary of interview vocabulary for any job role.
+
+    Uses Gemini 3 Flash (cheap + fast). Rate-limited via the shared
+    `vocabulary_lookup` endpoint bucket — this keeps a single user from spinning
+    up dozens of curated lists in one sitting.
+    """
+    endpoint = "vocabulary_lookup"
+    is_premium = _is_premium_hdr(x_is_premium)
+    await _guard(endpoint, uid=x_user_id, is_premium=is_premium)
+
+    role = req.role.strip()
+    chat = _new_chat(str(uuid.uuid4()), CUSTOM_TERMS_SYSTEM, "gemini", "gemini-3-flash-preview")
+    prompt = f"Job role: {role}\n\nReturn the JSON now."
+    try:
+        raw = await chat.send_message(UserMessage(text=prompt))
+    except Exception as e:  # noqa: BLE001
+        logger.exception("[custom-terms] LLM error")
+        raise HTTPException(status_code=502, detail="ai_service_unavailable") from e
+
+    await _record(endpoint, uid=x_user_id)
+    data = _extract_json(raw)
+    terms_raw = data.get("terms") or []
+    if not isinstance(terms_raw, list):
+        terms_raw = []
+    terms: List[CustomTerm] = []
+    for t in terms_raw[:12]:
+        if not isinstance(t, dict):
+            continue
+        term = str(t.get("term", "")).strip()
+        definition = str(t.get("definition", "")).strip()
+        example = str(t.get("example", "")).strip()
+        if not term or not definition:
+            continue
+        terms.append(CustomTerm(term=term, definition=definition, example=example))
+
+    if not terms:
+        raise HTTPException(status_code=502, detail="no_terms_generated")
+
+    return CustomTermsResponse(role=role, terms=terms)

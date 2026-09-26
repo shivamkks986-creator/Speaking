@@ -43,6 +43,7 @@ export type RootStackParamList = {
   LiveInterview: { track: InterviewTrack; targetQuestions?: number; difficulty?: 'beginner' | 'intermediate' | 'advanced' };
   InterviewDashboard: undefined;
   JobTerms: { track: InterviewTrack };
+  CustomRole: undefined;
   Leaderboard: undefined;
   InviteFriends: undefined;
   AdminConfig: undefined;
