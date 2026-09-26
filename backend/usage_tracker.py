@@ -123,9 +123,9 @@ async def _get_state() -> dict:
                 },
             },
             "per_plan_daily_limits": {
-                "monthly": {"tutor_chat": 30, "speaking_score": 15, "interview_live": 5, "interview_evaluate": 15, "tmay_evaluate": 10, "resume_parse": 3, "resume_interview_questions": 3, "sales_session": 5, "roadmap_generate": 2, "vocabulary_lookup": 100},
-                "yearly": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 20, "interview_evaluate": 50, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
-                "lifetime": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 20, "interview_evaluate": 50, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
+                "monthly": {"tutor_chat": 30, "speaking_score": 15, "interview_live": 10, "interview_evaluate": 30, "tmay_evaluate": 10, "resume_parse": 3, "resume_interview_questions": 3, "sales_session": 5, "roadmap_generate": 2, "vocabulary_lookup": 100},
+                "yearly": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 25, "interview_evaluate": 75, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
+                "lifetime": {"tutor_chat": 100, "speaking_score": 50, "interview_live": 25, "interview_evaluate": 75, "tmay_evaluate": 30, "resume_parse": 10, "resume_interview_questions": 10, "sales_session": 20, "roadmap_generate": 5, "vocabulary_lookup": 500},
             },
         },
         "free_endpoint_limits": {
@@ -185,6 +185,22 @@ async def _get_state() -> dict:
                 free_migrated = True
         if free_migrated:
             patch["free_endpoint_limits"] = current_free
+
+        # Force-migrate per_plan_daily_limits when they drift (e.g. monthly
+        # interview_live bumped from 5 → 10 to increase retention).
+        expected_ppl = defaults["pricing"]["per_plan_daily_limits"]
+        current_ppl = pricing.get("per_plan_daily_limits") or {}
+        ppl_migrated = False
+        for plan_key, plan_limits in expected_ppl.items():
+            plan_cur = current_ppl.get(plan_key) or {}
+            for k, v in plan_limits.items():
+                if plan_cur.get(k) != v:
+                    plan_cur[k] = v
+                    ppl_migrated = True
+            current_ppl[plan_key] = plan_cur
+        if ppl_migrated:
+            pricing["per_plan_daily_limits"] = current_ppl
+            patch["pricing"] = pricing
 
         if patch:
             patch["updated_at"] = datetime.now(timezone.utc).isoformat()

@@ -74,7 +74,7 @@ export default function LiveInterviewScreen() {
   const { user } = useAuth();
 
   const track = route.params?.track || 'hr';
-  const targetQuestions = route.params?.targetQuestions || 8;
+  const targetQuestions = route.params?.targetQuestions || 10;
   const difficulty = route.params?.difficulty || 'intermediate';
   const meta = getTrackMeta(track);
   const interviewer = getCompanion(meta.interviewer);

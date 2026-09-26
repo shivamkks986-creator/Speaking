@@ -35,7 +35,7 @@ export default function JobTermsScreen() {
   // user is reading the vocabulary. By the time they tap "I'm ready", the
   // question is already cached and LiveInterview opens instantly.
   useEffect(() => {
-    prefetchFirstQuestion(user?.uid, track, 8, 'intermediate');
+    prefetchFirstQuestion(user?.uid, track, 10, 'intermediate');
   }, [user?.uid, track]);
 
   return (
@@ -109,7 +109,7 @@ export default function JobTermsScreen() {
 
           <Pressable
             style={styles.startBtn}
-            onPress={() => navigation.replace('LiveInterview', { track, targetQuestions: 8 })}
+            onPress={() => navigation.replace('LiveInterview', { track, targetQuestions: 10 })}
             testID="job-terms-start-interview"
           >
             <LinearGradient

@@ -10,6 +10,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useProgress } from '@/contexts/ProgressContext';
 import { useGamification } from '@/contexts/GamificationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { INTERVIEW_TRACKS } from '@/data/interviewTracks';
 import { RootStackParamList } from '@/navigation/types';
 import { radius, spacing } from '@/config/theme';
@@ -17,13 +18,22 @@ import AdBanner from '@/components/common/AdBanner';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const QUESTION_COUNTS = [5, 8, 12] as const;
+interface CountOption {
+  count: number;
+  premium: boolean;
+}
+const QUESTION_COUNTS: CountOption[] = [
+  { count: 5, premium: false },
+  { count: 10, premium: false },
+  { count: 15, premium: true },
+];
 
 export default function InterviewDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { stats } = useProgress();
   const { level } = useGamification();
-  const [questionCount, setQuestionCount] = useState<number>(8);
+  const { user } = useAuth();
+  const [questionCount, setQuestionCount] = useState<number>(10);
 
   const avg = useMemo(() => {
     if (stats.bestInterviewScore === 0 && stats.interviewsCount === 0) return 0;
@@ -65,19 +75,32 @@ export default function InterviewDashboardScreen() {
 
           <Text style={styles.section}>Interview length</Text>
           <View style={styles.countRow}>
-            {QUESTION_COUNTS.map((n) => {
-              const active = questionCount === n;
+            {QUESTION_COUNTS.map((opt) => {
+              const active = questionCount === opt.count;
+              const locked = opt.premium && !user?.isPremium;
               return (
                 <Pressable
-                  key={n}
-                  onPress={() => setQuestionCount(n)}
-                  style={[styles.countChip, active && styles.countChipActive]}
-                  testID={`dash-qcount-${n}`}
+                  key={opt.count}
+                  onPress={() => {
+                    if (locked) {
+                      navigation.navigate('Premium' as any);
+                      return;
+                    }
+                    setQuestionCount(opt.count);
+                  }}
+                  style={[styles.countChip, active && styles.countChipActive, locked && styles.countChipLocked]}
+                  testID={`dash-qcount-${opt.count}`}
                 >
-                  <Text style={[styles.countChipText, active && styles.countChipTextActive]}>
-                    {n} questions
-                  </Text>
-                  {n === 8 && !active && <Text style={styles.countChipHint}>Recommended</Text>}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    {locked && <Ionicons name="lock-closed" size={11} color="#FACC15" />}
+                    <Text style={[styles.countChipText, active && styles.countChipTextActive]}>
+                      {opt.count} questions
+                    </Text>
+                  </View>
+                  {opt.count === 10 && !active && !locked && (
+                    <Text style={styles.countChipHint}>Recommended</Text>
+                  )}
+                  {locked && <Text style={styles.countChipPremium}>Premium</Text>}
                 </Pressable>
               );
             })}
@@ -191,9 +214,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(124,92,255,0.25)',
     borderColor: '#7C5CFF',
   },
+  countChipLocked: {
+    backgroundColor: 'rgba(250,204,21,0.08)',
+    borderColor: 'rgba(250,204,21,0.4)',
+  },
   countChipText: { color: '#F2EEFF', fontSize: 13, fontWeight: '700' },
   countChipTextActive: { color: '#FFFFFF' },
   countChipHint: { color: 'rgba(242,238,255,0.5)', fontSize: 10, marginTop: 2 },
+  countChipPremium: { color: '#FACC15', fontSize: 10, marginTop: 2, fontWeight: '700' },
   tracksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   customRoleCard: { marginBottom: spacing.md, borderRadius: radius.xl, overflow: 'hidden' },
   customRoleGrad: {

@@ -956,7 +956,7 @@ class LiveInterviewRequest(BaseModel):
     history: List[LiveAnswerItem] = Field(default_factory=list)
     last_answer: Optional[str] = None   # if None and history empty → just get first question
     last_question: Optional[str] = None
-    target_questions: int = Field(default=5, ge=1, le=15)
+    target_questions: int = Field(default=5, ge=1, le=20)
     difficulty: Optional[str] = "intermediate"  # "beginner" | "intermediate" | "advanced"
 
 
