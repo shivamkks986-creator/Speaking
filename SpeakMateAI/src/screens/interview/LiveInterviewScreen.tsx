@@ -19,6 +19,7 @@ import { COMPANIONS, getCompanion } from '@/config/companions';
 import { getTrackMeta } from '@/data/interviewTracks';
 import { InterviewResult } from '@/types';
 import { interviewProgressService } from '@/services/interviewProgressService';
+import { attachIdToken } from '@/services/tokenProvider';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import VoiceMicButton from '@/components/feature/VoiceMicButton';
 import { radius, spacing } from '@/config/theme';
@@ -128,23 +129,52 @@ export default function LiveInterviewScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Build request headers with uid + Firebase ID token so the backend can
+  // attribute usage to this user (avoids the anonymous 2/day quota that
+  // causes an infinite "Loading..." state for logged-in users).
+  const authHeaders = useCallback(async (): Promise<Record<string, string>> => {
+    const h: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (user?.uid) h['X-User-Id'] = user.uid;
+    return await attachIdToken(h);
+  }, [user?.uid]);
+
   const startInterview = useCallback(async () => {
     setPhase('starting');
     try {
       const res = await fetch(`${AI}/interview/live`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({ track, difficulty, history: [], target_questions: targetQuestions }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const reason = err?.detail?.reason || err?.detail || `HTTP ${res.status}`;
+        Alert.alert(
+          'Could not start interview',
+          typeof reason === 'string' && reason.includes('quota')
+            ? 'Daily practice limit reached. Try again tomorrow or upgrade to Premium for unlimited sessions.'
+            : `Please try again in a moment. (${String(reason).slice(0, 80)})`,
+          [{ text: 'OK', onPress: () => navigation.goBack() }],
+        );
+        return;
+      }
       const data = (await res.json()) as LiveResponse;
+      if (!data.next_question) {
+        Alert.alert('Interview failed to start', 'The interviewer did not respond. Please try again.', [
+          { text: 'OK', onPress: () => navigation.goBack() },
+        ]);
+        return;
+      }
       setCurrentQuestion(data.next_question);
       setPhase('speaking');
       await speechService.speakWithAI(data.next_question, { companionId: meta.interviewer, speed: 0.95 });
       setPhase('idle');
-    } catch {
-      setPhase('idle');
+    } catch (e) {
+      Alert.alert('Network error', 'Check your connection and try again.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
     }
-  }, [track, targetQuestions, meta.interviewer]);
+  }, [track, targetQuestions, meta.interviewer, authHeaders, navigation, difficulty]);
 
   const onMic = async () => {
     if (phase === 'speaking') {
@@ -188,7 +218,7 @@ export default function LiveInterviewScreen() {
     try {
       const res = await fetch(`${AI}/interview/live`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await authHeaders(),
         body: JSON.stringify({
           track,
           history: history.map((h) => ({ question: h.question, answer: h.answer })),
@@ -197,6 +227,18 @@ export default function LiveInterviewScreen() {
           target_questions: targetQuestions, difficulty,
         }),
       });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        const reason = err?.detail?.reason || err?.detail || `HTTP ${res.status}`;
+        Alert.alert(
+          'Answer submission failed',
+          typeof reason === 'string' && reason.includes('quota')
+            ? 'Daily limit reached. Upgrade to Premium for unlimited practice.'
+            : 'Please try again in a moment.',
+        );
+        setPhase('idle');
+        return;
+      }
       const data = (await res.json()) as LiveResponse;
       setLatestFeedback(data);
       const newQa: QA = {
