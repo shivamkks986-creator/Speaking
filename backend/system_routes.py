@@ -625,3 +625,88 @@ async def admin_pricing(
         "rewarded": rewarded,
         "free_endpoint_limits": endpoint_limits,
     }
+
+
+# =============================================================================
+# Admin — manual premium grant (for VIPs, testers, refund fixes, gifts)
+# =============================================================================
+class AdminGrantPayload(BaseModel):
+    uid: Optional[str] = None
+    email: Optional[str] = None
+    plan: str = Field(default="lifetime", pattern="^(monthly|yearly|lifetime)$")
+    days: Optional[int] = Field(default=None, ge=1, le=36525)  # 100 years max
+    reason: Optional[str] = None
+
+
+def _resolve_uid_from_email(email: str) -> Optional[str]:
+    """Try Firebase Admin to convert email → uid. Requires
+    FIREBASE_SERVICE_ACCOUNT_JSON to be configured; returns None otherwise."""
+    try:
+        from auth_deps import _init_firebase
+        if not _init_firebase():
+            return None
+        from firebase_admin import auth as fb_auth
+        rec = fb_auth.get_user_by_email(email)
+        return rec.uid
+    except Exception:
+        return None
+
+
+@router.post("/admin-grant-premium")
+async def admin_grant_premium(
+    payload: AdminGrantPayload,
+    x_admin_email: Optional[str] = Header(default=None),
+):
+    """Manually mark a user as premium — used for VIPs, refund fixes,
+    beta testers, or gifts to specific email addresses. Skips Play Billing
+    verification entirely; the record shows `source: "manual_grant"` so it's
+    always distinguishable from real purchases in analytics.
+    """
+    _require_admin(x_admin_email)
+    await _ensure_indexes()
+
+    uid = payload.uid
+    if not uid and payload.email:
+        uid = _resolve_uid_from_email(payload.email)
+    if not uid:
+        raise HTTPException(
+            status_code=400,
+            detail="uid_or_valid_email_required (email lookup needs FIREBASE_SERVICE_ACCOUNT_JSON)",
+        )
+
+    # Default duration: lifetime = 100 years, yearly = 365, monthly = 30.
+    if payload.days is None:
+        days = {"monthly": 30, "yearly": 365, "lifetime": 365 * 100}[payload.plan]
+    else:
+        days = payload.days
+
+    from datetime import timedelta
+    now = datetime.now(timezone.utc)
+    expires_iso = (now + timedelta(days=days)).isoformat()
+    token = f"manual:{uid}:{payload.plan}:{int(now.timestamp())}"
+
+    doc = {
+        "uid": uid,
+        "product_id": f"premium_{payload.plan}",
+        "purchase_token": token,
+        "order_id": None,
+        "plan": payload.plan,
+        "granted_at": now.isoformat(),
+        "expires_at": expires_iso,
+        "source": "manual_grant",
+        "granted_by": x_admin_email,
+        "reason": payload.reason or "",
+        "active": True,
+    }
+    await _db.subscriptions.update_one(
+        {"purchase_token": token},
+        {"$set": doc},
+        upsert=True,
+    )
+    return {
+        "ok": True,
+        "uid": uid,
+        "plan": payload.plan,
+        "expires_at": expires_iso,
+        "source": "manual_grant",
+    }
