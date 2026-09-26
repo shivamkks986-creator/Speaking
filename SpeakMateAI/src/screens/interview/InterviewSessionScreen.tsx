@@ -32,13 +32,15 @@ export default function InterviewSessionScreen() {
 
   const questions = useMemo(() => {
     if (route.params?.track) {
-      return getTrackQuestions(route.params.track).slice(0, 5);
+      // Use the full track — some tracks have 6, some 8 questions. This is a
+      // "mock interview", user expects the whole set, not an arbitrary 5.
+      return getTrackQuestions(route.params.track);
     }
     if (route.params?.questionId) {
       const q = INTERVIEW_QUESTIONS.find((x) => x.id === route.params!.questionId);
-      return q ? [q] : INTERVIEW_QUESTIONS.slice(0, 5);
+      return q ? [q] : INTERVIEW_QUESTIONS.slice(0, 8);
     }
-    return INTERVIEW_QUESTIONS.slice(0, 5);
+    return INTERVIEW_QUESTIONS.slice(0, 8);
   }, [route.params]);
 
   const track = route.params?.track ?? 'hr';

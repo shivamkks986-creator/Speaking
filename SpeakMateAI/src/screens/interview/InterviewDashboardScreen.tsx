@@ -65,7 +65,7 @@ export default function InterviewDashboardScreen() {
             {INTERVIEW_TRACKS.map((t) => (
               <Pressable
                 key={t.id}
-                onPress={() => navigation.navigate('LiveInterview', { track: t.id, targetQuestions: 5 })}
+                onPress={() => navigation.navigate('LiveInterview', { track: t.id, targetQuestions: 8 })}
                 style={styles.trackChipWrap}
                 testID={`dash-track-${t.id}`}
               >

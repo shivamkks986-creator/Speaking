@@ -13,10 +13,12 @@ import { RootStackParamList } from '@/navigation/types';
 import { useProgress } from '@/contexts/ProgressContext';
 import { useGamification } from '@/contexts/GamificationContext';
 import { useCompanion } from '@/contexts/CompanionContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { speechService } from '@/services/speechService';
 import { COMPANIONS, getCompanion } from '@/config/companions';
 import { getTrackMeta } from '@/data/interviewTracks';
 import { InterviewResult } from '@/types';
+import { interviewProgressService } from '@/services/interviewProgressService';
 import CompanionAvatar from '@/components/feature/CompanionAvatar';
 import VoiceMicButton from '@/components/feature/VoiceMicButton';
 import { radius, spacing } from '@/config/theme';
@@ -67,9 +69,10 @@ export default function LiveInterviewScreen() {
   const { selectCompanion } = useCompanion();
   const { recordActivity, recordInterviewScore } = useProgress();
   const { awardAction, checkBadges } = useGamification();
+  const { user } = useAuth();
 
   const track = route.params?.track || 'hr';
-  const targetQuestions = route.params?.targetQuestions || 5;
+  const targetQuestions = route.params?.targetQuestions || 8;
   const difficulty = route.params?.difficulty || 'intermediate';
   const meta = getTrackMeta(track);
   const interviewer = getCompanion(meta.interviewer);
@@ -79,10 +82,46 @@ export default function LiveInterviewScreen() {
   const [history, setHistory] = useState<QA[]>([]);
   const [latestFeedback, setLatestFeedback] = useState<LiveResponse | null>(null);
   const startedRef = useRef(Date.now());
+  const resumedRef = useRef(false);
 
   useEffect(() => {
     selectCompanion(meta.interviewer);
-    startInterview();
+    // Attempt to resume any saved session for this (user, track) pair before
+    // starting a fresh one. If a session ≥1 answered question exists in the
+    // last 24h, prompt the user to resume or start over.
+    (async () => {
+      const uid = user?.uid;
+      const saved = uid ? await interviewProgressService.load(uid, track) : null;
+      if (saved && saved.history.length > 0 && !resumedRef.current) {
+        resumedRef.current = true;
+        Alert.alert(
+          'Resume interview?',
+          `You have ${saved.history.length} question${saved.history.length === 1 ? '' : 's'} answered in a previous session. Continue where you left off?`,
+          [
+            {
+              text: 'Start over',
+              style: 'destructive',
+              onPress: async () => {
+                if (uid) await interviewProgressService.clear(uid, track);
+                startInterview();
+              },
+            },
+            {
+              text: 'Resume',
+              onPress: () => {
+                setHistory(saved.history as QA[]);
+                setCurrentQuestion(saved.currentQuestion);
+                startedRef.current = saved.startedAt;
+                setPhase('idle');
+              },
+            },
+          ],
+          { cancelable: false },
+        );
+      } else {
+        startInterview();
+      }
+    })();
     return () => {
       speechService.stopAudio();
     };
@@ -173,6 +212,19 @@ export default function LiveInterviewScreen() {
       const newHistory = [...history, newQa];
       setHistory(newHistory);
       awardAction('INTERVIEW_QUESTION').catch(() => {});
+
+      // Persist progress after every answer so an accidental app kill / exit
+      // doesn't lose the user's work. Cleared once the interview completes.
+      if (user?.uid) {
+        interviewProgressService.save(user.uid, {
+          track,
+          targetQuestions,
+          currentQuestion: data.should_end ? currentQuestion : data.next_question,
+          history: newHistory,
+          startedAt: startedRef.current,
+        }).catch(() => {});
+      }
+
       if (data.should_end) {
         finalize(newHistory);
         return;
@@ -217,6 +269,8 @@ export default function LiveInterviewScreen() {
     await awardAction('INTERVIEW_SESSION_COMPLETE');
     if (overall >= 90) await awardAction('PERFECT_SCORE_BONUS');
     await checkBadges({ interviewsCount: 1, bestInterviewScore: overall });
+    // Session completed — remove the auto-saved progress so it doesn't resume next time.
+    if (user?.uid) await interviewProgressService.clear(user.uid, track).catch(() => {});
     navigation.replace('InterviewResults', { result });
   };
 
