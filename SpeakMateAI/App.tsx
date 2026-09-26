@@ -22,6 +22,8 @@ import RewardModal from '@/components/feature/RewardModal';
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { initAds } from '@/services/adsService';
 import { initConsent } from '@/services/consentService';
+import { notificationService } from '@/services/notificationService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Silently check for an EAS Update on every cold start. If a new bundle is
 // available, download it in the background and apply it on the NEXT app launch
@@ -72,6 +74,18 @@ export default function App() {
     (async () => {
       await initConsent();
       initAds();
+      // First-launch: silently offer the daily practice reminder at 7 PM. If
+      // the user denies the OS permission, we don't ask again automatically —
+      // they can still turn it on from Settings → Notifications later.
+      try {
+        const asked = await AsyncStorage.getItem('notif:daily:first-ask');
+        if (!asked) {
+          await AsyncStorage.setItem('notif:daily:first-ask', '1');
+          notificationService.scheduleDailyReminder(19, 0).catch(() => {});
+        }
+      } catch {
+        // AsyncStorage failure — ignore.
+      }
     })();
   }, []);
   return (

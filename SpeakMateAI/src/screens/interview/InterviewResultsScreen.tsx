@@ -171,6 +171,24 @@ export default function InterviewResultsScreen() {
 
         <Button
           mode="contained"
+          onPress={() => {
+            // Jump straight back into the same track for a focused re-attempt.
+            // We hint difficulty=hard so the AI zeroes in on the user's weak areas.
+            navigation.replace('LiveInterview', {
+              track: result.track,
+              targetQuestions: 5,
+              difficulty: 'advanced',
+            });
+          }}
+          style={{ marginTop: 8, borderRadius: 12 }}
+          contentStyle={{ height: 50 }}
+          icon="target"
+          testID="results-practice-weak-btn"
+        >
+          Practise weak topics again
+        </Button>
+        <Button
+          mode="contained"
           onPress={() => navigation.navigate('Main', { screen: 'Interview' })}
           style={{ marginTop: 8, borderRadius: 12 }}
           contentStyle={{ height: 50 }}

@@ -1,5 +1,5 @@
 // Interview Dashboard — stats hub
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,10 +17,13 @@ import AdBanner from '@/components/common/AdBanner';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
+const QUESTION_COUNTS = [5, 8, 12] as const;
+
 export default function InterviewDashboardScreen() {
   const navigation = useNavigation<Nav>();
   const { stats } = useProgress();
   const { level } = useGamification();
+  const [questionCount, setQuestionCount] = useState<number>(8);
 
   const avg = useMemo(() => {
     if (stats.bestInterviewScore === 0 && stats.interviewsCount === 0) return 0;
@@ -60,20 +63,48 @@ export default function InterviewDashboardScreen() {
             </View>
           </View>
 
+          <Text style={styles.section}>Interview length</Text>
+          <View style={styles.countRow}>
+            {QUESTION_COUNTS.map((n) => {
+              const active = questionCount === n;
+              return (
+                <Pressable
+                  key={n}
+                  onPress={() => setQuestionCount(n)}
+                  style={[styles.countChip, active && styles.countChipActive]}
+                  testID={`dash-qcount-${n}`}
+                >
+                  <Text style={[styles.countChipText, active && styles.countChipTextActive]}>
+                    {n} questions
+                  </Text>
+                  {n === 8 && !active && <Text style={styles.countChipHint}>Recommended</Text>}
+                </Pressable>
+              );
+            })}
+          </View>
+
           <Text style={styles.section}>Available tracks ({INTERVIEW_TRACKS.length})</Text>
           <View style={styles.tracksGrid}>
             {INTERVIEW_TRACKS.map((t) => (
-              <Pressable
-                key={t.id}
-                onPress={() => navigation.navigate('LiveInterview', { track: t.id, targetQuestions: 8 })}
-                style={styles.trackChipWrap}
-                testID={`dash-track-${t.id}`}
-              >
-                <LinearGradient colors={t.colors} style={styles.trackChip}>
-                  <Ionicons name={t.icon} size={18} color="#FFFFFF" />
-                  <Text style={styles.trackChipText} numberOfLines={1}>{t.title}</Text>
-                </LinearGradient>
-              </Pressable>
+              <View key={t.id} style={styles.trackChipWrap}>
+                <Pressable
+                  onPress={() => navigation.navigate('LiveInterview', { track: t.id, targetQuestions: questionCount })}
+                  testID={`dash-track-${t.id}`}
+                >
+                  <LinearGradient colors={t.colors} style={styles.trackChip}>
+                    <Ionicons name={t.icon} size={18} color="#FFFFFF" />
+                    <Text style={styles.trackChipText} numberOfLines={1}>{t.title}</Text>
+                  </LinearGradient>
+                </Pressable>
+                <Pressable
+                  onPress={() => navigation.navigate('JobTerms', { track: t.id })}
+                  style={styles.studyBtn}
+                  testID={`dash-terms-${t.id}`}
+                >
+                  <Ionicons name="book-outline" size={12} color="#A992FF" />
+                  <Text style={styles.studyBtnText}>Study terms</Text>
+                </Pressable>
+              </View>
             ))}
           </View>
 
@@ -124,10 +155,36 @@ const styles = StyleSheet.create({
   lvlName: { color: '#F2EEFF', fontSize: 16, fontWeight: '800' },
   lvlSub: { color: 'rgba(242,238,255,0.6)', fontSize: 12, marginTop: 2 },
   section: { color: '#F2EEFF', fontWeight: '800', fontSize: 15, marginTop: spacing.xl, marginBottom: spacing.md },
+  countRow: { flexDirection: 'row', gap: 8 },
+  countChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+  },
+  countChipActive: {
+    backgroundColor: 'rgba(124,92,255,0.25)',
+    borderColor: '#7C5CFF',
+  },
+  countChipText: { color: '#F2EEFF', fontSize: 13, fontWeight: '700' },
+  countChipTextActive: { color: '#FFFFFF' },
+  countChipHint: { color: 'rgba(242,238,255,0.5)', fontSize: 10, marginTop: 2 },
   tracksGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   trackChipWrap: { width: '48%' },
   trackChip: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: spacing.sm, borderRadius: radius.lg },
   trackChipText: { color: '#FFFFFF', fontSize: 12, fontWeight: '700', flex: 1 },
+  studyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    marginTop: 4,
+  },
+  studyBtnText: { color: '#A992FF', fontSize: 11, fontWeight: '700' },
   tipCard: { backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: radius.xl, padding: spacing.md, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' },
   tipRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8 },
   tipText: { color: '#F2EEFF', fontSize: 13, flex: 1 },
