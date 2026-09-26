@@ -710,3 +710,40 @@ async def admin_grant_premium(
         "expires_at": expires_iso,
         "source": "manual_grant",
     }
+
+
+class AdminRevokePayload(BaseModel):
+    uid: Optional[str] = None
+    email: Optional[str] = None
+    reason: Optional[str] = None
+
+
+@router.post("/admin-revoke-premium")
+async def admin_revoke_premium(
+    payload: AdminRevokePayload,
+    x_admin_email: Optional[str] = Header(default=None),
+):
+    """Revoke ALL active subscriptions for a given user. Used when swapping
+    a manual grant to a different account, refunding a gift, or dealing
+    with account compromise. Marks each active subscription record
+    `active: false` and stamps `revoked_at` + `revoke_reason` for audit."""
+    _require_admin(x_admin_email)
+    uid = payload.uid
+    if not uid and payload.email:
+        uid = _resolve_uid_from_email(payload.email)
+    if not uid:
+        raise HTTPException(
+            status_code=400,
+            detail="uid_or_valid_email_required (email lookup needs FIREBASE_SERVICE_ACCOUNT_JSON)",
+        )
+    now = datetime.now(timezone.utc)
+    result = await _db.subscriptions.update_many(
+        {"uid": uid, "active": True},
+        {"$set": {
+            "active": False,
+            "revoked_at": now.isoformat(),
+            "revoke_reason": payload.reason or "manual_revoke_by_admin",
+            "revoked_by": x_admin_email,
+        }},
+    )
+    return {"ok": True, "uid": uid, "revoked_count": result.modified_count}
