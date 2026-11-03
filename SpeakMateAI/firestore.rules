@@ -1,0 +1,94 @@
+rules_version = '2';
+
+// SpeakMateAI — least-privilege Firestore rules.
+// Premium / subscription / payment data lives ONLY in the backend (MongoDB),
+// so no client may ever write premium-related fields here.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['shivamkks112@gmail.com'];
+    }
+
+    // ---------- users/{uid} : private profile ----------
+    match /users/{uid} {
+      allow get: if isOwner(uid);
+      allow list: if false;
+
+      // First login: only basic profile keys, premium must start false.
+      allow create: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['email', 'displayName', 'photoURL', 'isPremium', 'createdAt'])
+        && request.resource.data.isPremium == false
+        && (!('email' in request.resource.data) || request.resource.data.email == null || request.resource.data.email == request.auth.token.email)
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 60
+        && request.resource.data.photoURL is string
+        && request.resource.data.photoURL.size() <= 1024;
+
+      // Profile edits: only name + photo can change. isPremium / plan / any
+      // other field is immutable from the client.
+      allow update: if isOwner(uid)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['displayName', 'photoURL'])
+        && (!('displayName' in request.resource.data) || (request.resource.data.displayName is string && request.resource.data.displayName.size() <= 60))
+        && (!('photoURL' in request.resource.data) || (request.resource.data.photoURL is string && request.resource.data.photoURL.size() <= 1024));
+
+      allow delete: if false;
+
+      // users/{uid}/favorites/{wordId}
+      match /favorites/{wordId} {
+        allow read, delete: if isOwner(uid);
+        allow create, update: if isOwner(uid)
+          && request.resource.data.keys().hasOnly(['wordId', 'createdAt'])
+          && request.resource.data.wordId == wordId;
+      }
+    }
+
+    // ---------- progress/{uid} : private learning stats ----------
+    match /progress/{uid} {
+      allow read: if isOwner(uid);
+      allow create, update: if isOwner(uid)
+        && !request.resource.data.keys().hasAny(['isPremium', 'plan', 'subscription', 'premiumUntil', 'purchaseToken', 'role', 'isAdmin']);
+      allow delete: if false;
+    }
+
+    // ---------- leaderboard/{uid} : public-safe rank card ----------
+    // Holds ONLY a display name + XP (no email / photo / premium).
+    match /leaderboard/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isOwner(uid)
+        && request.resource.data.keys().hasOnly(['displayName', 'xp', 'updatedAt'])
+        && request.resource.data.displayName is string
+        && request.resource.data.displayName.size() <= 40
+        && request.resource.data.xp is int
+        && request.resource.data.xp >= 0
+        && request.resource.data.xp <= 10000000;
+      allow delete: if isOwner(uid);
+    }
+
+    // ---------- system/config : public kill-switch flags ----------
+    match /system/config {
+      allow read: if true;
+      allow create, update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+          'globalAIEnabled', 'speakingEnabled', 'interviewEnabled',
+          'premiumEnabled', 'tutorEnabled', 'maintenanceMessage', 'updatedAt'
+        ]);
+      allow delete: if false;
+    }
+
+    // ---------- everything else : denied ----------
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

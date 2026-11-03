@@ -1,6 +1,6 @@
 // Firestore service - thin wrapper. Fails gracefully if Firebase isn't configured.
 
-import { collection, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/config/firebase';
 import { ProgressStats } from '@/types';
 
@@ -33,9 +33,14 @@ export const firestoreService = {
     }
   },
 
-  async setPremium(uid: string, isPremium: boolean): Promise<void> {
+  // Public-safe rank card (name + XP only) — see firestore.rules `leaderboard`.
+  async syncLeaderboard(uid: string, displayName: string, xp: number): Promise<void> {
     try {
-      await updateDoc(doc(db, 'users', uid), { isPremium });
+      await setDoc(doc(db, 'leaderboard', uid), {
+        displayName: (displayName || 'Learner').slice(0, 40),
+        xp: Math.max(0, Math.floor(xp)),
+        updatedAt: serverTimestamp(),
+      });
     } catch {
       // ignore
     }

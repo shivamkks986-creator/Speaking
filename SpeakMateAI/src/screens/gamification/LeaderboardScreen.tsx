@@ -37,7 +37,7 @@ export default function LeaderboardScreen() {
   useEffect(() => {
     (async () => {
       try {
-        const q = query(collection(db, 'users'), orderBy('xp', 'desc'), limit(50));
+        const q = query(collection(db, 'leaderboard'), orderBy('xp', 'desc'), limit(50));
         const snap = await getDocs(q);
         const list: Row[] = snap.docs.map((d) => {
           const data = d.data() as any;

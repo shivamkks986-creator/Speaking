@@ -5,6 +5,8 @@ import { Level, LEVELS, getLevelByXp, getNextLevel, XP_REWARDS, COIN_REWARDS } f
 import { BADGES } from '@/data/badges';
 import { STORAGE_KEYS } from '@/utils/constants';
 import { todayKey } from '@/utils/helpers';
+import { auth } from '@/config/firebase';
+import { firestoreService } from '@/services/firestoreService';
 
 export interface GamificationState {
   xp: number;
@@ -89,7 +91,11 @@ export function GamificationProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const persist = useCallback(async (next: GamificationState) => {
-    setState(next);
+    setState((prev) => {
+      const u = auth.currentUser;
+      if (u && prev.xp !== next.xp) firestoreService.syncLeaderboard(u.uid, u.displayName || '', next.xp);
+      return next;
+    });
     await AsyncStorage.setItem(STORAGE_KEYS.GAMIFICATION, JSON.stringify(next));
   }, []);
 

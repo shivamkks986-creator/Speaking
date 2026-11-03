@@ -35,6 +35,7 @@ function ref() {
   return doc(db, CONFIG_DOC_PATH[0], CONFIG_DOC_PATH[1]);
 }
 
+// Only admins can write system/config (firestore.rules) — seed is best-effort.
 async function ensureSeed(): Promise<void> {
   const snap = await getDoc(ref());
   if (!snap.exists()) {
@@ -46,7 +47,7 @@ async function ensureSeed(): Promise<void> {
       tutorEnabled: true,
       maintenanceMessage: DEFAULT_CONFIG.maintenanceMessage,
       updatedAt: new Date().toISOString(),
-    });
+    }).catch(() => {});
   }
 }
 

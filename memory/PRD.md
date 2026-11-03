@@ -61,3 +61,9 @@ User building "Communication Skills and Job Readiness" mobile platform (SpeakMat
 ## Test Reports
 - Latest: `/app/test_reports/iteration_26.json` (14/15 backend, 93%)
 - iteration_25: 17/17 (100%)
+
+## 2026-06 — Firebase Security Audit (DONE)
+- New `/app/SpeakMateAI/firestore.rules` (least-privilege): users/{uid} owner-only, isPremium immutable from client; favorites/progress owner-only; new public-safe `leaderboard/{uid}` (name+xp only, signed-in read); system/config public read, admin-only write (verified shivamkks112@gmail.com); everything else denied.
+- Client: removed `firestoreService.setPremium`; leaderboard reads `leaderboard` collection (no more email exposure from `users`); GamificationContext syncs XP to leaderboard; remoteConfig seed is best-effort.
+- Verified with Firestore emulator: 30/30 rule tests pass (`scripts/firestore-rules.test.mjs`).
+- Pending: user must paste rules in Firebase Console (not auto-deployed). app-ads.txt unchanged (user skipped).
