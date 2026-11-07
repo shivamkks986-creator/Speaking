@@ -35,6 +35,9 @@ import InviteFriendsScreen from '@/screens/gamification/InviteFriendsScreen';
 import AdminConfigScreen from '@/screens/admin/AdminConfigScreen';
 import TmayTrainerScreen from '@/screens/tmay/TmayTrainerScreen';
 import RoadmapScreen from '@/screens/roadmap/RoadmapScreen';
+import RoadmapDayScreen from '@/screens/roadmap/RoadmapDayScreen';
+import AccentHomeScreen from '@/screens/accent/AccentHomeScreen';
+import AccentPracticeScreen from '@/screens/accent/AccentPracticeScreen';
 import SalesTrainerScreen from '@/screens/sales/SalesTrainerScreen';
 import ResumeUploadScreen from '@/screens/resume/ResumeUploadScreen';
 import ResumeInterviewScreen from '@/screens/resume/ResumeInterviewScreen';
@@ -194,6 +197,9 @@ export default function RootNavigator() {
             component={RoadmapScreen}
             options={{ headerShown: false }}
           />
+          <Stack.Screen name="RoadmapDay" component={RoadmapDayScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AccentHome" component={AccentHomeScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AccentPractice" component={AccentPracticeScreen} options={{ headerShown: false }} />
           <Stack.Screen
             name="SalesTrainer"
             component={SalesTrainerScreen}

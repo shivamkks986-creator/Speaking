@@ -38,6 +38,7 @@ DEFAULT_USER_DAILY_LIMIT = int(os.environ.get("USER_DAILY_FREE_LIMIT", "30"))
 COST_TABLE = {
     "tutor_chat": 1.8,
     "speaking_score": 2.4,
+    "accent_evaluate": 0.4,
     "interview_live": 3.0,
     "vocabulary_lookup": 0.5,
     "word_of_day": 0.3,

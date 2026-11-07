@@ -25,6 +25,7 @@ app = FastAPI()
 
 from ai_routes import router as ai_router
 from system_routes import router as system_router
+from practice_routes import router as practice_router
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -72,6 +73,7 @@ async def get_status_checks():
 
 api_router.include_router(ai_router)
 api_router.include_router(system_router)
+api_router.include_router(practice_router)
 
 
 # ---------------------------------------------------------------------------

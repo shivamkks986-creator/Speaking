@@ -35,7 +35,7 @@ export function setAiAuthContext(uid: string | null, isPremium: boolean) {
   currentIsPremium = isPremium;
 }
 
-async function authHeaders(): Promise<Record<string, string>> {
+export async function authHeaders(): Promise<Record<string, string>> {
   const h: Record<string, string> = { 'Content-Type': 'application/json' };
   if (currentUserId) h['X-User-Id'] = currentUserId;
   h['X-Is-Premium'] = currentIsPremium ? 'true' : 'false';   // hint only; backend ignores

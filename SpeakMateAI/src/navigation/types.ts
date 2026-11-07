@@ -1,5 +1,6 @@
 import { NavigatorScreenParams } from '@react-navigation/native';
-import { InterviewResult, InterviewTrack, ResumeInterviewQuestion, SpeakingScore } from '@/types';
+import { InterviewResult, InterviewTrack, ResumeInterviewQuestion, RoadmapDay, SpeakingScore } from '@/types';
+import type { AccentId } from '@/data/accentContent';
 
 export type AuthStackParamList = {
   Onboarding: undefined;
@@ -49,6 +50,9 @@ export type RootStackParamList = {
   AdminConfig: undefined;
   TmayTrainer: undefined;
   Roadmap: undefined;
+  RoadmapDay: { day: RoadmapDay; completed: boolean; bestScore?: number };
+  AccentHome: undefined;
+  AccentPractice: { accent: AccentId };
   SalesTrainer: undefined;
   ResumeUpload: undefined;
   ResumeInterview: {

@@ -290,6 +290,23 @@ export default function HomeScreen() {
             </Pressable>
           </FadeInView>
 
+          {/* Accent Improvement banner */}
+          <FadeInView delay={185} duration={500}>
+            <Pressable onPress={() => navigation.navigate('AccentHome')} testID="home-accent-banner" style={{ marginTop: spacing.md }}>
+              <LinearGradient colors={['#FF6B9D', '#7C5CFF']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.roadmapBanner}>
+                <View style={styles.roadmapIconWrap}>
+                  <Ionicons name="mic" size={26} color="#FFFFFF" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.roadmapLabel}>NEW · ACCENT COACH</Text>
+                  <Text style={styles.roadmapTitle}>Accent Improvement</Text>
+                  <Text style={styles.roadmapSub}>Indian · American · British — speak & get AI feedback</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color="#FFFFFF" />
+              </LinearGradient>
+            </Pressable>
+          </FadeInView>
+
           {/* Career Tools row — Sales Trainer + Resume Upload */}
           <FadeInView delay={200} duration={500}>
             <View style={styles.careerRow}>

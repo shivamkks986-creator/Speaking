@@ -152,6 +152,7 @@ export interface JobRoadmap {
   roleTarget?: string;
   currentLevel?: string;
   completedDays: number[]; // array of day numbers user has marked done
+  scores?: Record<string, number>;
 }
 
 // Sales / Counselling Trainer --------------------------------------------

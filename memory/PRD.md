@@ -67,3 +67,11 @@ User building "Communication Skills and Job Readiness" mobile platform (SpeakMat
 - Client: removed `firestoreService.setPremium`; leaderboard reads `leaderboard` collection (no more email exposure from `users`); GamificationContext syncs XP to leaderboard; remoteConfig seed is best-effort.
 - Verified with Firestore emulator: 30/30 rule tests pass (`scripts/firestore-rules.test.mjs`).
 - Pending: user must paste rules in Firebase Console (not auto-deployed). app-ads.txt unchanged (user skipped).
+
+## 2026-06 — Roadmap completion + Accent Improvement (DONE, backend curl-verified; app UI not device-tested)
+- Backend `practice_routes.py` (`/api/practice/*`, Bearer auth via require_uid, Mongo `roadmap_progress`, `accent_history`):
+  GET /roadmap, PUT /roadmap/plan, POST /roadmap/complete (sequential lock 409 day_locked, idempotent $addToSet, keeps best score), POST /roadmap/reset (needs confirm "RESET"),
+  POST /accent/evaluate (Gemini 3 Flash, word-match % + clarity/fluency/intonation(estimated), free 5/day own counter, premium unlimited), GET /accent/history.
+- App: `data/roadmapCurriculum.ts` (30 fixed days), `RoadmapDayScreen` (objective, lesson, read-aloud TTS, activity, record → real AI score, complete), RoadmapScreen now locks days sequentially, server-synced, migrates old local roadmap, reset needs confirm, "standard plan" option.
+- App: `data/accentContent.ts`, `AccentHomeScreen`, `AccentPracticeScreen` (lessons, listen/slow in en-IN/en-US/en-GB, record → AI feedback, mistakes, history avg/best). Home banner added.
+- Shared: `hooks/useVoiceRecorder.ts`, `components/feature/PracticeRecorder.tsx`, `services/practiceService.ts` (no mock scores).
