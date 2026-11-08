@@ -99,6 +99,9 @@ async def require_uid(
         uid = _verify_id_token(token)
         if uid:
             return uid
+        # Firebase Admin not configured on this server → legacy header (non-secure mode only).
+        if not SECURE_BILLING and not _init_firebase() and x_user_id:
+            return x_user_id
         # Bad/expired token → hard reject (don't fall back to X-User-Id).
         raise HTTPException(status_code=401, detail="invalid_id_token")
 
@@ -118,7 +121,10 @@ async def optional_uid(
     """Same as require_uid but returns None for anonymous callers instead of raising."""
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(None, 1)[1].strip()
-        return _verify_id_token(token)
+        uid = _verify_id_token(token)
+        if uid or SECURE_BILLING or _init_firebase():
+            return uid
+        return x_user_id or None
     return None if SECURE_BILLING else (x_user_id or None)
 
 
